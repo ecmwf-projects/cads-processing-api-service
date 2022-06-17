@@ -1,5 +1,5 @@
-import cads_procesing_api_service
+import cads_processing_api_service
 
 
 def test_version() -> None:
-    assert cads_procesing_api_service.__version__ != "999"
+    assert cads_processing_api_service.__version__ != "999"

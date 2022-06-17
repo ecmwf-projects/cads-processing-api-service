@@ -1,4 +1,4 @@
-PROJECT := cads_procesing_api_service
+PROJECT := cads_processing_api_service
 CONDA := conda
 CONDAFLAGS :=
 COV_REPORT := html

@@ -13,7 +13,7 @@ branch = true
 profile = "black"
 
 [tool.setuptools_scm]
-write_to = "cads_procesing_api_service/version.py"
+write_to = "cads_processing_api_service/version.py"
 write_to_template = '''
 # Do not change! Do not track in version control!
 __version__ = "{version}"
