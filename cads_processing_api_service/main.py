@@ -3,7 +3,7 @@ from typing import Any
 
 import attrs
 import fastapi
-from ogc_api_processes_fastapi import main
+from ogc_api_processes_fastapi import clients, main
 
 PROCESS_LIST: list[dict[str, str]] = [
     {"id": "retrieve-reanalysis-era5-single-levels", "version": "0.1"},
@@ -14,7 +14,7 @@ PROCESS_LIST: list[dict[str, str]] = [
 
 
 @attrs.define
-class DummyClient(main.BaseClient):  # type: ignore
+class DummyClient(clients.BaseClient):  # type: ignore
     """
     Dummy implementation of the OGC API - Processes endpoints.
     """
