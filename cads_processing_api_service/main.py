@@ -22,7 +22,6 @@ class DummyClient(clients.BaseClient):  # type: ignore
     def get_processes(
         self, request: fastapi.Request
     ) -> dict[str, list[dict[str, Any]]]:
-
         links = [
             {
                 "href": urllib.parse.urljoin(str(request.base_url), "processes"),
@@ -30,7 +29,6 @@ class DummyClient(clients.BaseClient):  # type: ignore
             }
         ]
         processes_list = PROCESS_LIST
-
         retval = {"processes": processes_list, "links": links}
 
         return retval
