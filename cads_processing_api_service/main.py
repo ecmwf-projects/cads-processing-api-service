@@ -16,8 +16,10 @@ class DummyClient(clients.BaseClient):  # type: ignore
     Dummy implementation of the OGC API - Processes endpoints.
     """
 
-    def get_processes_list(self) -> list[models.ProcessSummary]:
-        retval = PROCESS_LIST
+    def get_processes_list(
+        self, limit: int, offset: int
+    ) -> list[models.ProcessSummary]:
+        retval = PROCESS_LIST[offset : (offset + limit)]
 
         return retval
 
