@@ -29,7 +29,7 @@ class DatabaseClient(clients.BaseClient):  # type: ignore
     ) -> list[models.ProcessSummary]:
         with self.session.reader.context_session() as session:
             processes = (
-                session.query(self.collection_table).offset(offset).limit(limit).all()
+                session.query(self.process_table).offset(offset).limit(limit).all()
             )
             processes_list = [
                 self.process_serializer.db_to_oap(process) for process in processes
