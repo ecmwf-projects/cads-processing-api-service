@@ -1,4 +1,5 @@
 import attrs
+import fastapi
 from ogc_api_processes_fastapi import clients, main, models
 
 PROCESS_LIST: list[dict[str, str]] = [
@@ -21,4 +22,5 @@ class DummyClient(clients.BaseClient):  # type: ignore
         return retval
 
 
-app = main.instantiate_app(client=DummyClient())
+app = fastapi.FastAPI()
+app = main.include_ogc_api_processes_routers(app=app, client=DummyClient())
