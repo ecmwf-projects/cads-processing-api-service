@@ -2,6 +2,7 @@ import abc
 from typing import Any
 
 import attrs
+import pydantic
 from cads_catalogue import database
 from ogc_api_processes_fastapi import models
 
@@ -12,7 +13,7 @@ class Serializer(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def db_to_oap(cls, db_model: database.BaseModel) -> dict[str, Any]:
+    def db_to_oap(cls, db_model: database.BaseModel) -> pydantic.BaseModel:
         """Transform database model to OGC API - Processes schema."""
         ...
 
