@@ -5,7 +5,14 @@ dependencies:
 - fastapi
 - make
 - mypy
+- pip
 - pre-commit
+- psycopg2-binary
 - pytest
 - pytest-cov
+- python>=3.10
+- sqlalchemy
+- sqlalchemy-stubs
 - uvicorn
+- pip:
+  - fastapi-utils
