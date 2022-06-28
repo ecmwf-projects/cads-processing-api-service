@@ -33,7 +33,7 @@ class DatabaseClient(clients.BaseClient):
     session: dbsession.Session = attrs.field(
         default=dbsession.Session.create_from_settings(settings)
     )
-    process_table: database.Resource = attrs.field(default=database.Resource)
+    process_table: Type[database.Resource] = attrs.field(default=database.Resource)
     process_serializer: Type[serializers.ProcessSerializer] = attrs.field(
         default=serializers.ProcessSerializer
     )
