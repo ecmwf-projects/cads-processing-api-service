@@ -11,7 +11,7 @@ settings = config.SqlalchemySettings()
 
 
 @attrs.define
-class DatabaseClient(clients.BaseClient):  # type: ignore
+class DatabaseClient(clients.BaseClient):
     """
     Database implementation of the OGC API - Processes endpoints.
     """
@@ -20,7 +20,7 @@ class DatabaseClient(clients.BaseClient):  # type: ignore
         default=dbsession.Session.create_from_settings(settings)
     )
     process_table: database.Resource = attrs.field(default=database.Resource)
-    process_serializer: Type[serializers.Serializer] = attrs.field(
+    process_serializer: Type[serializers.ProcessSerializer] = attrs.field(
         default=serializers.ProcessSerializer
     )
 

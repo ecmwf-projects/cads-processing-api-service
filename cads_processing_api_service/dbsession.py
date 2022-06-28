@@ -4,6 +4,7 @@ from typing import Iterator
 
 import attrs
 import fastapi_utils.session
+import ogc_api_processes_fastapi.errors
 import psycopg2
 import sqlalchemy as sa
 
@@ -22,18 +23,17 @@ class FastAPISessionMaker(fastapi_utils.session.FastAPISessionMaker):
             yield from self.get_db()
         except sa.exc.StatementError as e:
             if isinstance(e.orig, psycopg2.errors.UniqueViolation):
-                raise ValueError("resource already exists")
-                # raise stac_fastapi.types.errors.ConflictError(
-                #     "resource already exists"
-                # ) from e
+                raise ogc_api_processes_fastapi.errors.ConflictError(
+                    "resource already exists"
+                ) from e
             elif isinstance(e.orig, psycopg2.errors.ForeignKeyViolation):
-                raise ValueError("collection does not exists")
-                # raise stac_fastapi.types.errors.ForeignKeyError(
-                #     "collection does not exist"
-                # ) from e
+                raise ogc_api_processes_fastapi.errors.ForeignKeyError(
+                    "collection does not exist"
+                ) from e
             logger.error(e, exc_info=True)
-            raise ValueError("unhandled database error")
-            # raise stac_fastapi.types.errors.DatabaseError("unhandled database error")
+            raise ogc_api_processes_fastapi.errors.DatabaseError(
+                "unhandled database error"
+            )
 
 
 @attrs.define
