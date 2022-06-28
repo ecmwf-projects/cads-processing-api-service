@@ -65,8 +65,9 @@ class DatabaseClient(clients.BaseClient):
 
         return processes_list
 
-    def get_process_description(self, id: str) -> models.Process:
+    def get_process_description(self, process_id: str) -> models.Process:
         with self.session.reader.context_session() as session:
+            id = process_id[len("retrieve-") :]
             process = self._lookup_id(id=id, table=self.process_table, session=session)
             process_description = self.process_serializer.process_description_db_to_oap(
                 process
