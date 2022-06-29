@@ -26,7 +26,7 @@ class ProcessSerializer:
         cls, db_model: database.Resource
     ) -> models.ProcessSummary:
 
-        return models.ProcessSummary(
+        retval = models.ProcessSummary(
             title=f"Retrieve of {db_model.title}",
             description=db_model.description,
             keywords=db_model.keywords,
@@ -39,22 +39,15 @@ class ProcessSerializer:
                 "reference",
             ],
         )
+
+        return retval
 
     @classmethod
     def process_description_db_to_oap(
         cls, db_model: database.Resource
     ) -> models.Process:
 
-        return models.Process(
-            title=f"Retrieve of {db_model.title}",
-            description=db_model.description,
-            keywords=db_model.keywords,
-            id=f"retrieve-{db_model.resource_id}",
-            version="1.0.0",
-            jobControlOptions=[
-                "async-execute",
-            ],
-            outputTransmission=[
-                "reference",
-            ],
-        )
+        process_summary = cls.process_summary_db_to_oap(db_model)
+        retval = models.Process(**process_summary.dict())
+
+        return retval
