@@ -19,7 +19,6 @@ from typing import Iterator
 import attrs
 import fastapi_utils.session
 import ogc_api_processes_fastapi.errors
-import psycopg2
 import sqlalchemy as sa
 
 from . import config
@@ -36,14 +35,6 @@ class FastAPISessionMaker(fastapi_utils.session.FastAPISessionMaker):
         try:
             yield from self.get_db()
         except sa.exc.StatementError as e:
-            if isinstance(e.orig, psycopg2.errors.UniqueViolation):
-                raise ogc_api_processes_fastapi.errors.ConflictError(
-                    "resource already exists"
-                ) from e
-            elif isinstance(e.orig, psycopg2.errors.ForeignKeyViolation):
-                raise ogc_api_processes_fastapi.errors.ForeignKeyError(
-                    "collection does not exist"
-                ) from e
             logger.error(e, exc_info=True)
             raise ogc_api_processes_fastapi.errors.DatabaseError(
                 "unhandled database error"
