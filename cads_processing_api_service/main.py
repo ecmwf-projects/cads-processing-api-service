@@ -18,9 +18,9 @@ import attrs
 import fastapi
 import sqlalchemy as sa
 from cads_catalogue import database
-from ogc_api_processes_fastapi import clients, errors, main, models
+from ogc_api_processes_fastapi import clients, main, models
 
-from . import config, dbsession, serializers
+from . import config, dbsession, errors, serializers
 
 settings = config.SqlalchemySettings()
 
