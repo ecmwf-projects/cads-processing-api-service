@@ -1,0 +1,568 @@
+[
+    {
+        "css": "todo",
+        "details": {
+            "columns": 2,
+            "id": 0,
+            "labels": {
+                "monthly_averaged_reanalysis": "Monthly averaged reanalysis",
+                "monthly_averaged_reanalysis_by_hour_of_day": "Monthly averaged reanalysis by hour of day"
+            },
+            "values": [
+                "monthly_averaged_reanalysis",
+                "monthly_averaged_reanalysis_by_hour_of_day"
+            ]
+        },
+        "help": "Monthly averaged reanalysis data are produced by averaging all daily data. Monthly averages by hour of day constitute the average over all data within the calendar month for every hour (UTC) of the day.",
+        "label": "Product type",
+        "name": "product_type",
+        "required": true,
+        "type": "StringListWidget"
+    },
+    {
+        "css": "todo",
+        "details": {
+            "accordionGroups": true,
+            "accordionOptions": {
+                "openGroups": [
+                    "Temperature",
+                    "Lakes",
+                    "Snow",
+                    "Soil Water",
+                    "Radiation and Heat",
+                    "Evaporation and Runoff",
+                    "Wind, Pressure and Precipitation",
+                    "Vegetation",
+                    "Blacklisted"
+                ],
+                "searchable": false
+            },
+            "displayaslist": false,
+            "groups": [
+                {
+                    "columns": 2,
+                    "label": "Temperature",
+                    "labels": {
+                        "2m_dewpoint_temperature": "2m dewpoint temperature",
+                        "2m_temperature": "2m temperature",
+                        "skin_temperature": "Skin temperature",
+                        "soil_temperature_level_1": "Soil temperature level 1",
+                        "soil_temperature_level_2": "Soil temperature level 2",
+                        "soil_temperature_level_3": "Soil temperature level 3",
+                        "soil_temperature_level_4": "Soil temperature level 4"
+                    },
+                    "values": [
+                        "2m_dewpoint_temperature",
+                        "2m_temperature",
+                        "skin_temperature",
+                        "soil_temperature_level_1",
+                        "soil_temperature_level_2",
+                        "soil_temperature_level_3",
+                        "soil_temperature_level_4"
+                    ]
+                },
+                {
+                    "columns": 2,
+                    "label": "Lakes",
+                    "labels": {
+                        "lake_bottom_temperature": "Lake bottom temperature",
+                        "lake_ice_depth": "Lake ice depth",
+                        "lake_ice_temperature": "Lake ice temperature",
+                        "lake_mix_layer_depth": "Lake mix-layer depth",
+                        "lake_mix_layer_temperature": "Lake mix-layer temperature",
+                        "lake_shape_factor": "Lake shape factor",
+                        "lake_total_layer_temperature": "Lake total layer temperature"
+                    },
+                    "values": [
+                        "lake_bottom_temperature",
+                        "lake_ice_depth",
+                        "lake_ice_temperature",
+                        "lake_mix_layer_depth",
+                        "lake_mix_layer_temperature",
+                        "lake_shape_factor",
+                        "lake_total_layer_temperature"
+                    ]
+                },
+                {
+                    "columns": 2,
+                    "label": "Snow",
+                    "labels": {
+                        "snow_albedo": "Snow albedo",
+                        "snow_cover": "Snow cover",
+                        "snow_density": "Snow density",
+                        "snow_depth": "Snow depth",
+                        "snow_depth_water_equivalent": "Snow depth water equivalent",
+                        "snowfall": "Snowfall",
+                        "snowmelt": "Snowmelt",
+                        "temperature_of_snow_layer": "Temperature of snow layer"
+                    },
+                    "values": [
+                        "snow_albedo",
+                        "snow_cover",
+                        "snow_density",
+                        "snow_depth",
+                        "snow_depth_water_equivalent",
+                        "snowfall",
+                        "snowmelt",
+                        "temperature_of_snow_layer"
+                    ]
+                },
+                {
+                    "columns": 2,
+                    "label": "Soil Water",
+                    "labels": {
+                        "skin_reservoir_content": "Skin reservoir content",
+                        "volumetric_soil_water_layer_1": "Volumetric soil water layer 1",
+                        "volumetric_soil_water_layer_2": "Volumetric soil water layer 2",
+                        "volumetric_soil_water_layer_3": "Volumetric soil water layer 3",
+                        "volumetric_soil_water_layer_4": "Volumetric soil water layer 4"
+                    },
+                    "values": [
+                        "skin_reservoir_content",
+                        "volumetric_soil_water_layer_1",
+                        "volumetric_soil_water_layer_2",
+                        "volumetric_soil_water_layer_3",
+                        "volumetric_soil_water_layer_4"
+                    ]
+                },
+                {
+                    "columns": 2,
+                    "label": "Radiation and Heat",
+                    "labels": {
+                        "forecast_albedo": "Forecast albedo",
+                        "surface_latent_heat_flux": "Surface latent heat flux",
+                        "surface_net_solar_radiation": "Surface net solar radiation",
+                        "surface_net_thermal_radiation": "Surface net thermal radiation",
+                        "surface_sensible_heat_flux": "Surface sensible heat flux",
+                        "surface_solar_radiation_downwards": "Surface solar radiation downwards",
+                        "surface_thermal_radiation_downwards": "Surface thermal radiation downwards"
+                    },
+                    "values": [
+                        "forecast_albedo",
+                        "surface_latent_heat_flux",
+                        "surface_net_solar_radiation",
+                        "surface_net_thermal_radiation",
+                        "surface_sensible_heat_flux",
+                        "surface_solar_radiation_downwards",
+                        "surface_thermal_radiation_downwards"
+                    ]
+                },
+                {
+                    "columns": 2,
+                    "label": "Evaporation and Runoff",
+                    "labels": {
+                        "evaporation_from_bare_soil": "Evaporation from bare soil",
+                        "evaporation_from_open_water_surfaces_excluding_oceans": "Evaporation from open water surfaces excluding oceans",
+                        "evaporation_from_the_top_of_canopy": "Evaporation from the top of canopy",
+                        "evaporation_from_vegetation_transpiration": "Evaporation from vegetation transpiration",
+                        "potential_evaporation": "Potential evaporation",
+                        "runoff": "Runoff",
+                        "snow_evaporation": "Snow evaporation",
+                        "sub_surface_runoff": "Sub-surface runoff",
+                        "surface_runoff": "Surface runoff",
+                        "total_evaporation": "Total evaporation"
+                    },
+                    "values": [
+                        "evaporation_from_bare_soil",
+                        "evaporation_from_open_water_surfaces_excluding_oceans",
+                        "evaporation_from_the_top_of_canopy",
+                        "evaporation_from_vegetation_transpiration",
+                        "potential_evaporation",
+                        "runoff",
+                        "snow_evaporation",
+                        "sub_surface_runoff",
+                        "surface_runoff",
+                        "total_evaporation"
+                    ]
+                },
+                {
+                    "columns": 2,
+                    "label": "Wind, Pressure and Precipitation",
+                    "labels": {
+                        "10m_u_component_of_wind": "10m u-component of wind",
+                        "10m_v_component_of_wind": "10m v-component of wind",
+                        "surface_pressure": "Surface pressure",
+                        "total_precipitation": "Total precipitation"
+                    },
+                    "values": [
+                        "10m_u_component_of_wind",
+                        "10m_v_component_of_wind",
+                        "surface_pressure",
+                        "total_precipitation"
+                    ]
+                },
+                {
+                    "columns": 2,
+                    "label": "Vegetation",
+                    "labels": {
+                        "leaf_area_index_high_vegetation": "Leaf area index, high vegetation",
+                        "leaf_area_index_low_vegetation": "Leaf area index, low vegetation"
+                    },
+                    "values": [
+                        "leaf_area_index_high_vegetation",
+                        "leaf_area_index_low_vegetation"
+                    ]
+                },
+                {
+                    "columns": 2,
+                    "label": "Blacklisted",
+                    "labels": {},
+                    "values": []
+                }
+            ],
+            "id": 1
+        },
+        "help": "Please, consult the product user guide in the documentation section for more information on these variables.",
+        "label": "Variable",
+        "name": "variable",
+        "required": true,
+        "type": "StringListArrayWidget"
+    },
+    {
+        "css": "todo",
+        "details": {
+            "columns": 8,
+            "id": 2,
+            "labels": {
+                "1950": "1950",
+                "1951": "1951",
+                "1952": "1952",
+                "1953": "1953",
+                "1954": "1954",
+                "1955": "1955",
+                "1956": "1956",
+                "1957": "1957",
+                "1958": "1958",
+                "1959": "1959",
+                "1960": "1960",
+                "1961": "1961",
+                "1962": "1962",
+                "1963": "1963",
+                "1964": "1964",
+                "1965": "1965",
+                "1966": "1966",
+                "1967": "1967",
+                "1968": "1968",
+                "1969": "1969",
+                "1970": "1970",
+                "1971": "1971",
+                "1972": "1972",
+                "1973": "1973",
+                "1974": "1974",
+                "1975": "1975",
+                "1976": "1976",
+                "1977": "1977",
+                "1978": "1978",
+                "1979": "1979",
+                "1980": "1980",
+                "1981": "1981",
+                "1982": "1982",
+                "1983": "1983",
+                "1984": "1984",
+                "1985": "1985",
+                "1986": "1986",
+                "1987": "1987",
+                "1988": "1988",
+                "1989": "1989",
+                "1990": "1990",
+                "1991": "1991",
+                "1992": "1992",
+                "1993": "1993",
+                "1994": "1994",
+                "1995": "1995",
+                "1996": "1996",
+                "1997": "1997",
+                "1998": "1998",
+                "1999": "1999",
+                "2000": "2000",
+                "2001": "2001",
+                "2002": "2002",
+                "2003": "2003",
+                "2004": "2004",
+                "2005": "2005",
+                "2006": "2006",
+                "2007": "2007",
+                "2008": "2008",
+                "2009": "2009",
+                "2010": "2010",
+                "2011": "2011",
+                "2012": "2012",
+                "2013": "2013",
+                "2014": "2014",
+                "2015": "2015",
+                "2016": "2016",
+                "2017": "2017",
+                "2018": "2018",
+                "2019": "2019",
+                "2020": "2020",
+                "2021": "2021",
+                "2022": "2022"
+            },
+            "values": [
+                "1950",
+                "1951",
+                "1952",
+                "1953",
+                "1954",
+                "1955",
+                "1956",
+                "1957",
+                "1958",
+                "1959",
+                "1960",
+                "1961",
+                "1962",
+                "1963",
+                "1964",
+                "1965",
+                "1966",
+                "1967",
+                "1968",
+                "1969",
+                "1970",
+                "1971",
+                "1972",
+                "1973",
+                "1974",
+                "1975",
+                "1976",
+                "1977",
+                "1978",
+                "1979",
+                "1980",
+                "1981",
+                "1982",
+                "1983",
+                "1984",
+                "1985",
+                "1986",
+                "1987",
+                "1988",
+                "1989",
+                "1990",
+                "1991",
+                "1992",
+                "1993",
+                "1994",
+                "1995",
+                "1996",
+                "1997",
+                "1998",
+                "1999",
+                "2000",
+                "2001",
+                "2002",
+                "2003",
+                "2004",
+                "2005",
+                "2006",
+                "2007",
+                "2008",
+                "2009",
+                "2010",
+                "2011",
+                "2012",
+                "2013",
+                "2014",
+                "2015",
+                "2016",
+                "2017",
+                "2018",
+                "2019",
+                "2020",
+                "2021",
+                "2022"
+            ]
+        },
+        "help": null,
+        "label": "Year",
+        "name": "year",
+        "required": true,
+        "type": "StringListWidget"
+    },
+    {
+        "css": "todo",
+        "details": {
+            "columns": 6,
+            "id": 3,
+            "labels": {
+                "01": "January",
+                "02": "February",
+                "03": "March",
+                "04": "April",
+                "05": "May",
+                "06": "June",
+                "07": "July",
+                "08": "August",
+                "09": "September",
+                "10": "October",
+                "11": "November",
+                "12": "December"
+            },
+            "values": [
+                "01",
+                "02",
+                "03",
+                "04",
+                "05",
+                "06",
+                "07",
+                "08",
+                "09",
+                "10",
+                "11",
+                "12"
+            ]
+        },
+        "help": null,
+        "label": "Month",
+        "name": "month",
+        "required": true,
+        "type": "StringListWidget"
+    },
+    {
+        "css": "todo",
+        "details": {
+            "columns": 6,
+            "id": 4,
+            "labels": {
+                "00:00": "00:00",
+                "01:00": "01:00",
+                "02:00": "02:00",
+                "03:00": "03:00",
+                "04:00": "04:00",
+                "05:00": "05:00",
+                "06:00": "06:00",
+                "07:00": "07:00",
+                "08:00": "08:00",
+                "09:00": "09:00",
+                "10:00": "10:00",
+                "11:00": "11:00",
+                "12:00": "12:00",
+                "13:00": "13:00",
+                "14:00": "14:00",
+                "15:00": "15:00",
+                "16:00": "16:00",
+                "17:00": "17:00",
+                "18:00": "18:00",
+                "19:00": "19:00",
+                "20:00": "20:00",
+                "21:00": "21:00",
+                "22:00": "22:00",
+                "23:00": "23:00"
+            },
+            "values": [
+                "00:00",
+                "01:00",
+                "02:00",
+                "03:00",
+                "04:00",
+                "05:00",
+                "06:00",
+                "07:00",
+                "08:00",
+                "09:00",
+                "10:00",
+                "11:00",
+                "12:00",
+                "13:00",
+                "14:00",
+                "15:00",
+                "16:00",
+                "17:00",
+                "18:00",
+                "19:00",
+                "20:00",
+                "21:00",
+                "22:00",
+                "23:00"
+            ]
+        },
+        "help": "UTC time standard. UTC stands for Universal Time Coordinated as well as for Coordinated Universal Time.",
+        "label": "Time",
+        "name": "time",
+        "required": true,
+        "type": "StringListWidget"
+    },
+    {
+        "css": "variable",
+        "details": {
+            "id": 5
+        },
+        "help": "Select one widget from the choice below",
+        "label": "Geographical area",
+        "name": "area_group",
+        "required": true,
+        "type": "ExclusiveFrameWidget",
+        "widgets": [
+            "global",
+            "area"
+        ]
+    },
+    {
+        "details": {
+            "accordion": false,
+            "id": 6,
+            "information": "With this option selected the entire available area will be provided"
+        },
+        "label": "Whole available region",
+        "name": "global",
+        "required": true,
+        "type": "LabelWidget"
+    },
+    {
+        "details": {
+            "accordion": true,
+            "default": [
+                90,
+                -180,
+                -90,
+                180
+            ],
+            "extentlabels": [
+                "North",
+                "West",
+                "South",
+                "East"
+            ],
+            "fullheight": true,
+            "id": 7,
+            "precision": 2,
+            "range": {
+                "e": 180,
+                "n": 90,
+                "s": -90,
+                "w": -180
+            },
+            "withmap": false,
+            "wrapping": true
+        },
+        "help": "Select a sub-region of the available area by providing its limits on latitude and longitude",
+        "label": "Sub-region extraction",
+        "name": "area",
+        "type": "GeographicExtentMapWidget"
+    },
+    {
+        "css": "todo",
+        "details": {
+            "columns": 2,
+            "default": [
+                "grib"
+            ],
+            "id": 8,
+            "labels": {
+                "grib": "GRIB",
+                "netcdf": "NetCDF (experimental)"
+            },
+            "values": [
+                "grib",
+                "netcdf"
+            ]
+        },
+        "help": null,
+        "label": "Format",
+        "name": "format",
+        "required": true,
+        "type": "StringChoiceWidget"
+    }
+]
