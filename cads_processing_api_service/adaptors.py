@@ -2,7 +2,7 @@ import json
 import pathlib
 from typing import Any
 
-CDS_FORMS_INPUTS = [
+ACCEPTED_INPUTS = [
     "product_type",
     "variable",
     "year",
@@ -22,7 +22,7 @@ def translate_cds_into_ogc_inputs(
 
     inputs_ogc = []
     for input_cds in cds_form:
-        if input_cds["name"] in CDS_FORMS_INPUTS:
+        if input_cds["name"] in ACCEPTED_INPUTS:
             input_ogc: dict[str, Any] = {input_cds["name"]: {}}
             inputs_ogc.append(input_ogc)
 
