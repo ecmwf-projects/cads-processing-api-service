@@ -12,9 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
+import os
+from typing import Generator
+
 import cads_processing_api_service.config
 
-from . import testing
+
+@contextlib.contextmanager
+def set_env(**environ: str) -> Generator[None, None, None]:
+    """
+    Temporarily set the process environment variables.
+    """
+    old_environ = dict(os.environ)
+    os.environ.update(environ)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(old_environ)
 
 
 def test_settings_default() -> None:
@@ -43,7 +59,7 @@ def test_settings_env() -> None:
         "postgres_port": "1234",
         "postgres_dbname": "test_dbname",
     }
-    with testing.set_env(**env_var):
+    with set_env(**env_var):
         settings = cads_processing_api_service.config.SqlalchemySettings()
     exp_connection_string = (
         f"postgresql://{env_var['postgres_user']}"
