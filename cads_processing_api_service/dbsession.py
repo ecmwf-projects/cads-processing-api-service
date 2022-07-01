@@ -18,10 +18,9 @@ from typing import Iterator
 
 import attrs
 import fastapi_utils.session
-import ogc_api_processes_fastapi.errors
 import sqlalchemy as sa
 
-from . import config
+from . import config, errors
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +35,7 @@ class FastAPISessionMaker(fastapi_utils.session.FastAPISessionMaker):
             yield from self.get_db()
         except sa.exc.StatementError as e:
             logger.error(e, exc_info=True)
-            raise ogc_api_processes_fastapi.errors.DatabaseError(
-                "unhandled database error"
-            )
+            raise errors.DatabaseError("unhandled database error")
 
 
 @attrs.define

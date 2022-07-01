@@ -12,17 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import attrs
 from cads_catalogue import database
 from ogc_api_processes_fastapi import models
 
 
+@attrs.define
 class ProcessSerializer:
     """Serialization methods for OGC API - Processes processes."""
 
     @classmethod
-    def db_to_oap(cls, db_model: database.Resource) -> models.ProcessSummary:
+    def process_summary_db_to_oap(
+        cls, db_model: database.Resource
+    ) -> models.ProcessSummary:
 
-        return models.ProcessSummary(
+        retval = models.ProcessSummary(
             title=f"Retrieve of {db_model.title}",
             description=db_model.description,
             keywords=db_model.keywords,
@@ -35,3 +39,15 @@ class ProcessSerializer:
                 "reference",
             ],
         )
+
+        return retval
+
+    @classmethod
+    def process_description_db_to_oap(
+        cls, db_model: database.Resource
+    ) -> models.Process:
+
+        process_summary = cls.process_summary_db_to_oap(db_model)
+        retval = models.Process(**process_summary.dict())
+
+        return retval
