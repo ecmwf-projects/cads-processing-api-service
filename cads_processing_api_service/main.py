@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-from typing import Type
+from typing import Optional, Type
 
 import attrs
 import fastapi
@@ -52,7 +52,7 @@ class DatabaseClient(clients.BaseClient):
         return row
 
     def get_processes_list(
-        self, limit: int | None = None, offset: int = 0
+        self, limit: Optional[int] = None, offset: int = 0
     ) -> list[models.ProcessSummary]:
         with self.session.reader.context_session() as session:
             if limit:
