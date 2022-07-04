@@ -12,17 +12,65 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import logging
 from typing import Type
 
 import attrs
+import cads_catalogue.database
 import fastapi
-import sqlalchemy as sa
+import fastapi_utils.session
+import sqlalchemy.orm
+import sqlalchemy.orm.exc
 from cads_catalogue import database
 from ogc_api_processes_fastapi import clients, main, models
 
-from . import config, dbsession, errors, serializers
+from . import config, errors
 
 settings = config.SqlalchemySettings()
+
+logger = logging.getLogger(__name__)
+
+
+def lookup_id(
+    id: str,
+    record: Type[cads_catalogue.database.BaseModel],
+    session: sqlalchemy.orm.Session,
+) -> database.BaseModel:
+    """Lookup row by id."""
+    try:
+        row = session.query(record).filter(record.resource_id == id).one()
+    except sqlalchemy.orm.exc.NoResultFound:
+        raise errors.NotFoundError(f"{record.__name__} {id} not found")
+    return row
+
+
+def process_summary_serializer(
+    db_model: cads_catalogue.database.Resource,
+) -> models.ProcessSummary:
+
+    retval = models.ProcessSummary(
+        title=f"Retrieve of {db_model.title}",
+        description=db_model.description,
+        keywords=db_model.keywords,
+        id=f"retrieve-{db_model.resource_id}",
+        version="1.0.0",
+        jobControlOptions=[
+            "async-execute",
+        ],
+        outputTransmission=[
+            "reference",
+        ],
+    )
+
+    return retval
+
+
+def process_description_serializer(db_model: database.Resource) -> models.Process:
+
+    process_summary = process_summary_serializer(db_model)
+    retval = models.Process(**process_summary.dict())
+
+    return retval
 
 
 @attrs.define
@@ -31,30 +79,16 @@ class DatabaseClient(clients.BaseClient):
     Database implementation of the OGC API - Processes endpoints.
     """
 
-    session: dbsession.Session = attrs.field(
-        default=dbsession.Session.create_from_settings(settings)
+    reader: fastapi_utils.session.FastAPISessionMaker = attrs.field(
+        default=fastapi_utils.session.FastAPISessionMaker(settings.connection_string),
+        init=False,
     )
     process_table: Type[database.Resource] = attrs.field(default=database.Resource)
-    process_serializer: Type[serializers.ProcessSerializer] = attrs.field(
-        default=serializers.ProcessSerializer
-    )
-
-    @staticmethod
-    def _lookup_id(
-        id: str,
-        table: Type[database.BaseModel],
-        session: sa.orm.Session,
-    ) -> database.BaseModel:
-        """Lookup row by id."""
-        row = session.query(table).filter(table.resource_id == id).first()
-        if not row:
-            raise errors.NotFoundError(f"{table.__name__} {id} not found")
-        return row
 
     def get_processes_list(
         self, limit: int | None = None, offset: int = 0
     ) -> list[models.ProcessSummary]:
-        with self.session.reader.context_session() as session:
+        with self.reader.context_session() as session:
             if limit:
                 processes = (
                     session.query(self.process_table).offset(offset).limit(limit).all()
@@ -62,19 +96,16 @@ class DatabaseClient(clients.BaseClient):
             else:
                 processes = session.query(self.process_table).offset(offset).all()
             processes_list = [
-                self.process_serializer.process_summary_db_to_oap(process)
-                for process in processes
+                process_summary_serializer(process) for process in processes
             ]
 
         return processes_list
 
     def get_process_description(self, process_id: str) -> models.Process:
-        with self.session.reader.context_session() as session:
+        with self.reader.context_session() as session:
             id = process_id[len("retrieve-") :]
-            process = self._lookup_id(id=id, table=self.process_table, session=session)
-            process_description = self.process_serializer.process_description_db_to_oap(
-                process
-            )
+            process = lookup_id(id=id, record=self.process_table, session=session)
+            process_description = process_description_serializer(process)
 
         return process_description
 

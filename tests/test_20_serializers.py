@@ -17,7 +17,7 @@ import datetime
 import cads_catalogue.database
 import ogc_api_processes_fastapi.models
 
-import cads_processing_api_service.serializers
+import cads_processing_api_service.main
 
 
 def get_record(id: str) -> cads_catalogue.database.Resource:
@@ -51,9 +51,7 @@ def get_record(id: str) -> cads_catalogue.database.Resource:
 
 def test_process_summary_serializer() -> None:
     record = get_record("era5-something")
-    oap_record = cads_processing_api_service.serializers.ProcessSerializer.process_summary_db_to_oap(
-        record
-    )
+    oap_record = cads_processing_api_service.main.process_summary_serializer(record)
     expected = ogc_api_processes_fastapi.models.ProcessSummary(
         title="Retrieve of ERA5",
         description="description",
@@ -68,9 +66,7 @@ def test_process_summary_serializer() -> None:
 
 def test_process_description_serializer() -> None:
     record = get_record("era5-something")
-    oap_record = cads_processing_api_service.serializers.ProcessSerializer.process_description_db_to_oap(
-        record
-    )
+    oap_record = cads_processing_api_service.main.process_description_serializer(record)
     expected = ogc_api_processes_fastapi.models.Process(
         title="Retrieve of ERA5",
         description="description",
