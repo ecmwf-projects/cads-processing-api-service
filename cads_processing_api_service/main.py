@@ -13,6 +13,7 @@
 # limitations under the License
 
 import logging
+import urllib.parse
 from typing import Type
 
 import attrs
@@ -24,7 +25,7 @@ import sqlalchemy.orm.exc
 from cads_catalogue import database
 from ogc_api_processes_fastapi import clients, main, models
 
-from . import config, errors
+from . import adaptors, config, errors
 
 settings = config.SqlalchemySettings()
 
@@ -65,12 +66,22 @@ def process_summary_serializer(
     return retval
 
 
+# TODO: this is a mock implementation. Change it when database is ready.
+def process_inputs_serializer() -> list[dict[str, models.InputDescription]]:
+    inputs = adaptors.translate_cds_into_ogc_inputs(
+        urllib.parse.urljoin(__file__, "../tests/data/form.json")
+    )
+    return inputs
+
+
 def process_description_serializer(
     db_model: database.Resource,
 ) -> models.ProcessDescription:
 
     process_summary = process_summary_serializer(db_model)
-    retval = models.ProcessDescription(**process_summary.dict())
+    retval = models.ProcessDescription(
+        **process_summary.dict(), inputs=process_inputs_serializer()
+    )
 
     return retval
 

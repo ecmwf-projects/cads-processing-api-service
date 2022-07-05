@@ -17,6 +17,8 @@ import json
 import pathlib
 from typing import Any
 
+from ogc_api_processes_fastapi import models
+
 ACCEPTED_INPUTS = [
     "product_type",
     "variable",
@@ -79,7 +81,7 @@ def build_input_ogc_schema(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
 
 def translate_cds_into_ogc_inputs(
     cds_form_file: str | pathlib.Path,
-) -> list[dict[str, Any]]:
+) -> list[dict[str, models.InputDescription]]:
 
     with open(cds_form_file, "r") as f:
         cds_form = json.load(f)
@@ -87,11 +89,13 @@ def translate_cds_into_ogc_inputs(
     inputs_ogc = []
     for input_cds_schema in cds_form:
         if input_cds_schema["name"] in ACCEPTED_INPUTS:
-            input_ogc: dict[str, Any] = {
-                input_cds_schema["name"]: {
-                    "title": input_cds_schema["label"],
-                    "schema": build_input_ogc_schema(input_cds_schema),
-                }
+            input_ogc = {
+                input_cds_schema["name"]: models.InputDescription(
+                    title=input_cds_schema["label"],
+                    schema_=models.SchemaItem(
+                        **build_input_ogc_schema(input_cds_schema)
+                    ),
+                )
             }
             inputs_ogc.append(input_ogc)
 
