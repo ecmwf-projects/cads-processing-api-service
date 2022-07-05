@@ -24,7 +24,7 @@ import sqlalchemy.orm.exc
 from cads_catalogue import database
 from ogc_api_processes_fastapi import clients, main, models
 
-from . import config, errors
+from . import adaptors, config, errors
 
 settings = config.SqlalchemySettings()
 
@@ -110,9 +110,10 @@ class DatabaseClient(clients.BaseClient):
         return process_description
 
     def post_process_execution(
-        self, process_id: str, execution_content: dict[str, Any]
+        self, process_id: str, execution_content: models.Execute
     ) -> Any:
-        return super().post_process_execution(process_id, execution_content)
+        inputs_schema = adaptors.translate_cds_into_ogc_inputs("./tests/form.json")
+        return inputs_schema
 
 
 app = fastapi.FastAPI()
