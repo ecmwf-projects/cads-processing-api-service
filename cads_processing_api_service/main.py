@@ -65,10 +65,12 @@ def process_summary_serializer(
     return retval
 
 
-def process_description_serializer(db_model: database.Resource) -> models.Process:
+def process_description_serializer(
+    db_model: database.Resource,
+) -> models.ProcessDescription:
 
     process_summary = process_summary_serializer(db_model)
-    retval = models.Process(**process_summary.dict())
+    retval = models.ProcessDescription(**process_summary.dict())
 
     return retval
 
@@ -101,7 +103,7 @@ class DatabaseClient(clients.BaseClient):
 
         return processes_list
 
-    def get_process_description(self, process_id: str) -> models.Process:
+    def get_process_description(self, process_id: str) -> models.ProcessDescription:
         with self.reader.context_session() as session:
             id = process_id[len("retrieve-") :]
             process = lookup_id(id=id, record=self.process_table, session=session)
