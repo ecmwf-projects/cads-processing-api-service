@@ -38,7 +38,7 @@ def lookup_id(
 ) -> database.BaseModel:
     """Lookup row by id."""
     try:
-        row = session.query(record).filter(record.resource_id == id).one()
+        row = session.query(record).filter(record.resource_uid == id).one()
     except sqlalchemy.orm.exc.NoResultFound:
         raise errors.NotFoundError(f"{record.__name__} {id} not found")
     return row
@@ -52,7 +52,7 @@ def process_summary_serializer(
         title=f"Retrieve of {db_model.title}",
         description=db_model.description,
         keywords=db_model.keywords,
-        id=f"retrieve-{db_model.resource_id}",
+        id=f"retrieve-{db_model.resource_uid}",
         version="1.0.0",
         jobControlOptions=[
             "async-execute",
