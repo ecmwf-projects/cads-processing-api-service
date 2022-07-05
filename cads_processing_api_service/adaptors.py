@@ -1,3 +1,17 @@
+# Copyright 2022, European Union.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import itertools
 import json
 import pathlib
@@ -14,22 +28,22 @@ ACCEPTED_INPUTS = [
 ]
 
 
-def _string_array_to_string_array(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+def string_array_to_string_array(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
     input_ogc_schema = {"type": "array", "items": {"type": "string"}}
-    input_ogc_schema["enum"] = input_cds_schema["details"]["values"]
+    input_ogc_schema["enum"] = sorted(input_cds_schema["details"]["values"])
     return input_ogc_schema
 
 
-def _string_list_to_string_array(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+def string_list_to_string_array(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
     input_ogc_schema = {"type": "array", "items": {"type": "string"}}
     values = []
     for group in input_cds_schema["details"]["groups"]:
         values.append(group["values"])
-    input_ogc_schema["enum"] = list(set(itertools.chain.from_iterable(values)))
+    input_ogc_schema["enum"] = sorted(list(set(itertools.chain.from_iterable(values))))
     return input_ogc_schema
 
 
-def _string_choice_to_string_value(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+def string_choice_to_string_value(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
     input_ogc_schema = {
         "type": "string",
         "enum": input_cds_schema["details"]["values"],
@@ -38,7 +52,7 @@ def _string_choice_to_string_value(input_cds_schema: dict[str, Any]) -> dict[str
     return input_ogc_schema
 
 
-def _extent_to_area(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+def extent_to_area(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
     input_ogc_schema = {
         "type": "array",
         "minItems": 4,
@@ -50,14 +64,14 @@ def _extent_to_area(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
 
 
 SCHEMA_TRANSLATORS = {
-    "StringListWidget": _string_array_to_string_array,
-    "StringListArrayWidget": _string_list_to_string_array,
-    "StringChoiceWidget": _string_choice_to_string_value,
-    "GeographicExtentMapWidget": _extent_to_area,
+    "StringListWidget": string_array_to_string_array,
+    "StringListArrayWidget": string_list_to_string_array,
+    "StringChoiceWidget": string_choice_to_string_value,
+    "GeographicExtentMapWidget": extent_to_area,
 }
 
 
-def _build_input_ogc_schema(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+def build_input_ogc_schema(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
     input_cds_type = input_cds_schema["type"]
     input_ogc_schema = SCHEMA_TRANSLATORS[input_cds_type](input_cds_schema)
     return input_ogc_schema
@@ -76,7 +90,7 @@ def translate_cds_into_ogc_inputs(
             input_ogc: dict[str, Any] = {
                 input_cds_schema["name"]: {
                     "title": input_cds_schema["label"],
-                    "schema": _build_input_ogc_schema(input_cds_schema),
+                    "schema": build_input_ogc_schema(input_cds_schema),
                 }
             }
             inputs_ogc.append(input_ogc)
