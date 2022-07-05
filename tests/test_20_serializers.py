@@ -66,7 +66,7 @@ def test_process_summary_serializer() -> None:
 def test_process_description_serializer() -> None:
     record = get_record("era5-something")
     oap_record = cads_processing_api_service.main.process_description_serializer(record)
-    expected = ogc_api_processes_fastapi.models.Process(
+    expected = ogc_api_processes_fastapi.models.ProcessDescription(
         title="Retrieve of ERA5",
         description="description",
         keywords=["label 1", "label 2"],
