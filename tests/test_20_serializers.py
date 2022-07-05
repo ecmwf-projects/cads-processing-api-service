@@ -22,7 +22,7 @@ import cads_processing_api_service.main
 
 def get_record(id: str) -> cads_catalogue.database.Resource:
     return cads_catalogue.database.Resource(
-        resource_id=id,
+        resource_uid=id,
         title="ERA5",
         description="description",
         abstract="Lorem ipsum dolor",
