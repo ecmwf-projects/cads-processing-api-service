@@ -13,7 +13,7 @@
 # limitations under the License
 
 import logging
-from typing import Type
+from typing import Any, Type
 
 import attrs
 import cads_catalogue.database
@@ -108,6 +108,11 @@ class DatabaseClient(clients.BaseClient):
             process_description = process_description_serializer(process)
 
         return process_description
+
+    def post_process_execution(
+        self, process_id: str, execution_content: dict[str, Any]
+    ) -> Any:
+        return super().post_process_execution(process_id, execution_content)
 
 
 app = fastapi.FastAPI()
