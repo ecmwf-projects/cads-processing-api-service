@@ -34,7 +34,6 @@ def get_record(id: str) -> cads_catalogue.database.Resource:
         variables=["var1", "var2"],
         providers=["provider 1", "provider 2"],
         extent=[[-180, 180], [-90, 90]],
-        links=[{"rel": "foo", "href": "http://foo.com"}],
         documentation="documentation",
         previewimage="img",
         publication_date=datetime.datetime.strptime(
