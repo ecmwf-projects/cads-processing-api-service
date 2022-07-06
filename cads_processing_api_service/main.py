@@ -13,16 +13,18 @@
 # limitations under the License
 
 import logging
+import urllib.parse
 from typing import Any, Type
 
 import attrs
 import cads_catalogue.database
 import fastapi
 import fastapi_utils.session
+import ogc_api_processes_fastapi
+import ogc_api_processes_fastapi.clients
+import ogc_api_processes_fastapi.models
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
-from cads_catalogue import database
-from ogc_api_processes_fastapi import clients, main, models
 
 from . import adaptors, config, errors
 
@@ -35,7 +37,7 @@ def lookup_id(
     id: str,
     record: Type[cads_catalogue.database.BaseModel],
     session: sqlalchemy.orm.Session,
-) -> database.BaseModel:
+) -> cads_catalogue.database.BaseModel:
     """Lookup row by id."""
     try:
         row = session.query(record).filter(record.resource_uid == id).one()
@@ -46,9 +48,9 @@ def lookup_id(
 
 def process_summary_serializer(
     db_model: cads_catalogue.database.Resource,
-) -> models.ProcessSummary:
+) -> ogc_api_processes_fastapi.models.ProcessSummary:
 
-    retval = models.ProcessSummary(
+    retval = ogc_api_processes_fastapi.models.ProcessSummary(
         title=f"Retrieve of {db_model.title}",
         description=db_model.description,
         keywords=db_model.keywords,
@@ -65,18 +67,31 @@ def process_summary_serializer(
     return retval
 
 
+# TODO: this is a mock implementation. Change it when database is ready.
+def process_inputs_serializer() -> list[
+    dict[str, ogc_api_processes_fastapi.models.InputDescription]
+]:
+    inputs = adaptors.translate_cds_into_ogc_inputs(
+        urllib.parse.urljoin(__file__, "../tests/data/form.json")
+    )
+    return inputs
+
+
 def process_description_serializer(
-    db_model: database.Resource,
-) -> models.ProcessDescription:
+    db_model: cads_catalogue.database.Resource,
+) -> ogc_api_processes_fastapi.models.ProcessDescription:
 
     process_summary = process_summary_serializer(db_model)
-    retval = models.ProcessDescription(**process_summary.dict())
+    retval = ogc_api_processes_fastapi.models.ProcessDescription(
+        **process_summary.dict(),
+        inputs=process_inputs_serializer(),
+    )
 
     return retval
 
 
 @attrs.define
-class DatabaseClient(clients.BaseClient):
+class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     """
     Database implementation of the OGC API - Processes endpoints.
     """
@@ -85,11 +100,13 @@ class DatabaseClient(clients.BaseClient):
         default=fastapi_utils.session.FastAPISessionMaker(settings.connection_string),
         init=False,
     )
-    process_table: Type[database.Resource] = attrs.field(default=database.Resource)
+    process_table: Type[cads_catalogue.database.Resource] = attrs.field(
+        default=cads_catalogue.database.Resource
+    )
 
     def get_processes_list(
         self, limit: int | None = None, offset: int = 0
-    ) -> list[models.ProcessSummary]:
+    ) -> list[ogc_api_processes_fastapi.models.ProcessSummary]:
         with self.reader.context_session() as session:
             if limit:
                 processes = (
@@ -103,20 +120,35 @@ class DatabaseClient(clients.BaseClient):
 
         return processes_list
 
-    def get_process_description(self, process_id: str) -> models.ProcessDescription:
+    def get_process_description(
+        self, process_id: str
+    ) -> ogc_api_processes_fastapi.models.ProcessDescription:
         with self.reader.context_session() as session:
             id = process_id[len("retrieve-") :]
             process = lookup_id(id=id, record=self.process_table, session=session)
             process_description = process_description_serializer(process)
+            process_description.outputs = [
+                {
+                    "download_url": ogc_api_processes_fastapi.models.OutputDescription(
+                        title="Download URL",
+                        description="URL to download process result",
+                        schema_=ogc_api_processes_fastapi.models.SchemaItem(  # type: ignore
+                            type="string", format="url"
+                        ),
+                    )
+                }
+            ]
 
         return process_description
 
     def post_process_execution(
-        self, process_id: str, execution_content: models.Execute
+        self,
+        process_id: str,
+        execution_content: ogc_api_processes_fastapi.models.Execute,
     ) -> Any:
         inputs_schema = adaptors.translate_cds_into_ogc_inputs("./tests/form.json")
         return inputs_schema
 
 
 app = fastapi.FastAPI()
-app = main.include_ogc_api_processes_routers(app=app, client=DatabaseClient())
+app = ogc_api_processes_fastapi.include_routers(app=app, client=DatabaseClient())
