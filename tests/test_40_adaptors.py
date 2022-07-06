@@ -40,8 +40,7 @@ def test_string_array_to_string_array() -> None:
     test_input = TEST_INPUT["string_array"]
     exp_ouput = {
         "type": "array",
-        "items": {"type": "string"},
-        "enum": ["val1", "val2", "val3"],
+        "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
     }
     res_output = cads_processing_api_service.adaptors.string_array_to_string_array(
         test_input
@@ -54,8 +53,7 @@ def test_string_list_to_string_array() -> None:
     test_input = TEST_INPUT["string_list"]
     exp_ouput = {
         "type": "array",
-        "items": {"type": "string"},
-        "enum": ["val1", "val2", "val3"],
+        "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
     }
     res_output = cads_processing_api_service.adaptors.string_list_to_string_array(
         test_input
