@@ -141,7 +141,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return process_description
 
-    def post_process_execution(
+    def post_process_execute(
         self,
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
