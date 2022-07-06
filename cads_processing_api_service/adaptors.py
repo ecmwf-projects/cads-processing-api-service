@@ -92,7 +92,7 @@ def translate_cds_into_ogc_inputs(
             input_ogc = {
                 input_cds_schema["name"]: models.InputDescription(
                     title=input_cds_schema["label"],
-                    schema_=models.SchemaItem(
+                    schema_=models.SchemaItem(  # type: ignore
                         **build_input_ogc_schema(input_cds_schema)
                     ),
                 )
