@@ -143,6 +143,4 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
 
 app = fastapi.FastAPI()
-app = ogc_api_processes_fastapi.include_ogc_api_processes_routers(
-    app=app, client=DatabaseClient()
-)
+app = ogc_api_processes_fastapi.include_routers(app=app, client=DatabaseClient())
