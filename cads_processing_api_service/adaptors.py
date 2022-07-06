@@ -31,17 +31,19 @@ ACCEPTED_INPUTS = [
 
 
 def string_array_to_string_array(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
-    input_ogc_schema = {"type": "array", "items": {"type": "string"}}
-    input_ogc_schema["enum"] = sorted(input_cds_schema["details"]["values"])
+    input_ogc_schema: dict[str, Any] = {"type": "array", "items": {"type": "string"}}
+    input_ogc_schema["items"]["enum"] = sorted(input_cds_schema["details"]["values"])
     return input_ogc_schema
 
 
 def string_list_to_string_array(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
-    input_ogc_schema = {"type": "array", "items": {"type": "string"}}
+    input_ogc_schema: dict[str, Any] = {"type": "array", "items": {"type": "string"}}
     values = []
     for group in input_cds_schema["details"]["groups"]:
         values.append(group["values"])
-    input_ogc_schema["enum"] = sorted(list(set(itertools.chain.from_iterable(values))))
+    input_ogc_schema["items"]["enum"] = sorted(
+        list(set(itertools.chain.from_iterable(values)))
+    )
     return input_ogc_schema
 
 
