@@ -146,8 +146,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
     ) -> Any:
-        inputs_schema = adaptors.translate_cds_into_ogc_inputs("./tests/form.json")
-        return inputs_schema
+        retval = {
+            "message": f"requested execution of process {process_id}",
+            "request_content": execution_content,
+            "process_description": self.get_process_description(process_id),
+        }
+        return retval
 
 
 app = fastapi.FastAPI()
