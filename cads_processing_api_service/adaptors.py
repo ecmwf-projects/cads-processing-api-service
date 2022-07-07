@@ -84,6 +84,19 @@ def build_input_ogc_schema(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
 def translate_cds_into_ogc_inputs(
     cds_form_file: str | pathlib.Path,
 ) -> list[dict[str, models.InputDescription]]:
+    """Translate inputs information contained in the provided CDS form file
+    into a Python object compatible with the OGC API - Processes standard.
+
+    Parameters
+    ----------
+    cds_form_file : str | pathlib.Path
+        Path to the CDS form file.
+
+    Returns
+    -------
+    list[dict[str, models.InputDescription]]
+        Python object containing translated inputs information.
+    """
 
     with open(cds_form_file, "r") as f:
         cds_form = json.load(f)

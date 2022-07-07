@@ -38,7 +38,28 @@ def lookup_id(
     record: Type[cads_catalogue.database.BaseModel],
     session: sqlalchemy.orm.Session,
 ) -> cads_catalogue.database.BaseModel:
-    """Lookup row by id."""
+    """Lookup `record` instance containing identifier `id` in the provided
+    SQLAlchemy `session`.
+
+    Parameters
+    ----------
+    id : str
+        Identifier to look up.
+    record : Type[cads_catalogue.database.BaseModel]
+        Record for which to look for identifier `id`.
+    session : sqlalchemy.orm.Session
+        SQLAlchemy ORM session.
+
+    Returns
+    -------
+    cads_catalogue.database.BaseModel
+        Record instance containing identifier `id`.
+
+    Raises
+    ------
+    errors.NotFoundError
+        If not `record` instance is found containing identifier `id`.
+    """
     try:
         row = session.query(record).filter(record.resource_uid == id).one()
     except sqlalchemy.orm.exc.NoResultFound:
@@ -49,6 +70,19 @@ def lookup_id(
 def process_summary_serializer(
     db_model: cads_catalogue.database.Resource,
 ) -> ogc_api_processes_fastapi.models.ProcessSummary:
+    """Convert provided database entry into a representation of a process
+    summary.
+
+    Parameters
+    ----------
+    db_model : cads_catalogue.database.Resource
+        Database entry.
+
+    Returns
+    -------
+    ogc_api_processes_fastapi.models.ProcessSummary
+        Process summary representation.
+    """
 
     retval = ogc_api_processes_fastapi.models.ProcessSummary(
         title=f"Retrieve of {db_model.title}",
@@ -71,6 +105,14 @@ def process_summary_serializer(
 def process_inputs_serializer() -> list[
     dict[str, ogc_api_processes_fastapi.models.InputDescription]
 ]:
+    """Convert provided database entry into a representation of a process
+    summary.
+
+    Returns
+    -------
+    list[ dict[str, ogc_api_processes_fastapi.models.InputDescription] ]
+        Process inputs representation.
+    """
     inputs = adaptors.translate_cds_into_ogc_inputs(
         urllib.parse.urljoin(__file__, "../tests/data/form.json")
     )
@@ -80,6 +122,14 @@ def process_inputs_serializer() -> list[
 def process_description_serializer(
     db_model: cads_catalogue.database.Resource,
 ) -> ogc_api_processes_fastapi.models.ProcessDescription:
+    """Convert provided database entry into a representation of a process
+    description.
+
+    Returns
+    -------
+    ogc_api_processes_fastapi.models.ProcessDescription
+        Process description representation.
+    """
 
     process_summary = process_summary_serializer(db_model)
     retval = ogc_api_processes_fastapi.models.ProcessDescription(
@@ -92,8 +142,14 @@ def process_description_serializer(
 
 @attrs.define
 class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
-    """
-    Database implementation of the OGC API - Processes endpoints.
+    """Database implementation of the OGC API - Processes endpoints.
+
+    Attributes
+    ----------
+    reader : fastapi_utils.session.FastAPISessionMaker
+        SQLAlchemy ORM session reader.
+    process_table: Type[cads_catalogue.database.Resource]
+        Processes record/table.
     """
 
     reader: fastapi_utils.session.FastAPISessionMaker = attrs.field(
@@ -107,6 +163,23 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_processes_list(
         self, limit: int | None = None, offset: int = 0
     ) -> list[ogc_api_processes_fastapi.models.ProcessSummary]:
+        """Implements OGC API - Processes `GET /processes` endpoint.
+
+        Get the list of available processes from the database.
+
+        Parameters
+        ----------
+        limit : int | None, optional
+            Number of processes summaries to be returned.
+        offset : int, optional
+            Index (starting from 0) of the first process summary
+            to be returned, by default 0.
+
+        Returns
+        -------
+        list[ogc_api_processes_fastapi.models.ProcessSummary]
+            List of available processes.
+        """
         with self.reader.context_session() as session:
             if limit:
                 processes = (
@@ -123,6 +196,20 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_process_description(
         self, process_id: str
     ) -> ogc_api_processes_fastapi.models.ProcessDescription:
+        """Implements OGC API - Processes `GET /processes/{process_id}` endpoint.
+
+        Get the description of the process identified by `process_id`.
+
+        Parameters
+        ----------
+        process_id : str
+            Process identifier.
+
+        Returns
+        -------
+        ogc_api_processes_fastapi.models.ProcessDescription
+            Process description.
+        """
         with self.reader.context_session() as session:
             id = process_id[len("retrieve-") :]
             process = lookup_id(id=id, record=self.process_table, session=session)
@@ -146,6 +233,22 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
     ) -> Any:
+        """Implements OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
+
+        Request execution of the process identified by `process_id`.
+
+        Parameters
+        ----------
+        process_id : str
+            Process identifier.
+        execution_content : ogc_api_processes_fastapi.models.Execute
+            Process execution details (e.g. inputs).
+
+        Returns
+        -------
+        Any
+            _description_
+        """
         retval = {
             "message": f"requested execution of process {process_id}",
             "request_content": execution_content,

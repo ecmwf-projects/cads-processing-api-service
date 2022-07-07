@@ -18,12 +18,20 @@ import pydantic
 class SqlalchemySettings(pydantic.BaseSettings):
     """Postgres-specific API settings.
 
-    Attributes:
-        postgres_user: postgres username.
-        postgres_password: postgres password.
-        postgres_host: hostname for the connection.
-        postgres_port: database port.
-        postgres_dbname: database name.
+    Attributes
+    ----------
+    postgres_user: str
+        postgres username.
+    postgres_password: str
+        postgres password.
+    postgres_host: str
+        hostname for the connection.
+    postgres_port: str
+        database port.
+    postgres_dbname: str
+        database name.
+    connection_string: str
+        reader psql connection string.
     """
 
     postgres_user: str = "catalogue"
@@ -34,7 +42,13 @@ class SqlalchemySettings(pydantic.BaseSettings):
 
     @property
     def connection_string(self) -> str:
-        """Create reader psql connection string."""
+        """Create reader psql connection string.
+
+        Returns
+        -------
+        str
+            Reader psql connection string.
+        """
         return (
             f"postgresql://{self.postgres_user}"
             f":{self.postgres_password}@{self.postgres_host}"
