@@ -14,7 +14,7 @@
 
 import logging
 import urllib.parse
-from typing import Any, Type
+from typing import Type
 
 import attrs
 import cads_catalogue.database
@@ -232,7 +232,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
-    ) -> Any:
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implements OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
         Request execution of the process identified by `process_id`.
@@ -246,15 +246,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        Any
-            _description_
+        ogc_api_processes_fastapi.models.StatusInfo
+            Information on the status of the job.
         """
-        retval = {
-            "message": f"requested execution of process {process_id}",
-            "request_content": execution_content,
-            "process_description": self.get_process_description(process_id),
-        }
-        return retval
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(
+            jobID=1,
+            status=ogc_api_processes_fastapi.models.StatusCode.accepted,
+            type=ogc_api_processes_fastapi.models.JobType.process,
+        )
+        return status_info
 
 
 app = fastapi.FastAPI()
