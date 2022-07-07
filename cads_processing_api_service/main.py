@@ -256,6 +256,31 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         return status_info
 
+    def get_job_status(
+        self, job_id: str
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+        """Implements OGC API - Processes `GET /jobs/{job_id}` endpoint.
+
+        Get status information for the job identifed by `job_id`.
+
+        Parameters
+        ----------
+        job_id : str
+            Identifier of the job.
+
+        Returns
+        -------
+        models.StatusInfo
+            Information on the status of the job.
+        """
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(
+            jobID=1,
+            status=ogc_api_processes_fastapi.models.StatusCode.running,
+            type=ogc_api_processes_fastapi.models.JobType.process,
+        )
+
+        return status_info
+
 
 app = fastapi.FastAPI()
 app = ogc_api_processes_fastapi.include_routers(app=app, client=DatabaseClient())
