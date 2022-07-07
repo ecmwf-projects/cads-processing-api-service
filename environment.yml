@@ -15,3 +15,4 @@ dependencies:
 - uvicorn
 - pip:
   - fastapi-utils
+  - git+https://github.com/ecmwf-projects/ogc-api-processes-fastapi.git
