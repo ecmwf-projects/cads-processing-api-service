@@ -14,7 +14,7 @@
 
 import logging
 import urllib.parse
-from typing import Type
+from typing import Any, Type
 
 import attrs
 import cads_catalogue.database
@@ -140,6 +140,18 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             ]
 
         return process_description
+
+    def post_process_execute(
+        self,
+        process_id: str,
+        execution_content: ogc_api_processes_fastapi.models.Execute,
+    ) -> Any:
+        retval = {
+            "message": f"requested execution of process {process_id}",
+            "request_content": execution_content,
+            "process_description": self.get_process_description(process_id),
+        }
+        return retval
 
 
 app = fastapi.FastAPI()
