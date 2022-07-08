@@ -279,6 +279,27 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return status_info
 
+    def get_job_results(self, job_id: str) -> ogc_api_processes_fastapi.models.Link:
+        """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
+
+        Get results for the job identifed by `job_id`.
+
+        Parameters
+        ----------
+        job_id : str
+            Identifier of the job.
+
+        Returns
+        -------
+        models.Link
+            Link to the job results.
+        """
+        results_link = ogc_api_processes_fastapi.models.Link(
+            href="https://example.org/job-1-results.nc",
+            title="Download link for the result of job job-1",
+        )
+        return results_link
+
 
 app = fastapi.FastAPI()
 app = ogc_api_processes_fastapi.include_routers(app=app, client=DatabaseClient())
