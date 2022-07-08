@@ -280,7 +280,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         return status_info
 
     def get_job_results(self, job_id: str) -> ogc_api_processes_fastapi.models.Link:
-        """Implements OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
+        """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
 
         Get results for the job identifed by `job_id`.
 
