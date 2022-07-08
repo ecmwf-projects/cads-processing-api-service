@@ -158,7 +158,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         default=cads_catalogue.database.Resource
     )
 
-    def get_processes_list(
+    def get_processes(
         self, limit: int | None = None, offset: int = 0
     ) -> list[ogc_api_processes_fastapi.models.ProcessSummary]:
         """Implement OGC API - Processes `GET /processes` endpoint.
@@ -191,7 +191,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return processes_list
 
-    def get_process_description(
+    def get_process(
         self, process_id: str
     ) -> ogc_api_processes_fastapi.models.ProcessDescription:
         """Implement OGC API - Processes `GET /processes/{process_id}` endpoint.
@@ -254,9 +254,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         return status_info
 
-    def get_job_status(
-        self, job_id: str
-    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+    def get_job(self, job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
         Get status information for the job identifed by `job_id`.
