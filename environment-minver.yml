@@ -3,5 +3,8 @@ channels:
 - nodefaults
 dependencies:
 - make
+- pip
 - pytest
 - pytest-cov
+- pip:
+  - git+https://github.com/ecmwf-projects/ogc-api-processes-fastapi.git

@@ -5,13 +5,18 @@ dependencies:
 - fastapi
 - make
 - mypy
+- myst-parser
 - pip
 - pre-commit
+- pydata-sphinx-theme
 - pytest
 - pytest-cov
 - python>=3.10
+- sphinx
+- sphinxcontrib-apidoc
 - sqlalchemy
 - sqlalchemy-stubs
 - uvicorn
 - pip:
   - fastapi-utils
+  - git+https://github.com/ecmwf-projects/ogc-api-processes-fastapi.git
