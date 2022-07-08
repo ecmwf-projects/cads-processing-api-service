@@ -1,3 +1,5 @@
+"""CADS Processing client, implementing the OGC API Processes standard."""
+
 # Copyright 2022, European Union.
 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,8 +40,9 @@ def lookup_id(
     record: Type[cads_catalogue.database.BaseModel],
     session: sqlalchemy.orm.Session,
 ) -> cads_catalogue.database.BaseModel:
-    """Lookup `record` instance containing identifier `id` in the provided
-    SQLAlchemy `session`.
+    """Search database record by id.
+
+    Lookup `record` instance containing identifier `id` in the provided SQLAlchemy `session`.
 
     Parameters
     ----------
@@ -70,8 +73,7 @@ def lookup_id(
 def process_summary_serializer(
     db_model: cads_catalogue.database.Resource,
 ) -> ogc_api_processes_fastapi.models.ProcessSummary:
-    """Convert provided database entry into a representation of a process
-    summary.
+    """Convert provided database entry into a representation of a process summary.
 
     Parameters
     ----------
@@ -83,7 +85,6 @@ def process_summary_serializer(
     ogc_api_processes_fastapi.models.ProcessSummary
         Process summary representation.
     """
-
     retval = ogc_api_processes_fastapi.models.ProcessSummary(
         title=f"Retrieve of {db_model.title}",
         description=db_model.description,
@@ -105,8 +106,7 @@ def process_summary_serializer(
 def process_inputs_serializer() -> list[
     dict[str, ogc_api_processes_fastapi.models.InputDescription]
 ]:
-    """Convert provided database entry into a representation of a process
-    summary.
+    """Convert provided database entry into a representation of a process inputs.
 
     Returns
     -------
@@ -122,15 +122,13 @@ def process_inputs_serializer() -> list[
 def process_description_serializer(
     db_model: cads_catalogue.database.Resource,
 ) -> ogc_api_processes_fastapi.models.ProcessDescription:
-    """Convert provided database entry into a representation of a process
-    description.
+    """Convert provided database entry into a representation of a process description.
 
     Returns
     -------
     ogc_api_processes_fastapi.models.ProcessDescription
         Process description representation.
     """
-
     process_summary = process_summary_serializer(db_model)
     retval = ogc_api_processes_fastapi.models.ProcessDescription(
         **process_summary.dict(),
@@ -163,7 +161,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_processes_list(
         self, limit: int | None = None, offset: int = 0
     ) -> list[ogc_api_processes_fastapi.models.ProcessSummary]:
-        """Implements OGC API - Processes `GET /processes` endpoint.
+        """Implement OGC API - Processes `GET /processes` endpoint.
 
         Get the list of available processes from the database.
 
@@ -196,7 +194,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_process_description(
         self, process_id: str
     ) -> ogc_api_processes_fastapi.models.ProcessDescription:
-        """Implements OGC API - Processes `GET /processes/{process_id}` endpoint.
+        """Implement OGC API - Processes `GET /processes/{process_id}` endpoint.
 
         Get the description of the process identified by `process_id`.
 
@@ -233,7 +231,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
-        """Implements OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
+        """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
         Request execution of the process identified by `process_id`.
 
@@ -259,7 +257,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_job_status(
         self, job_id: str
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
-        """Implements OGC API - Processes `GET /jobs/{job_id}` endpoint.
+        """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
         Get status information for the job identifed by `job_id`.
 
