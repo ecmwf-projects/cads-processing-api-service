@@ -16,6 +16,7 @@
 
 import json
 import logging
+import random
 import urllib.parse
 from typing import Type
 
@@ -34,6 +35,8 @@ from . import adaptors, config, errors
 settings = config.SqlalchemySettings()
 
 logger = logging.getLogger(__name__)
+
+JOBS: dict[str, str] = {}
 
 
 def lookup_id(
@@ -248,10 +251,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.StatusInfo
             Information on the status of the job.
         """
+        job_id = f"{random.randint(1,1000):04}"
+        while job_id in JOBS.keys():
+            job_id = f"{random.randint(1,1000):04}"
+        JOBS[job_id] = "running"
         status_info = ogc_api_processes_fastapi.models.StatusInfo(
-            jobID=1,
+            jobID=job_id,
             status=ogc_api_processes_fastapi.models.StatusCode.accepted,
             type=ogc_api_processes_fastapi.models.JobType.process,
+            processID=process_id,
         )
         return status_info
 
@@ -270,9 +278,17 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Information on the status of the job.
         """
+        if job_id not in JOBS.keys():
+            raise fastapi.HTTPException(
+                status_code=404, detail=f"Job {job_id} not found"
+            )
+        elif JOBS[job_id] == "running":
+            random_number = random.randint(1, 10)
+            if random_number >= 9:
+                JOBS[job_id] = "successful"
         status_info = ogc_api_processes_fastapi.models.StatusInfo(
-            jobID=1,
-            status=ogc_api_processes_fastapi.models.StatusCode.running,
+            jobID=job_id,
+            status=JOBS[job_id],
             type=ogc_api_processes_fastapi.models.JobType.process,
         )
 
@@ -293,9 +309,17 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.Link
             Link to the job results.
         """
+        if job_id not in JOBS.keys():
+            raise fastapi.HTTPException(
+                status_code=404, detail=f"Job {job_id} not found."
+            )
+        elif JOBS[job_id] == "running":
+            raise fastapi.HTTPException(
+                status_code=404, detail=f"Job {job_id} still running."
+            )
         results_link = ogc_api_processes_fastapi.models.Link(
-            href="https://example.org/job-1-results.nc",
-            title="Download link for the result of job job-1",
+            href=f"https://example.org/{job_id}-results.nc",
+            title=f"Download link for the result of job {job_id}",
         )
         return results_link
 
