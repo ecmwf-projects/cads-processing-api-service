@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import json
 import logging
 import urllib.parse
 from typing import Type
@@ -87,7 +88,7 @@ def process_summary_serializer(
     """
     retval = ogc_api_processes_fastapi.models.ProcessSummary(
         title=f"Retrieve of {db_model.title}",
-        description=db_model.description,
+        description=json.dumps(db_model.description),
         keywords=db_model.keywords,
         id=f"retrieve-{db_model.resource_uid}",
         version="1.0.0",
