@@ -282,22 +282,17 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_id = f"{random.randint(1,1000):04}"
         while job_id in JOBS.keys():
             job_id = f"{random.randint(1,1000):04}"
-        JOBS[job_id] = {"status": "accepted"}
-        JOBS[job_id]["created"] = datetime.datetime.now()
-        JOBS[job_id]["started"] = None
-        JOBS[job_id]["finished"] = None
-        JOBS[job_id]["updated"] = datetime.datetime.now()
-        JOBS[job_id]["processID"] = process_id
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(
-            jobID=job_id,
-            status=JOBS[job_id]["status"],
-            type=ogc_api_processes_fastapi.models.JobType.process,
-            processID=JOBS[job_id]["processID"],
-            created=JOBS[job_id]["created"],
-            started=JOBS[job_id]["started"],
-            finished=JOBS[job_id]["finished"],
-            updated=JOBS[job_id]["updated"],
-        )
+        JOBS[job_id] = {
+            "jobID": job_id,
+            "status": "accepted",
+            "type": "process",
+            "created": datetime.datetime.now(),
+            "started": None,
+            "finished": None,
+            "updated": datetime.datetime.now(),
+            "processID": process_id,
+        }
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
         return status_info
 
     def get_jobs(self) -> list[ogc_api_processes_fastapi.models.StatusInfo]:
@@ -314,7 +309,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         list[ogc_api_processes_fastapi.models.StatusInfo]
             Information on the status of the job.
         """
-        ...
+        for job_id in JOBS:
+            update_job_status(job_id)
+        jobs_list = [
+            ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+            for job_id in JOBS
+        ]
+        return jobs_list
 
     def get_job(self, job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
@@ -337,16 +338,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             )
         else:
             update_job_status(job_id)
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(
-            jobID=job_id,
-            status=JOBS[job_id]["status"],
-            type=ogc_api_processes_fastapi.models.JobType.process,
-            processID=JOBS[job_id]["processID"],
-            created=JOBS[job_id]["created"],
-            started=JOBS[job_id]["started"],
-            finished=JOBS[job_id]["finished"],
-            updated=JOBS[job_id]["updated"],
-        )
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
 
         return status_info
 
