@@ -14,8 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import datetime
 import json
 import logging
+import random
 import urllib.parse
 from typing import Type
 
@@ -34,6 +36,8 @@ from . import adaptors, config, errors
 settings = config.SqlalchemySettings()
 
 logger = logging.getLogger(__name__)
+
+JOBS: dict[str, dict[str, str | datetime.datetime | None]] = {}
 
 
 def lookup_id(
@@ -248,10 +252,24 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.StatusInfo
             Information on the status of the job.
         """
+        job_id = f"{random.randint(1,1000):04}"
+        while job_id in JOBS.keys():
+            job_id = f"{random.randint(1,1000):04}"
+        JOBS[job_id] = {"status": "accepted"}
+        JOBS[job_id]["created"] = datetime.datetime.now()
+        JOBS[job_id]["started"] = None
+        JOBS[job_id]["finished"] = None
+        JOBS[job_id]["updated"] = datetime.datetime.now()
+        JOBS[job_id]["processID"] = process_id
         status_info = ogc_api_processes_fastapi.models.StatusInfo(
-            jobID=1,
-            status=ogc_api_processes_fastapi.models.StatusCode.accepted,
+            jobID=job_id,
+            status=JOBS[job_id]["status"],
             type=ogc_api_processes_fastapi.models.JobType.process,
+            processID=JOBS[job_id]["processID"],
+            created=JOBS[job_id]["created"],
+            started=JOBS[job_id]["started"],
+            finished=JOBS[job_id]["finished"],
+            updated=JOBS[job_id]["updated"],
         )
         return status_info
 
@@ -270,10 +288,31 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Information on the status of the job.
         """
+        if job_id not in JOBS.keys():
+            raise fastapi.HTTPException(
+                status_code=404, detail=f"Job {job_id} not found"
+            )
+        elif JOBS[job_id]["status"] == "accepted":
+            random_number = random.randint(1, 10)
+            if random_number >= 5:
+                JOBS[job_id]["status"] = "running"
+                JOBS[job_id]["updated"] = datetime.datetime.now()
+                JOBS[job_id]["started"] = datetime.datetime.now()
+        elif JOBS[job_id]["status"] == "running":
+            random_number = random.randint(1, 10)
+            if random_number >= 9:
+                JOBS[job_id]["status"] = "successful"
+                JOBS[job_id]["updated"] = datetime.datetime.now()
+                JOBS[job_id]["finished"] = datetime.datetime.now()
         status_info = ogc_api_processes_fastapi.models.StatusInfo(
-            jobID=1,
-            status=ogc_api_processes_fastapi.models.StatusCode.running,
+            jobID=job_id,
+            status=JOBS[job_id]["status"],
             type=ogc_api_processes_fastapi.models.JobType.process,
+            processID=JOBS[job_id]["processID"],
+            created=JOBS[job_id]["created"],
+            started=JOBS[job_id]["started"],
+            finished=JOBS[job_id]["finished"],
+            updated=JOBS[job_id]["updated"],
         )
 
         return status_info
@@ -293,9 +332,17 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.Link
             Link to the job results.
         """
+        if job_id not in JOBS.keys():
+            raise fastapi.HTTPException(
+                status_code=404, detail=f"Job {job_id} not found."
+            )
+        elif JOBS[job_id]["status"] != "successful":
+            raise fastapi.HTTPException(
+                status_code=404, detail=f"Job {job_id} is not finished yet."
+            )
         results_link = ogc_api_processes_fastapi.models.Link(
-            href="https://example.org/job-1-results.nc",
-            title="Download link for the result of job job-1",
+            href=f"https://example.org/{job_id}-results.nc",
+            title=f"Download link for the result of job {job_id}",
         )
         return results_link
 
