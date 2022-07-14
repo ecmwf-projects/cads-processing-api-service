@@ -22,6 +22,7 @@ import urllib.parse
 from typing import Type
 
 import attrs
+import cads_catalogue.config
 import cads_catalogue.database
 import fastapi
 import fastapi_utils.session
@@ -31,9 +32,9 @@ import ogc_api_processes_fastapi.models
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
-from . import adaptors, config, errors
+from . import adaptors, errors
 
-settings = config.SqlalchemySettings()
+settings = cads_catalogue.config.SqlalchemySettings()
 
 logger = logging.getLogger(__name__)
 
