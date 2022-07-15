@@ -130,6 +130,11 @@ def process_description_serializer(
 ) -> ogc_api_processes_fastapi.models.ProcessDescription:
     """Convert provided database entry into a representation of a process description.
 
+    Parameters
+    ----------
+    db_model : cads_catalogue.database.Resource
+        Database entry.
+
     Returns
     -------
     ogc_api_processes_fastapi.models.ProcessDescription
@@ -142,6 +147,28 @@ def process_description_serializer(
     )
 
     return retval
+
+
+def update_job_status(job_id: str) -> None:
+    """Randomly update status of job `job_id`.
+
+    Parameters
+    ----------
+    job_id : str
+        Job ID.
+    """
+    if JOBS[job_id]["status"] == "accepted":
+        random_number = random.randint(1, 10)
+        if random_number >= 5:
+            JOBS[job_id]["status"] = "running"
+            JOBS[job_id]["updated"] = datetime.datetime.now()
+            JOBS[job_id]["started"] = datetime.datetime.now()
+    elif JOBS[job_id]["status"] == "running":
+        random_number = random.randint(1, 10)
+        if random_number >= 9:
+            JOBS[job_id]["status"] = "successful"
+            JOBS[job_id]["updated"] = datetime.datetime.now()
+            JOBS[job_id]["finished"] = datetime.datetime.now()
 
 
 @attrs.define
@@ -256,23 +283,40 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_id = f"{random.randint(1,1000):04}"
         while job_id in JOBS.keys():
             job_id = f"{random.randint(1,1000):04}"
-        JOBS[job_id] = {"status": "accepted"}
-        JOBS[job_id]["created"] = datetime.datetime.now()
-        JOBS[job_id]["started"] = None
-        JOBS[job_id]["finished"] = None
-        JOBS[job_id]["updated"] = datetime.datetime.now()
-        JOBS[job_id]["processID"] = process_id
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(
-            jobID=job_id,
-            status=JOBS[job_id]["status"],
-            type=ogc_api_processes_fastapi.models.JobType.process,
-            processID=JOBS[job_id]["processID"],
-            created=JOBS[job_id]["created"],
-            started=JOBS[job_id]["started"],
-            finished=JOBS[job_id]["finished"],
-            updated=JOBS[job_id]["updated"],
-        )
+        JOBS[job_id] = {
+            "jobID": job_id,
+            "status": "accepted",
+            "type": "process",
+            "created": datetime.datetime.now(),
+            "started": None,
+            "finished": None,
+            "updated": datetime.datetime.now(),
+            "processID": process_id,
+        }
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
         return status_info
+
+    def get_jobs(self) -> list[ogc_api_processes_fastapi.models.StatusInfo]:
+        """Implement OGC API - Processes `GET /jobs` endpoint.
+
+        Get jobs' status information list.
+
+        Parameters
+        ----------
+        ...
+
+        Returns
+        -------
+        list[ogc_api_processes_fastapi.models.StatusInfo]
+            Information on the status of the job.
+        """
+        for job_id in JOBS:
+            update_job_status(job_id)
+        jobs_list = [
+            ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+            for job_id in JOBS
+        ]
+        return jobs_list
 
     def get_job(self, job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
@@ -286,35 +330,16 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        models.StatusInfo
+        ogc_api_processes_fastapi.models.StatusInfo
             Information on the status of the job.
         """
         if job_id not in JOBS.keys():
             raise fastapi.HTTPException(
                 status_code=404, detail=f"Job {job_id} not found"
             )
-        elif JOBS[job_id]["status"] == "accepted":
-            random_number = random.randint(1, 10)
-            if random_number >= 5:
-                JOBS[job_id]["status"] = "running"
-                JOBS[job_id]["updated"] = datetime.datetime.now()
-                JOBS[job_id]["started"] = datetime.datetime.now()
-        elif JOBS[job_id]["status"] == "running":
-            random_number = random.randint(1, 10)
-            if random_number >= 9:
-                JOBS[job_id]["status"] = "successful"
-                JOBS[job_id]["updated"] = datetime.datetime.now()
-                JOBS[job_id]["finished"] = datetime.datetime.now()
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(
-            jobID=job_id,
-            status=JOBS[job_id]["status"],
-            type=ogc_api_processes_fastapi.models.JobType.process,
-            processID=JOBS[job_id]["processID"],
-            created=JOBS[job_id]["created"],
-            started=JOBS[job_id]["started"],
-            finished=JOBS[job_id]["finished"],
-            updated=JOBS[job_id]["updated"],
-        )
+        else:
+            update_job_status(job_id)
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
 
         return status_info
 
@@ -330,7 +355,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        models.Link
+        ogc_api_processes_fastapi.models.Link
             Link to the job results.
         """
         if job_id not in JOBS.keys():
