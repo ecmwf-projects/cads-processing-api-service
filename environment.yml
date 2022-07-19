@@ -2,19 +2,19 @@ channels:
 - conda-forge
 - nodefaults
 dependencies:
-- fastapi
 - make
 - mypy
 - myst-parser
-- pip
 - pre-commit
 - pydata-sphinx-theme
 - pytest
 - pytest-cov
-- python>=3.10
 - sphinx
 - sphinxcontrib-apidoc
 # DO NOT EDIT ABOVE THIS LINE, ADD DEPENDENCIES BELOW
+- fastapi
+- pip
+- python>=3.10
 - sqlalchemy
 - sqlalchemy-stubs
 - uvicorn
