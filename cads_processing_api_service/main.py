@@ -28,11 +28,12 @@ import fastapi
 import fastapi_utils.session
 import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
+import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
-from . import adaptors, errors
+from . import adaptors, exceptions
 
 settings = cads_catalogue.config.SqlalchemySettings()
 
@@ -72,7 +73,7 @@ def lookup_id(
     try:
         row = session.query(record).filter(record.resource_uid == id).one()
     except sqlalchemy.orm.exc.NoResultFound:
-        raise errors.NotFoundError(f"{record.__name__} {id} not found")
+        raise exceptions.NotFoundError(f"{record.__name__} {id} not found")
     return row
 
 
@@ -243,7 +244,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         with self.reader.context_session() as session:
             id = process_id[len("retrieve-") :]
-            process = lookup_id(id=id, record=self.process_table, session=session)
+            try:
+                process = lookup_id(id=id, record=self.process_table, session=session)
+            except exceptions.NotFoundError:
+                raise ogc_api_processes_fastapi.exceptions.ProcessNotFound()
             process_description = process_description_serializer(process)
             process_description.outputs = [
                 {
@@ -375,3 +379,4 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
 app = fastapi.FastAPI()
 app = ogc_api_processes_fastapi.include_routers(app=app, client=DatabaseClient())
+app = ogc_api_processes_fastapi.include_exception_handlers(app=app)
