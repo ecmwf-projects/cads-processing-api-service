@@ -6,5 +6,6 @@ dependencies:
 - pip
 - pytest
 - pytest-cov
+# DO NOT EDIT ABOVE THIS LINE, ADD DEPENDENCIES BELOW
 - pip:
   - git+https://github.com/ecmwf-projects/ogc-api-processes-fastapi.git

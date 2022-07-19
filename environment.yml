@@ -14,6 +14,7 @@ dependencies:
 - python>=3.10
 - sphinx
 - sphinxcontrib-apidoc
+# DO NOT EDIT ABOVE THIS LINE, ADD DEPENDENCIES BELOW
 - sqlalchemy
 - sqlalchemy-stubs
 - uvicorn
