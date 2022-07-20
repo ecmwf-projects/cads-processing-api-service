@@ -28,12 +28,13 @@ import fastapi
 import fastapi_utils.session
 import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
+import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
 import requests  # type: ignore
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
-from . import adaptors, config, errors
+from . import adaptors, config, exceptions
 
 dbsettings = cads_catalogue.config.SqlalchemySettings()
 settings = config.Settings()
@@ -74,7 +75,7 @@ def lookup_id(
     try:
         row = session.query(record).filter(record.resource_uid == id).one()
     except sqlalchemy.orm.exc.NoResultFound:
-        raise errors.NotFoundError(f"{record.__name__} {id} not found")
+        raise exceptions.NotFoundError(f"{record.__name__} {id} not found")
     return row
 
 
@@ -173,10 +174,18 @@ def update_job_status(job_id: str) -> None:
             JOBS[job_id]["status"] = "running"
             JOBS[job_id]["updated"] = datetime.datetime.now()
             JOBS[job_id]["started"] = datetime.datetime.now()
+        elif random_number <= 1:
+            JOBS[job_id]["status"] = "failed"
+            JOBS[job_id]["updated"] = datetime.datetime.now()
+            JOBS[job_id]["finished"] = datetime.datetime.now()
     elif JOBS[job_id]["status"] == "running":
         random_number = random.randint(1, 10)
-        if random_number >= 9:
+        if random_number >= 7:
             JOBS[job_id]["status"] = "successful"
+            JOBS[job_id]["updated"] = datetime.datetime.now()
+            JOBS[job_id]["finished"] = datetime.datetime.now()
+        elif random_number <= 1:
+            JOBS[job_id]["status"] = "failed"
             JOBS[job_id]["updated"] = datetime.datetime.now()
             JOBS[job_id]["finished"] = datetime.datetime.now()
 
@@ -250,10 +259,18 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         -------
         ogc_api_processes_fastapi.models.ProcessDescription
             Process description.
+
+        Raises
+        ------
+        ogc_api_processes_fastapi.exceptions.NoSuchProcess
+            If the process `process_id` is not found.
         """
         with self.reader.context_session() as session:
             id = process_id[len("retrieve-") :]
-            process = lookup_id(id=id, record=self.process_table, session=session)
+            try:
+                process = lookup_id(id=id, record=self.process_table, session=session)
+            except exceptions.NotFoundError:
+                raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
             process_description = process_description_serializer(process)
             process_description.outputs = [
                 {
@@ -289,7 +306,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         -------
         ogc_api_processes_fastapi.models.StatusInfo
             Information on the status of the job.
+
+        Raises
+        ------
+        ogc_api_processes_fastapi.exceptions.NoSuchProcess
+            If the process `process_id` is not found.
         """
+        process_description = self.get_process(process_id)
+        # TODO: inputs validation
+        print(process_description)
         job_id = f"{random.randint(1,1000):04}"
         while job_id in JOBS.keys():
             job_id = f"{random.randint(1,1000):04}"
@@ -342,13 +367,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         -------
         ogc_api_processes_fastapi.models.StatusInfo
             Information on the status of the job.
+
+        Raises
+        ------
+        ogc_api_processes_fastapi.exceptions.NoSuchJob
+            If the job `job_id` is not found.
         """
         if job_id not in JOBS.keys():
-            raise fastapi.HTTPException(
-                status_code=404, detail=f"Job {job_id} not found"
-            )
-        else:
-            update_job_status(job_id)
+            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
+        update_job_status(job_id)
         status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
 
         return status_info
@@ -367,15 +394,25 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         -------
         ogc_api_processes_fastapi.models.Link
             Link to the job results.
+
+        Raises
+        ------
+        ogc_api_processes_fastapi.exceptions.NoSuchJob
+            If the job `job_id` is not found.
+
+        ogc_api_processes_fastapi.exceptions.ResultsNotReady
+            If job `job_id` results are not yet ready.
+
+        ogc_api_processes_fastapi.exceptions.JobResultsFailed
+            If job `job_id` results preparation failed.
         """
         if job_id not in JOBS.keys():
-            raise fastapi.HTTPException(
-                status_code=404, detail=f"Job {job_id} not found."
-            )
-        elif JOBS[job_id]["status"] != "successful":
-            raise fastapi.HTTPException(
-                status_code=404, detail=f"Job {job_id} is not finished yet."
-            )
+            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
+        update_job_status(job_id)
+        if JOBS[job_id]["status"] in ("accepted", "running"):
+            raise ogc_api_processes_fastapi.exceptions.ResultsNotReady()
+        elif JOBS[job_id]["status"] == "failed":
+            raise ogc_api_processes_fastapi.exceptions.JobResultsFailed()
         results_link = ogc_api_processes_fastapi.models.Link(
             href=f"https://example.org/{job_id}-results.nc",
             title=f"Download link for the result of job {job_id}",
@@ -385,3 +422,4 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
 app = fastapi.FastAPI()
 app = ogc_api_processes_fastapi.include_routers(app=app, client=DatabaseClient())
+app = ogc_api_processes_fastapi.include_exception_handlers(app=app)
