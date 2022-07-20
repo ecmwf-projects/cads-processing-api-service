@@ -288,7 +288,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         -------
         ogc_api_processes_fastapi.models.StatusInfo
             Information on the status of the job.
+
+        Raises
+        ------
+        ogc_api_processes_fastapi.exceptions.ProcessNotFound
+            If the process `process_id` is not found.
         """
+        process_description = self.get_process(process_id)
+        # TODO: inputs validation
+        print(process_description)
         job_id = f"{random.randint(1,1000):04}"
         while job_id in JOBS.keys():
             job_id = f"{random.randint(1,1000):04}"
