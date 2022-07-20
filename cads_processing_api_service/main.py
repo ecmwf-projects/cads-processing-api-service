@@ -241,6 +241,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         -------
         ogc_api_processes_fastapi.models.ProcessDescription
             Process description.
+
+        Raises
+        ------
+        ogc_api_processes_fastapi.exceptions.ProcessNotFound
+            If the process `process_id` is not found.
         """
         with self.reader.context_session() as session:
             id = process_id[len("retrieve-") :]
