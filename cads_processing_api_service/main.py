@@ -357,8 +357,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         if job_id not in JOBS.keys():
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-        else:
-            update_job_status(job_id)
+        update_job_status(job_id)
         status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
 
         return status_info
@@ -382,13 +381,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ------
         exceptions.NoSuchJob
             If the job `job_id` is not found.
+
+        exceptions.ResultsNotReady
+            If job `job_id` results are not yet ready.
         """
         if job_id not in JOBS.keys():
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-        elif JOBS[job_id]["status"] != "successful":
-            raise fastapi.HTTPException(
-                status_code=404, detail=f"Job {job_id} is not finished yet."
-            )
+        update_job_status(job_id)
+        if JOBS[job_id]["status"] != "successful":
+            raise ogc_api_processes_fastapi.exceptions.ResultsNotReady()
         results_link = ogc_api_processes_fastapi.models.Link(
             href=f"https://example.org/{job_id}-results.nc",
             title=f"Download link for the result of job {job_id}",
