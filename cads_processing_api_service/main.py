@@ -29,12 +29,14 @@ import fastapi_utils.session
 import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
 import ogc_api_processes_fastapi.models
+import requests  # type: ignore
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
-from . import adaptors, errors
+from . import adaptors, config, errors
 
-settings = cads_catalogue.config.SqlalchemySettings()
+dbsettings = cads_catalogue.config.SqlalchemySettings()
+settings = config.Settings()
 
 logger = logging.getLogger(__name__)
 
@@ -109,16 +111,24 @@ def process_summary_serializer(
 
 
 # TODO: this is a mock implementation. Change it when database is ready.
-def process_inputs_serializer() -> list[
-    dict[str, ogc_api_processes_fastapi.models.InputDescription]
-]:
+def process_inputs_serializer(
+    db_model: cads_catalogue.database.Resource,
+) -> list[dict[str, ogc_api_processes_fastapi.models.InputDescription]]:
     """Convert provided database entry into a representation of a process inputs.
+
+    Parameters
+    ----------
+    db_model : cads_catalogue.database.Resource
+        Database entry.
 
     Returns
     -------
     list[ dict[str, ogc_api_processes_fastapi.models.InputDescription] ]
         Process inputs representation.
     """
+    form_url = urllib.parse.urljoin(settings.document_storage_url, db_model.form)
+    form_json = requests.get(url=form_url).json()
+    print(form_json)
     inputs = adaptors.translate_cds_into_ogc_inputs(
         urllib.parse.urljoin(__file__, "../tests/data/form.json")
     )
@@ -143,7 +153,7 @@ def process_description_serializer(
     process_summary = process_summary_serializer(db_model)
     retval = ogc_api_processes_fastapi.models.ProcessDescription(
         **process_summary.dict(),
-        inputs=process_inputs_serializer(),
+        inputs=process_inputs_serializer(db_model),
     )
 
     return retval
@@ -184,7 +194,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     """
 
     reader: fastapi_utils.session.FastAPISessionMaker = attrs.field(
-        default=fastapi_utils.session.FastAPISessionMaker(settings.connection_string),
+        default=fastapi_utils.session.FastAPISessionMaker(dbsettings.connection_string),
         init=False,
     )
     process_table: Type[cads_catalogue.database.Resource] = attrs.field(
