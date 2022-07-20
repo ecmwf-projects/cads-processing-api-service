@@ -164,10 +164,18 @@ def update_job_status(job_id: str) -> None:
             JOBS[job_id]["status"] = "running"
             JOBS[job_id]["updated"] = datetime.datetime.now()
             JOBS[job_id]["started"] = datetime.datetime.now()
+        elif random_number <= 1:
+            JOBS[job_id]["status"] = "failed"
+            JOBS[job_id]["updated"] = datetime.datetime.now()
+            JOBS[job_id]["finished"] = datetime.datetime.now()
     elif JOBS[job_id]["status"] == "running":
         random_number = random.randint(1, 10)
-        if random_number >= 9:
+        if random_number >= 7:
             JOBS[job_id]["status"] = "successful"
+            JOBS[job_id]["updated"] = datetime.datetime.now()
+            JOBS[job_id]["finished"] = datetime.datetime.now()
+        elif random_number <= 1:
+            JOBS[job_id]["status"] = "failed"
             JOBS[job_id]["updated"] = datetime.datetime.now()
             JOBS[job_id]["finished"] = datetime.datetime.now()
 
@@ -352,7 +360,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Raises
         ------
-        exceptions.NoSuchJob
+        ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
         if job_id not in JOBS.keys():
@@ -379,17 +387,22 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Raises
         ------
-        exceptions.NoSuchJob
+        ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
 
-        exceptions.ResultsNotReady
+        ogc_api_processes_fastapi.exceptions.ResultsNotReady
             If job `job_id` results are not yet ready.
+
+        ogc_api_processes_fastapi.exceptions.JobResultsFailed
+            If job `job_id` results preparation failed.
         """
         if job_id not in JOBS.keys():
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
         update_job_status(job_id)
-        if JOBS[job_id]["status"] != "successful":
+        if JOBS[job_id]["status"] in ("accepted", "running"):
             raise ogc_api_processes_fastapi.exceptions.ResultsNotReady()
+        elif JOBS[job_id]["status"] == "failed":
+            raise ogc_api_processes_fastapi.exceptions.JobResultsFailed()
         results_link = ogc_api_processes_fastapi.models.Link(
             href=f"https://example.org/{job_id}-results.nc",
             title=f"Download link for the result of job {job_id}",
