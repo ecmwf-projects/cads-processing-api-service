@@ -15,7 +15,6 @@
 # limitations under the License
 
 import datetime
-import json
 import logging
 import random
 import urllib.parse
@@ -91,7 +90,7 @@ def process_summary_serializer(
     """
     retval = ogc_api_processes_fastapi.models.ProcessSummary(
         title=f"Retrieve of {db_model.title}",
-        description=json.dumps(db_model.description),
+        description=db_model.abstract,
         keywords=db_model.keywords,
         id=f"retrieve-{db_model.resource_uid}",
         version="1.0.0",
