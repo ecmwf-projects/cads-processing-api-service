@@ -12,7 +12,7 @@ def adapter(request, config, metadata):
 
     # parse input options
     with cads.add_step_metrics("process inputs", metadata):
-        request, format = cads.extract_formta_options(request, config)
+        request, format = cads.extract_format_options(request, config)
         request, reduce = cads.extract_reduce_options(request, config)
         mars_request = cads.map_to_mars_request(request, config)
 
