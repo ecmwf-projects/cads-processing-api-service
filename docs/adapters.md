@@ -46,6 +46,8 @@ def adapter(collection_id, request, metadata):
 
     # parse input options
     format = request.pop("format", "grib")
+    if format not in {"netcdf", "grib"}:
+        raise ValueError(f"{format=} is not supported")
 
     # retrieve data
     client = cdsapi.Client()
