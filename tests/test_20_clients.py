@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
-
 import cads_catalogue.database
 import ogc_api_processes_fastapi.models
 
@@ -39,7 +37,7 @@ def test_process_summary_serializer() -> None:
     oap_record = cads_processing_api_service.clients.process_summary_serializer(record)
     expected = ogc_api_processes_fastapi.models.ProcessSummary(
         title="Retrieve of ERA5",
-        description=json.dumps({"name": "dataset"}),
+        description="Lorem ipsum dolor",
         keywords=["label 1", "label 2"],
         id="retrieve-era5-something",
         version="1.0.0",
@@ -57,7 +55,7 @@ def test_process_description_serializer() -> None:
     )
     expected = ogc_api_processes_fastapi.models.ProcessDescription(
         title="Retrieve of ERA5",
-        description=json.dumps({"name": "dataset"}),
+        description="Lorem ipsum dolor",
         keywords=["label 1", "label 2"],
         id="retrieve-era5-something",
         version="1.0.0",
