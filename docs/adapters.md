@@ -30,6 +30,7 @@ def adapter(request, config, metadata):
             data = cads.translate(data, format)
 
     return data
+
 ```
 
 Short-term simple adapter code:
@@ -42,12 +43,15 @@ import xarray as xr
 
 
 @cacholote.cacheable
-def adapter(collection_id, request, metadata):
+def adapter(request, config, metadata):
 
     # parse input options
-    format = request.pop("format", "grib")
-    if format not in {"netcdf", "grib"}:
-        raise ValueError(f"{format=} is not supported")
+    collection_id = request.pop("collection_id", None)
+    if collection_id:
+        raise ValueError(f"collection_id is required in request")
+    data_format = request.pop("format", "grib")
+    if data_format not in {"netcdf", "grib"}:
+        raise ValueError(f"{data_format=} is not supported")
 
     # retrieve data
     client = cdsapi.Client()
@@ -55,8 +59,9 @@ def adapter(collection_id, request, metadata):
     data = xr.open_dataset("download.grib")
 
     # post-process data
-    if format == "netcdf":
+    if data_format == "netcdf":
         data = cdscdm.open_dataset("download.grib")
 
     return data
+
 ```
