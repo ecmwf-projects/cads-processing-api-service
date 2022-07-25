@@ -15,8 +15,6 @@
 # limitations under the License.
 
 import itertools
-import json
-import pathlib
 from typing import Any
 
 from ogc_api_processes_fastapi import models
@@ -84,7 +82,7 @@ def build_input_ogc_schema(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def translate_cds_into_ogc_inputs(
-    cds_form_file: str | pathlib.Path,
+    cds_form: list[Any],
 ) -> list[dict[str, models.InputDescription]]:
     """Translate CDS forms inputs into OGC API compliants ones.
 
@@ -93,17 +91,14 @@ def translate_cds_into_ogc_inputs(
 
     Parameters
     ----------
-    cds_form_file : str | pathlib.Path
-        Path to the CDS form file.
+    cds_form : list
+        CDS form.
 
     Returns
     -------
     list[dict[str, models.InputDescription]]
         Python object containing translated inputs information.
     """
-    with open(cds_form_file, "r") as f:
-        cds_form = json.load(f)
-
     inputs_ogc = []
     for input_cds_schema in cds_form:
         if input_cds_schema["name"] in ACCEPTED_INPUTS:

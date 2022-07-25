@@ -18,7 +18,7 @@ import datetime
 import logging
 import random
 import urllib.parse
-from typing import Type
+from typing import Any, Type
 
 import attrs
 import cads_catalogue.config
@@ -28,10 +28,11 @@ import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
+import requests  # type: ignore
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
-from . import adaptors, exceptions
+from . import adaptors, config, exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,27 @@ def lookup_id(
     return row
 
 
+def get_cds_form(cds_form_url: str) -> list[Any]:
+    """Get CDS form from URL.
+
+    Parameters
+    ----------
+    cds_form_url : str
+        URL to the CDS form, relative to the Document Storage URL.
+
+    Returns
+    -------
+    list[Any]
+        CDS form.
+    """
+    settings = config.ensure_settings()
+    cds_form_complete_url = urllib.parse.urljoin(
+        settings.document_storage_url, cds_form_url
+    )
+    cds_form: list[Any] = requests.get(cds_form_complete_url).json()
+    return cds_form
+
+
 def process_summary_serializer(
     db_model: cads_catalogue.database.Resource,
 ) -> ogc_api_processes_fastapi.models.ProcessSummary:
@@ -105,10 +127,9 @@ def process_summary_serializer(
     return retval
 
 
-# TODO: this is a mock implementation. Change it when database is ready.
-def process_inputs_serializer() -> list[
-    dict[str, ogc_api_processes_fastapi.models.InputDescription]
-]:
+def process_inputs_serializer(
+    db_model: cads_catalogue.database.Resource,
+) -> list[dict[str, ogc_api_processes_fastapi.models.InputDescription]]:
     """Convert provided database entry into a representation of a process inputs.
 
     Returns
@@ -116,9 +137,9 @@ def process_inputs_serializer() -> list[
     list[ dict[str, ogc_api_processes_fastapi.models.InputDescription] ]
         Process inputs representation.
     """
-    inputs = adaptors.translate_cds_into_ogc_inputs(
-        urllib.parse.urljoin(__file__, "../tests/data/form.json")
-    )
+    form_url = db_model.form
+    cds_form = get_cds_form(cds_form_url=form_url)
+    inputs = adaptors.translate_cds_into_ogc_inputs(cds_form)
     return inputs
 
 
@@ -140,7 +161,7 @@ def process_description_serializer(
     process_summary = process_summary_serializer(db_model)
     retval = ogc_api_processes_fastapi.models.ProcessDescription(
         **process_summary.dict(),
-        inputs=process_inputs_serializer(),
+        inputs=process_inputs_serializer(db_model),
     )
 
     return retval

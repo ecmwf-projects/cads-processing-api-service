@@ -19,6 +19,8 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 
 import pydantic
 
+general_settings = None
+
 
 class Settings(pydantic.BaseSettings):
     """General settings.
@@ -27,3 +29,25 @@ class Settings(pydantic.BaseSettings):
     """
 
     document_storage_url: str = "/document-storage/"
+
+
+def ensure_settings(
+    settings: Settings | None = None,
+) -> Settings:
+    """If `settings` is None, create a new Settings object.
+
+    Parameters
+    ----------
+    settings: an optional Settings object to be set as general settings.
+
+    Returns
+    -------
+    Settings:
+        General settings.
+    """
+    global general_settings
+    if settings and isinstance(settings, pydantic.BaseSettings):
+        general_settings = settings
+    else:
+        general_settings = Settings()
+    return general_settings
