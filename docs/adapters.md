@@ -65,3 +65,18 @@ def adapter(request, config, metadata):
     return data
 
 ```
+
+The compute service would look like:
+
+```python
+
+def run_code(
+    setup_code: str,
+    entry_point: str,
+    kwargs: Dict[str, Any],
+    metadata: Dict[str, Any]
+) -> Dict[str, Any]:
+    exec(setup_code)
+    return eval(f"{entry_point}(**kwargs, metadata=metadata)")
+
+```
