@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
-
 import cads_catalogue.database
 import ogc_api_processes_fastapi.models
 
-import cads_processing_api_service.main
+import cads_processing_api_service.clients
 
 
 def get_record(id: str) -> cads_catalogue.database.Resource:
@@ -36,10 +34,10 @@ def get_record(id: str) -> cads_catalogue.database.Resource:
 
 def test_process_summary_serializer() -> None:
     record = get_record("era5-something")
-    oap_record = cads_processing_api_service.main.process_summary_serializer(record)
+    oap_record = cads_processing_api_service.clients.process_summary_serializer(record)
     expected = ogc_api_processes_fastapi.models.ProcessSummary(
         title="Retrieve of ERA5",
-        description=json.dumps({"name": "dataset"}),
+        description="Lorem ipsum dolor",
         keywords=["label 1", "label 2"],
         id="retrieve-era5-something",
         version="1.0.0",
@@ -52,15 +50,17 @@ def test_process_summary_serializer() -> None:
 # TODO: update test when retrievable forms enabled
 def test_process_description_serializer() -> None:
     record = get_record("era5-something")
-    oap_record = cads_processing_api_service.main.process_description_serializer(record)
+    oap_record = cads_processing_api_service.clients.process_description_serializer(
+        record
+    )
     expected = ogc_api_processes_fastapi.models.ProcessDescription(
         title="Retrieve of ERA5",
-        description=json.dumps({"name": "dataset"}),
+        description="Lorem ipsum dolor",
         keywords=["label 1", "label 2"],
         id="retrieve-era5-something",
         version="1.0.0",
         jobControlOptions=["async-execute"],
         outputTransmission=["reference"],
-        inputs=cads_processing_api_service.main.process_inputs_serializer(),
+        inputs=cads_processing_api_service.clients.process_inputs_serializer(),
     )
     assert oap_record == expected
