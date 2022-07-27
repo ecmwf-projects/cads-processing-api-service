@@ -1,4 +1,4 @@
-"""Errors definition."""
+"""Exceptions definitions."""
 
 # Copyright 2022, European Union.
 

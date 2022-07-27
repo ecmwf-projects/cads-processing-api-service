@@ -1,4 +1,4 @@
-"""Database to OGC API Processes models translators."""
+"""Catalogue CDS forms to OGC API Processes compliant inputs translators."""
 
 # Copyright 2022, European Union.
 #
