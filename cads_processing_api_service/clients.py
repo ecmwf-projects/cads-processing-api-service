@@ -96,7 +96,7 @@ def get_cds_form(cds_form_url: str) -> list[Any]:
     return cds_form
 
 
-def process_summary_serializer(
+def serialize_process_summary(
     db_model: cads_catalogue.database.Resource,
 ) -> ogc_api_processes_fastapi.models.ProcessSummary:
     """Convert provided database entry into a representation of a process summary.
@@ -128,7 +128,7 @@ def process_summary_serializer(
     return retval
 
 
-def process_inputs_serializer(
+def serialize_process_inputs(
     db_model: cads_catalogue.database.Resource,
 ) -> list[dict[str, ogc_api_processes_fastapi.models.InputDescription]]:
     """Convert provided database entry into a representation of a process inputs.
@@ -144,7 +144,7 @@ def process_inputs_serializer(
     return inputs
 
 
-def process_description_serializer(
+def serialize_process_description(
     db_model: cads_catalogue.database.Resource,
 ) -> ogc_api_processes_fastapi.models.ProcessDescription:
     """Convert provided database entry into a representation of a process description.
@@ -159,10 +159,10 @@ def process_description_serializer(
     ogc_api_processes_fastapi.models.ProcessDescription
         Process description representation.
     """
-    process_summary = process_summary_serializer(db_model)
+    process_summary = serialize_process_summary(db_model)
     retval = ogc_api_processes_fastapi.models.ProcessDescription(
         **process_summary.dict(),
-        inputs=process_inputs_serializer(db_model),
+        inputs=serialize_process_inputs(db_model),
     )
 
     return retval
@@ -243,7 +243,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             else:
                 processes = session.query(self.process_table).offset(offset).all()
             processes_list = [
-                process_summary_serializer(process) for process in processes
+                serialize_process_summary(process) for process in processes
             ]
 
         return processes_list
@@ -276,7 +276,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 process = lookup_id(id=id, record=self.process_table, session=session)
             except exceptions.NotFoundError:
                 raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
-            process_description = process_description_serializer(process)
+            process_description = serialize_process_description(process)
             process_description.outputs = [
                 {
                     "download_url": ogc_api_processes_fastapi.models.OutputDescription(

@@ -1,4 +1,4 @@
-"""Database to OGC API Processes models adaptors."""
+"""Database to OGC API Processes models translators."""
 
 # Copyright 2022, European Union.
 #
