@@ -33,7 +33,7 @@ import requests  # type: ignore
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
-from . import adaptors, config, exceptions
+from . import config, exceptions, translators
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +140,7 @@ def serialize_process_inputs(
     """
     form_url = db_model.form
     cds_form = get_cds_form(cds_form_url=form_url)
-    inputs = adaptors.translate_cds_into_ogc_inputs(cds_form)
+    inputs = translators.translate_cds_into_ogc_inputs(cds_form)
     return inputs
 
 
