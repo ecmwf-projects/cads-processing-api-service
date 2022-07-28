@@ -18,6 +18,7 @@ import datetime
 import logging
 import random
 import urllib.parse
+import uuid
 from typing import Any, Type
 
 import attrs
@@ -319,9 +320,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_description = self.get_process(process_id)
         # TODO: inputs validation
         print(process_description)
-        job_id = f"{random.randint(1,1000):04}"
+        job_id = str(uuid.uuid4())
         while job_id in JOBS.keys():
-            job_id = f"{random.randint(1,1000):04}"
+            job_id = str(uuid.uuid4())
         JOBS[job_id] = {
             "jobID": job_id,
             "status": "accepted",
