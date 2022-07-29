@@ -168,36 +168,6 @@ def serialize_process_description(
     return retval
 
 
-def submit_job(
-    job_id: str, process_id: str
-) -> ogc_api_processes_fastapi.models.StatusInfo:
-    """Mock new job sumbission.
-
-    Parameters
-    ----------
-    job_id : str
-        Job ID.
-
-    Returns
-    -------
-    ogc_api_processes_fastapi.models.StatusInfo
-        Sumbitted job status info.
-    """
-    JOBS[job_id] = {
-        "jobID": job_id,
-        "status": "accepted",
-        "type": "process",
-        "created": datetime.datetime.now(),
-        "started": None,
-        "finished": None,
-        "updated": datetime.datetime.now(),
-        "processID": process_id,
-    }
-    status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
-
-    return status_info
-
-
 def update_job_status(job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
     """Randomly update status of job `job_id`.
 
@@ -247,6 +217,38 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     process_table: Type[cads_catalogue.database.Resource] = attrs.field(
         default=cads_catalogue.database.Resource
     )
+
+    def submit_job_mock(
+        self,
+        job_id: str,
+        process_id: str,
+        execution_content: ogc_api_processes_fastapi.models.Execute,
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+        """Mock new job sumbission.
+
+        Parameters
+        ----------
+        job_id : str
+            Job ID.
+
+        Returns
+        -------
+        ogc_api_processes_fastapi.models.StatusInfo
+            Sumbitted job status info.
+        """
+        JOBS[job_id] = {
+            "jobID": job_id,
+            "status": "accepted",
+            "type": "process",
+            "created": datetime.datetime.now(),
+            "started": None,
+            "finished": None,
+            "updated": datetime.datetime.now(),
+            "processID": process_id,
+        }
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+
+        return status_info
 
     def get_processes(
         self, limit: int | None = None, offset: int = 0
@@ -352,7 +354,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         # TODO: inputs validation
         job_id = str(uuid.uuid4())
-        status_info = submit_job(job_id, process_id)
+        status_info = self.submit_job_mock(job_id, process_id, execution_content)
         return status_info
 
     def get_jobs(self) -> list[ogc_api_processes_fastapi.models.StatusInfo]:
