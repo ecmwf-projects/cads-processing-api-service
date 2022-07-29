@@ -114,24 +114,45 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return process
 
+    def validate_request(
+        self,
+        process_id: str,
+        execution_content: ogc_api_processes_fastapi.models.Execute,
+        session: sqlalchemy.orm.Session,
+    ) -> str:
+        """Validate retrieve process execution request.
+
+        Check if requested dataset exists and if execution content is valid.
+        In case the check is successful, creates and returns the job ID.
+
+        Parameters
+        ----------
+        process_id : str
+            Process ID.
+        execution_content : ogc_api_processes_fastapi.models.Execute
+            Body of the process execution request.
+        session : sqlalchemy.orm.Session
+           SQLAlchemy ORM session
+
+        Returns
+        -------
+        str
+            Job ID.
+        """
+        # TODO: implement inputs validation
+        resource_id = process_id[len("retrieve-") :]
+        resource = self.lookup_resource_by_id(resource_id, session)
+        job_id = str(uuid.uuid4())
+        print(execution_content, resource)
+        return job_id
+
     def submit_job_mock(
         self,
         job_id: str,
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
-        """Mock submission of new job.
 
-        Parameters
-        ----------
-        job_id : str
-            Job ID.
-
-        Returns
-        -------
-        ogc_api_processes_fastapi.models.StatusInfo
-            Sumbitted job status info.
-        """
         JOBS[job_id] = {
             "jobID": job_id,
             "status": "accepted",
@@ -158,6 +179,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         job_id : str
             Job ID.
+        process_id: str
+            Process ID.
+        execution_content: ogc_api_processes_fastapi.models.Execute
+            Body of the process execution request.
 
         Returns
         -------
@@ -175,13 +200,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def request_job_status_mock(
         self, job_id: str
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
-        """Randomly update status of job `job_id`.
 
-        Parameters
-        ----------
-        job_id : str
-            Job ID.
-        """
         if JOBS[job_id]["status"] == "accepted":
             random_number = random.randint(1, 10)
             if random_number >= 5:
@@ -262,8 +281,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the process `process_id` is not found.
         """
         with self.reader.context_session() as session:
-            id = process_id[len("retrieve-") :]
-            resource = self.lookup_resource_by_id(id, session)
+            resource_id = process_id[len("retrieve-") :]
+            resource = self.lookup_resource_by_id(resource_id, session)
             process_description = serializers.serialize_process_description(resource)
             process_description.outputs = [
                 {
@@ -305,8 +324,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        # TODO: request (included inputs) validation
-        job_id = str(uuid.uuid4())
+        with self.reader.context_session() as session:
+            job_id = self.validate_request(process_id, execution_content, session)
         status_info = self.submit_job_mock(job_id, process_id, execution_content)
         return status_info
 
