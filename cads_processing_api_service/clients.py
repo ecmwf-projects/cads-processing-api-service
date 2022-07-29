@@ -168,6 +168,26 @@ def serialize_process_description(
     return retval
 
 
+def submit_job(job_id: str, process_id: str) -> None:
+    """Mock new job sumbission.
+
+    Parameters
+    ----------
+    job_id : str
+        Job ID.
+    """
+    JOBS[job_id] = {
+        "jobID": job_id,
+        "status": "accepted",
+        "type": "process",
+        "created": datetime.datetime.now(),
+        "started": None,
+        "finished": None,
+        "updated": datetime.datetime.now(),
+        "processID": process_id,
+    }
+
+
 def update_job_status(job_id: str) -> None:
     """Randomly update status of job `job_id`.
 
@@ -317,22 +337,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        process_description = self.get_process(process_id)
         # TODO: inputs validation
-        print(process_description)
         job_id = str(uuid.uuid4())
-        while job_id in JOBS.keys():
-            job_id = str(uuid.uuid4())
-        JOBS[job_id] = {
-            "jobID": job_id,
-            "status": "accepted",
-            "type": "process",
-            "created": datetime.datetime.now(),
-            "started": None,
-            "finished": None,
-            "updated": datetime.datetime.now(),
-            "processID": process_id,
-        }
+        submit_job(job_id, process_id)
         status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
         return status_info
 
