@@ -119,11 +119,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
         session: sqlalchemy.orm.Session,
-    ) -> str:
+    ) -> tuple[str, cads_catalogue.database.Resource]:
         """Validate retrieve process execution request.
 
         Check if requested dataset exists and if execution content is valid.
-        In case the check is successful, creates and returns the job ID.
+        In case the check is successful, creates and returns the job ID and the
+        resource (dataset) associated to the process request.
 
         Parameters
         ----------
@@ -132,19 +133,19 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         execution_content : ogc_api_processes_fastapi.models.Execute
             Body of the process execution request.
         session : sqlalchemy.orm.Session
-           SQLAlchemy ORM session
+            SQLAlchemy ORM session
 
         Returns
         -------
-        str
-            Job ID.
+        tuple[str, cads_catalogue.database.Resource]
+            Job ID and resource (dataset) associated to the process request.
         """
         # TODO: implement inputs validation
         resource_id = process_id[len("retrieve-") :]
         resource = self.lookup_resource_by_id(resource_id, session)
         job_id = str(uuid.uuid4())
         print(execution_content, resource)
-        return job_id
+        return job_id, resource
 
     def submit_job_mock(
         self,
@@ -325,7 +326,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the process `process_id` is not found.
         """
         with self.reader.context_session() as session:
-            job_id = self.validate_request(process_id, execution_content, session)
+            job_id, resource = self.validate_request(
+                process_id, execution_content, session
+            )
         status_info = self.submit_job_mock(job_id, process_id, execution_content)
         return status_info
 
