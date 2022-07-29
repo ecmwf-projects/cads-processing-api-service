@@ -149,9 +149,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def submit_job_mock(
         self,
-        job_id: str,
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
+        job_id: str,
+        resource: cads_catalogue.database.Resource,
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
 
         JOBS[job_id] = {
@@ -170,31 +171,34 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def submit_job(
         self,
-        job_id: str,
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
-    ) -> ogc_api_processes_fastapi.models.StatusInfo | None:
+        job_id: str,
+        resource: cads_catalogue.database.Resource,
+    ) -> None:
         """Submit new job.
 
         Parameters
         ----------
-        job_id : str
-            Job ID.
         process_id: str
             Process ID.
         execution_content: ogc_api_processes_fastapi.models.Execute
             Body of the process execution request.
+        job_id : str
+            Job ID.
+        resource: cads_catalogue.database.Resource,
+            Catalogue resource corresponding to the requested retrieve process
+
 
         Returns
         -------
         ogc_api_processes_fastapi.models.StatusInfo
             Sumbitted job status info.
         """
-        # TODO: request adaptation
-        setup_code, entry_point, kwargs, metadata = adapters.adapt_user_request(
-            job_id, process_id, execution_content
+        setup_code, entry_point, kwargs, metadata = adapters.make_system_request(
+            process_id, execution_content, job_id, resource
         )
-        # TODO: submit request to broker
+        print(setup_code, entry_point, kwargs, metadata)
 
         return None
 
@@ -329,7 +333,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job_id, resource = self.validate_request(
                 process_id, execution_content, session
             )
-        status_info = self.submit_job_mock(job_id, process_id, execution_content)
+        status_info = self.submit_job_mock(
+            process_id, execution_content, job_id, resource
+        )
         return status_info
 
     def get_jobs(self) -> list[ogc_api_processes_fastapi.models.StatusInfo]:
