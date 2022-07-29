@@ -215,20 +215,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         default=cads_catalogue.database.Resource
     )
 
-    def get_processes(
-        self, limit: int | None = None, offset: int = 0
-    ) -> list[ogc_api_processes_fastapi.models.ProcessSummary]:
+    def get_processes(self) -> list[ogc_api_processes_fastapi.models.ProcessSummary]:
         """Implement OGC API - Processes `GET /processes` endpoint.
 
         Get the list of available processes from the database.
-
-        Parameters
-        ----------
-        limit : int | None, optional
-            Number of processes summaries to be returned.
-        offset : int, optional
-            Index (starting from 0) of the first process summary
-            to be returned, by default 0.
 
         Returns
         -------
@@ -236,12 +226,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             List of available processes.
         """
         with self.reader.context_session() as session:
-            if limit:
-                processes = (
-                    session.query(self.process_table).offset(offset).limit(limit).all()
-                )
-            else:
-                processes = session.query(self.process_table).offset(offset).all()
+            processes = session.query(self.process_table).all()
             processes_list = [
                 process_summary_serializer(process) for process in processes
             ]
