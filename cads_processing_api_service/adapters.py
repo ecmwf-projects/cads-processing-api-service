@@ -14,18 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Type
-
-import cads_catalogue.database
-import fastapi_utils.session
 import ogc_api_processes_fastapi.models
 
 
-def adapt_request(
-    reader: fastapi_utils.session.FastAPISessionMaker,
-    record: Type[cads_catalogue.database.BaseModel],
-    process_id: str,
+def adapt_user_request(
     job_id: str,
+    process_id: str,
     execution_content: ogc_api_processes_fastapi.models.Execute,
 ) -> ogc_api_processes_fastapi.models.Execute:
 

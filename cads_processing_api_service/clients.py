@@ -18,7 +18,7 @@ import datetime
 import logging
 import random
 import uuid
-from typing import Type
+from typing import Any, Type
 
 import attrs
 import cads_catalogue.config
@@ -28,8 +28,10 @@ import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
+import sqlalchemy.orm
+import sqlalchemy.orm.exc
 
-from . import exceptions, serializers
+from . import adapters, exceptions, serializers
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +88,32 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         default=cads_catalogue.database.Resource
     )
 
+    def _lookup_id(
+        self,
+        id: str,
+        record: Type[cads_catalogue.database.BaseModel],
+        session: sqlalchemy.orm.Session,
+    ) -> cads_catalogue.database.BaseModel:
+
+        try:
+            row = session.query(record).filter(record.resource_uid == id).one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise exceptions.NotFoundError(f"{record.__name__} {id} not found")
+        return row
+
+    def lookup_resource_by_id(
+        self,
+        id: str,
+        session: sqlalchemy.orm.Session,
+    ) -> Any:
+
+        try:
+            process = self._lookup_id(id=id, record=self.process_table, session=session)
+        except exceptions.NotFoundError:
+            raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
+
+        return process
+
     def submit_job_mock(
         self,
         job_id: str,
@@ -123,7 +151,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_id: str,
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
-    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+    ) -> ogc_api_processes_fastapi.models.StatusInfo | None:
         """Submit new job.
 
         Parameters
@@ -136,7 +164,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.StatusInfo
             Sumbitted job status info.
         """
-        ...
+        # TODO: request adaptation
+        setup_code, entry_point, kwargs, metadata = adapters.adapt_user_request(
+            job_id, process_id, execution_content
+        )
+        # TODO: submit request to broker
+
+        return None
 
     def request_job_status_mock(
         self, job_id: str
@@ -229,13 +263,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         with self.reader.context_session() as session:
             id = process_id[len("retrieve-") :]
-            try:
-                process = serializers.lookup_id(
-                    id=id, record=self.process_table, session=session
-                )
-            except exceptions.NotFoundError:
-                raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
-            process_description = serializers.serialize_process_description(process)
+            resource = self.lookup_resource_by_id(id, session)
+            process_description = serializers.serialize_process_description(resource)
             process_description.outputs = [
                 {
                     "download_url": ogc_api_processes_fastapi.models.OutputDescription(
@@ -276,7 +305,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        # TODO: inputs validation
+        # TODO: request (included inputs) validation
         job_id = str(uuid.uuid4())
         status_info = self.submit_job_mock(job_id, process_id, execution_content)
         return status_info

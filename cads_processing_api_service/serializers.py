@@ -15,50 +15,13 @@
 # limitations under the License.
 
 import urllib.parse
-from typing import Any, Type
+from typing import Any
 
 import cads_catalogue.database
 import ogc_api_processes_fastapi.models
 import requests  # type: ignore
-import sqlalchemy.orm
-import sqlalchemy.orm.exc
 
-from . import config, exceptions, translators
-
-
-def lookup_id(
-    id: str,
-    record: Type[cads_catalogue.database.BaseModel],
-    session: sqlalchemy.orm.Session,
-) -> cads_catalogue.database.BaseModel:
-    """Search database record by id.
-
-    Lookup `record` instance containing identifier `id` in the provided SQLAlchemy `session`.
-
-    Parameters
-    ----------
-    id : str
-        Identifier to look up.
-    record : Type[cads_catalogue.database.BaseModel]
-        Record for which to look for identifier `id`.
-    session : sqlalchemy.orm.Session
-        SQLAlchemy ORM session.
-
-    Returns
-    -------
-    cads_catalogue.database.BaseModel
-        Record instance containing identifier `id`.
-
-    Raises
-    ------
-    errors.NotFoundError
-        If not `record` instance is found containing identifier `id`.
-    """
-    try:
-        row = session.query(record).filter(record.resource_uid == id).one()
-    except sqlalchemy.orm.exc.NoResultFound:
-        raise exceptions.NotFoundError(f"{record.__name__} {id} not found")
-    return row
+from . import config, translators
 
 
 def get_cds_form(cds_form_url: str) -> list[Any]:
