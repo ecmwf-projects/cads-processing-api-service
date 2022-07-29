@@ -92,7 +92,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
-        """Mock new job sumbission.
+        """Mock submission of new job.
 
         Parameters
         ----------
@@ -114,6 +114,60 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             "updated": datetime.datetime.now(),
             "processID": process_id,
         }
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+
+        return status_info
+
+    def submit_job(
+        self,
+        job_id: str,
+        process_id: str,
+        execution_content: ogc_api_processes_fastapi.models.Execute,
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+        """Submit new job.
+
+        Parameters
+        ----------
+        job_id : str
+            Job ID.
+
+        Returns
+        -------
+        ogc_api_processes_fastapi.models.StatusInfo
+            Sumbitted job status info.
+        """
+        ...
+
+    def request_job_status_mock(
+        self, job_id: str
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+        """Randomly update status of job `job_id`.
+
+        Parameters
+        ----------
+        job_id : str
+            Job ID.
+        """
+        if JOBS[job_id]["status"] == "accepted":
+            random_number = random.randint(1, 10)
+            if random_number >= 5:
+                JOBS[job_id]["status"] = "running"
+                JOBS[job_id]["updated"] = datetime.datetime.now()
+                JOBS[job_id]["started"] = datetime.datetime.now()
+            elif random_number <= 1:
+                JOBS[job_id]["status"] = "failed"
+                JOBS[job_id]["updated"] = datetime.datetime.now()
+                JOBS[job_id]["finished"] = datetime.datetime.now()
+        elif JOBS[job_id]["status"] == "running":
+            random_number = random.randint(1, 10)
+            if random_number >= 7:
+                JOBS[job_id]["status"] = "successful"
+                JOBS[job_id]["updated"] = datetime.datetime.now()
+                JOBS[job_id]["finished"] = datetime.datetime.now()
+            elif random_number <= 1:
+                JOBS[job_id]["status"] = "failed"
+                JOBS[job_id]["updated"] = datetime.datetime.now()
+                JOBS[job_id]["finished"] = datetime.datetime.now()
         status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
 
         return status_info
@@ -241,7 +295,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         list[ogc_api_processes_fastapi.models.StatusInfo]
             Information on the status of the job.
         """
-        jobs_list = [update_job_status(job_id) for job_id in JOBS]
+        jobs_list = [self.request_job_status_mock(job_id) for job_id in JOBS]
         return jobs_list
 
     def get_job(self, job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
@@ -266,7 +320,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         if job_id not in JOBS.keys():
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-        status_info = update_job_status(job_id)
+        status_info = self.request_job_status_mock(job_id)
 
         return status_info
 
@@ -298,7 +352,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         if job_id not in JOBS.keys():
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-        update_job_status(job_id)
         if JOBS[job_id]["status"] in ("accepted", "running"):
             raise ogc_api_processes_fastapi.exceptions.ResultsNotReady()
         elif JOBS[job_id]["status"] == "failed":
