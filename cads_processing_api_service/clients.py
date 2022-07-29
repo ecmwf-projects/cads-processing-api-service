@@ -168,13 +168,20 @@ def serialize_process_description(
     return retval
 
 
-def submit_job(job_id: str, process_id: str) -> None:
+def submit_job(
+    job_id: str, process_id: str
+) -> ogc_api_processes_fastapi.models.StatusInfo:
     """Mock new job sumbission.
 
     Parameters
     ----------
     job_id : str
         Job ID.
+
+    Returns
+    -------
+    ogc_api_processes_fastapi.models.StatusInfo
+        Sumbitted job status info.
     """
     JOBS[job_id] = {
         "jobID": job_id,
@@ -186,9 +193,12 @@ def submit_job(job_id: str, process_id: str) -> None:
         "updated": datetime.datetime.now(),
         "processID": process_id,
     }
+    status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+
+    return status_info
 
 
-def update_job_status(job_id: str) -> None:
+def update_job_status(job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
     """Randomly update status of job `job_id`.
 
     Parameters
@@ -216,6 +226,9 @@ def update_job_status(job_id: str) -> None:
             JOBS[job_id]["status"] = "failed"
             JOBS[job_id]["updated"] = datetime.datetime.now()
             JOBS[job_id]["finished"] = datetime.datetime.now()
+    status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+
+    return status_info
 
 
 @attrs.define
@@ -339,8 +352,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         # TODO: inputs validation
         job_id = str(uuid.uuid4())
-        submit_job(job_id, process_id)
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+        status_info = submit_job(job_id, process_id)
         return status_info
 
     def get_jobs(self) -> list[ogc_api_processes_fastapi.models.StatusInfo]:
@@ -357,12 +369,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         list[ogc_api_processes_fastapi.models.StatusInfo]
             Information on the status of the job.
         """
-        for job_id in JOBS:
-            update_job_status(job_id)
-        jobs_list = [
-            ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
-            for job_id in JOBS
-        ]
+        jobs_list = [update_job_status(job_id) for job_id in JOBS]
         return jobs_list
 
     def get_job(self, job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
@@ -387,8 +394,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         if job_id not in JOBS.keys():
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-        update_job_status(job_id)
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+        status_info = update_job_status(job_id)
 
         return status_info
 
