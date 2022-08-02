@@ -17,7 +17,6 @@
 import datetime
 import logging
 import random
-import urllib.parse
 import uuid
 from typing import Any, Type
 
@@ -29,146 +28,17 @@ import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
-import requests  # type: ignore
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
-from . import adaptors, config, exceptions
+from . import adapters, exceptions, serializers
 
 logger = logging.getLogger(__name__)
 
 JOBS: dict[str, dict[str, str | datetime.datetime | None]] = {}
 
 
-def lookup_id(
-    id: str,
-    record: Type[cads_catalogue.database.BaseModel],
-    session: sqlalchemy.orm.Session,
-) -> cads_catalogue.database.BaseModel:
-    """Search database record by id.
-
-    Lookup `record` instance containing identifier `id` in the provided SQLAlchemy `session`.
-
-    Parameters
-    ----------
-    id : str
-        Identifier to look up.
-    record : Type[cads_catalogue.database.BaseModel]
-        Record for which to look for identifier `id`.
-    session : sqlalchemy.orm.Session
-        SQLAlchemy ORM session.
-
-    Returns
-    -------
-    cads_catalogue.database.BaseModel
-        Record instance containing identifier `id`.
-
-    Raises
-    ------
-    errors.NotFoundError
-        If not `record` instance is found containing identifier `id`.
-    """
-    try:
-        row = session.query(record).filter(record.resource_uid == id).one()
-    except sqlalchemy.orm.exc.NoResultFound:
-        raise exceptions.NotFoundError(f"{record.__name__} {id} not found")
-    return row
-
-
-def get_cds_form(cds_form_url: str) -> list[Any]:
-    """Get CDS form from URL.
-
-    Parameters
-    ----------
-    cds_form_url : str
-        URL to the CDS form, relative to the Document Storage URL.
-
-    Returns
-    -------
-    list[Any]
-        CDS form.
-    """
-    settings = config.ensure_settings()
-    cds_form_complete_url = urllib.parse.urljoin(
-        settings.document_storage_url, cds_form_url
-    )
-    cds_form: list[Any] = requests.get(cds_form_complete_url).json()
-    return cds_form
-
-
-def process_summary_serializer(
-    db_model: cads_catalogue.database.Resource,
-) -> ogc_api_processes_fastapi.models.ProcessSummary:
-    """Convert provided database entry into a representation of a process summary.
-
-    Parameters
-    ----------
-    db_model : cads_catalogue.database.Resource
-        Database entry.
-
-    Returns
-    -------
-    ogc_api_processes_fastapi.models.ProcessSummary
-        Process summary representation.
-    """
-    retval = ogc_api_processes_fastapi.models.ProcessSummary(
-        title=f"Retrieve of {db_model.title}",
-        description=db_model.abstract,
-        keywords=db_model.keywords,
-        id=f"retrieve-{db_model.resource_uid}",
-        version="1.0.0",
-        jobControlOptions=[
-            "async-execute",
-        ],
-        outputTransmission=[
-            "reference",
-        ],
-    )
-
-    return retval
-
-
-def process_inputs_serializer(
-    db_model: cads_catalogue.database.Resource,
-) -> list[dict[str, ogc_api_processes_fastapi.models.InputDescription]]:
-    """Convert provided database entry into a representation of a process inputs.
-
-    Returns
-    -------
-    list[ dict[str, ogc_api_processes_fastapi.models.InputDescription] ]
-        Process inputs representation.
-    """
-    form_url = db_model.form
-    cds_form = get_cds_form(cds_form_url=form_url)
-    inputs = adaptors.translate_cds_into_ogc_inputs(cds_form)
-    return inputs
-
-
-def process_description_serializer(
-    db_model: cads_catalogue.database.Resource,
-) -> ogc_api_processes_fastapi.models.ProcessDescription:
-    """Convert provided database entry into a representation of a process description.
-
-    Parameters
-    ----------
-    db_model : cads_catalogue.database.Resource
-        Database entry.
-
-    Returns
-    -------
-    ogc_api_processes_fastapi.models.ProcessDescription
-        Process description representation.
-    """
-    process_summary = process_summary_serializer(db_model)
-    retval = ogc_api_processes_fastapi.models.ProcessDescription(
-        **process_summary.dict(),
-        inputs=process_inputs_serializer(db_model),
-    )
-
-    return retval
-
-
-def update_job_status(job_id: str) -> None:
+def update_job_status(job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
     """Randomly update status of job `job_id`.
 
     Parameters
@@ -196,6 +66,9 @@ def update_job_status(job_id: str) -> None:
             JOBS[job_id]["status"] = "failed"
             JOBS[job_id]["updated"] = datetime.datetime.now()
             JOBS[job_id]["finished"] = datetime.datetime.now()
+    status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+
+    return status_info
 
 
 @attrs.define
@@ -215,7 +88,147 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         default=cads_catalogue.database.Resource
     )
 
-    def get_processes(self) -> list[ogc_api_processes_fastapi.models.ProcessSummary]:
+    def _lookup_id(
+        self,
+        id: str,
+        record: Type[cads_catalogue.database.BaseModel],
+        session: sqlalchemy.orm.Session,
+    ) -> cads_catalogue.database.BaseModel:
+
+        try:
+            row = session.query(record).filter(record.resource_uid == id).one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise exceptions.NotFoundError(f"{record.__name__} {id} not found")
+        return row
+
+    def lookup_resource_by_id(
+        self,
+        id: str,
+        session: sqlalchemy.orm.Session,
+    ) -> Any:
+
+        try:
+            process = self._lookup_id(id=id, record=self.process_table, session=session)
+        except exceptions.NotFoundError:
+            raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
+
+        return process
+
+    def validate_request(
+        self,
+        process_id: str,
+        execution_content: ogc_api_processes_fastapi.models.Execute,
+        session: sqlalchemy.orm.Session,
+    ) -> tuple[str, cads_catalogue.database.Resource]:
+        """Validate retrieve process execution request.
+
+        Check if requested dataset exists and if execution content is valid.
+        In case the check is successful, creates and returns the job ID and the
+        resource (dataset) associated to the process request.
+
+        Parameters
+        ----------
+        process_id : str
+            Process ID.
+        execution_content : ogc_api_processes_fastapi.models.Execute
+            Body of the process execution request.
+        session : sqlalchemy.orm.Session
+            SQLAlchemy ORM session
+
+        Returns
+        -------
+        tuple[str, cads_catalogue.database.Resource]
+            Job ID and resource (dataset) associated to the process request.
+        """
+        # TODO: implement inputs validation
+        resource_id = process_id[len("retrieve-") :]
+        resource = self.lookup_resource_by_id(resource_id, session)
+        job_id = str(uuid.uuid4())
+        print(execution_content, resource)
+        return job_id, resource
+
+    def submit_job_mock(
+        self,
+        job_id: str,
+        process_id: str,
+        execution_content: ogc_api_processes_fastapi.models.Execute,
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+
+        JOBS[job_id] = {
+            "jobID": job_id,
+            "status": "accepted",
+            "type": "process",
+            "created": datetime.datetime.now(),
+            "started": None,
+            "finished": None,
+            "updated": datetime.datetime.now(),
+            "processID": process_id,
+        }
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+
+        return status_info
+
+    def submit_job(
+        self,
+        job_id: str,
+        process_id: str,
+        execution_content: ogc_api_processes_fastapi.models.Execute,
+    ) -> ogc_api_processes_fastapi.models.StatusInfo | None:
+        """Submit new job.
+
+        Parameters
+        ----------
+        job_id : str
+            Job ID.
+        process_id: str
+            Process ID.
+        execution_content: ogc_api_processes_fastapi.models.Execute
+            Body of the process execution request.
+
+        Returns
+        -------
+        ogc_api_processes_fastapi.models.StatusInfo
+            Sumbitted job status info.
+        """
+        # TODO: request adaptation
+        setup_code, entry_point, kwargs, metadata = adapters.adapt_user_request(
+            job_id, process_id, execution_content
+        )
+        # TODO: submit request to broker
+
+        return None
+
+    def request_job_status_mock(
+        self, job_id: str
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+
+        if JOBS[job_id]["status"] == "accepted":
+            random_number = random.randint(1, 10)
+            if random_number >= 5:
+                JOBS[job_id]["status"] = "running"
+                JOBS[job_id]["updated"] = datetime.datetime.now()
+                JOBS[job_id]["started"] = datetime.datetime.now()
+            elif random_number <= 1:
+                JOBS[job_id]["status"] = "failed"
+                JOBS[job_id]["updated"] = datetime.datetime.now()
+                JOBS[job_id]["finished"] = datetime.datetime.now()
+        elif JOBS[job_id]["status"] == "running":
+            random_number = random.randint(1, 10)
+            if random_number >= 7:
+                JOBS[job_id]["status"] = "successful"
+                JOBS[job_id]["updated"] = datetime.datetime.now()
+                JOBS[job_id]["finished"] = datetime.datetime.now()
+            elif random_number <= 1:
+                JOBS[job_id]["status"] = "failed"
+                JOBS[job_id]["updated"] = datetime.datetime.now()
+                JOBS[job_id]["finished"] = datetime.datetime.now()
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+
+        return status_info
+
+    def get_processes(
+        self, limit: int | None = None, offset: int = 0
+    ) -> list[ogc_api_processes_fastapi.models.ProcessSummary]:
         """Implement OGC API - Processes `GET /processes` endpoint.
 
         Get the list of available processes from the database.
@@ -228,7 +241,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         with self.reader.context_session() as session:
             processes = session.query(self.process_table).all()
             processes_list = [
-                process_summary_serializer(process) for process in processes
+                serializers.serialize_process_summary(process) for process in processes
             ]
 
         return processes_list
@@ -256,12 +269,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the process `process_id` is not found.
         """
         with self.reader.context_session() as session:
-            id = process_id[len("retrieve-") :]
-            try:
-                process = lookup_id(id=id, record=self.process_table, session=session)
-            except exceptions.NotFoundError:
-                raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
-            process_description = process_description_serializer(process)
+            resource_id = process_id[len("retrieve-") :]
+            resource = self.lookup_resource_by_id(resource_id, session)
+            process_description = serializers.serialize_process_description(resource)
             process_description.outputs = [
                 {
                     "download_url": ogc_api_processes_fastapi.models.OutputDescription(
@@ -302,23 +312,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        process_description = self.get_process(process_id)
-        # TODO: inputs validation
-        print(process_description)
-        job_id = str(uuid.uuid4())
-        while job_id in JOBS.keys():
-            job_id = str(uuid.uuid4())
-        JOBS[job_id] = {
-            "jobID": job_id,
-            "status": "accepted",
-            "type": "process",
-            "created": datetime.datetime.now(),
-            "started": None,
-            "finished": None,
-            "updated": datetime.datetime.now(),
-            "processID": process_id,
-        }
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+        with self.reader.context_session() as session:
+            job_id, resource = self.validate_request(
+                process_id, execution_content, session
+            )
+        status_info = self.submit_job_mock(job_id, process_id, execution_content)
         return status_info
 
     def get_jobs(self) -> list[ogc_api_processes_fastapi.models.StatusInfo]:
@@ -335,12 +333,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         list[ogc_api_processes_fastapi.models.StatusInfo]
             Information on the status of the job.
         """
-        for job_id in JOBS:
-            update_job_status(job_id)
-        jobs_list = [
-            ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
-            for job_id in JOBS
-        ]
+        jobs_list = [self.request_job_status_mock(job_id) for job_id in JOBS]
         return jobs_list
 
     def get_job(self, job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
@@ -365,8 +358,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         if job_id not in JOBS.keys():
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-        update_job_status(job_id)
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+        status_info = self.request_job_status_mock(job_id)
 
         return status_info
 
@@ -398,7 +390,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         if job_id not in JOBS.keys():
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-        update_job_status(job_id)
         if JOBS[job_id]["status"] in ("accepted", "running"):
             raise ogc_api_processes_fastapi.exceptions.ResultsNotReady()
         elif JOBS[job_id]["status"] == "failed":
