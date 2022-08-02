@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cads_processing_api_service.adaptors
+import cads_processing_api_service.translators
 
 TEST_INPUT = {
     "string_array": {
@@ -42,7 +42,7 @@ def test_string_array_to_string_array() -> None:
         "type": "array",
         "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
     }
-    res_output = cads_processing_api_service.adaptors.string_array_to_string_array(
+    res_output = cads_processing_api_service.translators.string_array_to_string_array(
         test_input
     )
 
@@ -55,7 +55,7 @@ def test_string_list_to_string_array() -> None:
         "type": "array",
         "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
     }
-    res_output = cads_processing_api_service.adaptors.string_list_to_string_array(
+    res_output = cads_processing_api_service.translators.string_list_to_string_array(
         test_input
     )
 
@@ -65,7 +65,7 @@ def test_string_list_to_string_array() -> None:
 def test_string_choice_to_string_value() -> None:
     test_input = TEST_INPUT["string_choice"]
     exp_ouput = {"type": "string", "enum": ["val1", "val2", "val3"], "default": "val1"}
-    res_output = cads_processing_api_service.adaptors.string_choice_to_string_value(
+    res_output = cads_processing_api_service.translators.string_choice_to_string_value(
         test_input
     )
 
@@ -81,6 +81,6 @@ def test_extent_to_area() -> None:
         "items": {"type": "number"},
         "default": [1, 2, 3, 4],
     }
-    res_output = cads_processing_api_service.adaptors.extent_to_area(test_input)
+    res_output = cads_processing_api_service.translators.extent_to_area(test_input)
 
     assert res_output == exp_ouput
