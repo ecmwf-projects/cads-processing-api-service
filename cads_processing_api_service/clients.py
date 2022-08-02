@@ -141,8 +141,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job ID and resource (dataset) associated to the process request.
         """
         # TODO: implement inputs validation
-        resource_id = process_id[len("retrieve-") :]
-        resource = self.lookup_resource_by_id(resource_id, session)
+        resource = self.lookup_resource_by_id(process_id, session)
         job_id = str(uuid.uuid4())
         print(execution_content, resource)
         return job_id, resource
@@ -282,8 +281,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the process `process_id` is not found.
         """
         with self.reader.context_session() as session:
-            resource_id = process_id[len("retrieve-") :]
-            resource = self.lookup_resource_by_id(resource_id, session)
+            resource = self.lookup_resource_by_id(process_id, session)
             process_description = serializers.serialize_process_description(resource)
             process_description.outputs = {
                 "download_url": ogc_api_processes_fastapi.models.OutputDescription(

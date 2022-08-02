@@ -64,7 +64,7 @@ def serialize_process_summary(
         title=f"Retrieve of {db_model.title}",
         description=db_model.abstract,
         keywords=db_model.keywords,
-        id=f"retrieve-{db_model.resource_uid}",
+        id=db_model.resource_uid,
         version="1.0.0",
         jobControlOptions=[
             "async-execute",
