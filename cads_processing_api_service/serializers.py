@@ -17,6 +17,7 @@
 import urllib.parse
 from typing import Any
 
+import cacholote.cache
 import cads_catalogue.database
 import ogc_api_processes_fastapi.models
 import requests  # type: ignore
@@ -77,6 +78,7 @@ def serialize_process_summary(
     return retval
 
 
+@cacholote.cache.cacheable
 def serialize_process_inputs(
     db_model: cads_catalogue.database.Resource,
 ) -> dict[str, ogc_api_processes_fastapi.models.InputDescription]:
