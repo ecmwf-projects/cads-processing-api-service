@@ -9,3 +9,4 @@ dependencies:
 - pip
 - pip:
   - git+https://github.com/ecmwf-projects/ogc-api-processes-fastapi.git
+  - git+https://github.com/bopen/cacholote.git
