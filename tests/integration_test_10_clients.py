@@ -16,8 +16,8 @@ import urllib.parse
 
 import requests  # type: ignore
 
-EXISTING_PROCESS_ID = "retrieve-reanalysis-era5-land"
-NON_EXISTING_PROCESS_ID = "retrieve-non-existing-dataset"
+EXISTING_PROCESS_ID = "reanalysis-era5-land"
+NON_EXISTING_PROCESS_ID = "non-existing-dataset"
 NON_EXISTING_JOB_ID = "1234"
 
 
