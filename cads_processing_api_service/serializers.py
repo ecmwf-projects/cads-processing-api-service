@@ -79,12 +79,12 @@ def serialize_process_summary(
 
 def serialize_process_inputs(
     db_model: cads_catalogue.database.Resource,
-) -> list[dict[str, ogc_api_processes_fastapi.models.InputDescription]]:
+) -> dict[str, ogc_api_processes_fastapi.models.InputDescription]:
     """Convert provided database entry into a representation of a process inputs.
 
     Returns
     -------
-    list[ dict[str, ogc_api_processes_fastapi.models.InputDescription] ]
+    dict[str, ogc_api_processes_fastapi.models.InputDescription]
         Process inputs representation.
     """
     form_url = db_model.form
