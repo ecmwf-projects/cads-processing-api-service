@@ -83,7 +83,7 @@ def build_input_ogc_schema(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
 
 def translate_cds_into_ogc_inputs(
     cds_form: list[Any],
-) -> list[dict[str, models.InputDescription]]:
+) -> dict[str, models.InputDescription]:
     """Translate CDS forms inputs into OGC API compliants ones.
 
     Convert inputs information contained in the provided CDS form file
@@ -96,20 +96,17 @@ def translate_cds_into_ogc_inputs(
 
     Returns
     -------
-    list[dict[str, models.InputDescription]]
+    dict[str, models.InputDescription]
         Python object containing translated inputs information.
     """
-    inputs_ogc = []
+    inputs_ogc = {}
     for input_cds_schema in cds_form:
         if input_cds_schema["name"] in ACCEPTED_INPUTS:
-            input_ogc = {
-                input_cds_schema["name"]: models.InputDescription(
-                    title=input_cds_schema["label"],
-                    schema_=models.SchemaItem(  # type: ignore
-                        **build_input_ogc_schema(input_cds_schema)
-                    ),
-                )
-            }
-            inputs_ogc.append(input_ogc)
+            inputs_ogc[input_cds_schema["name"]] = models.InputDescription(
+                title=input_cds_schema["label"],
+                schema_=models.SchemaItem(  # type: ignore
+                    **build_input_ogc_schema(input_cds_schema)
+                ),
+            )
 
     return inputs_ogc

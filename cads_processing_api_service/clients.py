@@ -285,17 +285,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             resource_id = process_id[len("retrieve-") :]
             resource = self.lookup_resource_by_id(resource_id, session)
             process_description = serializers.serialize_process_description(resource)
-            process_description.outputs = [
-                {
-                    "download_url": ogc_api_processes_fastapi.models.OutputDescription(
-                        title="Download URL",
-                        description="URL to download process result",
-                        schema_=ogc_api_processes_fastapi.models.SchemaItem(  # type: ignore
-                            type="string", format="url"
-                        ),
-                    )
-                }
-            ]
+            process_description.outputs = {
+                "download_url": ogc_api_processes_fastapi.models.OutputDescription(
+                    title="Download URL",
+                    description="URL to download process result",
+                    schema_=ogc_api_processes_fastapi.models.SchemaItem(  # type: ignore
+                        type="string", format="url"
+                    ),
+                )
+            }
 
         return process_description
 
