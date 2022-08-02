@@ -19,7 +19,7 @@ from typing import Any
 import cads_catalogue.database
 import ogc_api_processes_fastapi.models
 
-FALLBACK_ADAPTER_CODE = """
+FALLBACK_SETUP_CODE = """
 import cacholote
 import cadsapi
 import cdscdm
@@ -62,9 +62,9 @@ def make_system_request(
 ) -> tuple[str, str, dict[str, Any], dict[str, str]]:
 
     try:
-        adapter_code = resource.adapter_code
+        setup_code = resource.adapter_code
     except AttributeError:
-        adapter_code = FALLBACK_ADAPTER_CODE
+        setup_code = FALLBACK_SETUP_CODE
 
     try:
         entry_point = resource.entry_point
@@ -77,14 +77,11 @@ def make_system_request(
         config = FALLBACK_CONFIG
 
     inputs = execution_content.dict()["inputs"]
-    request = {}
-    for input in inputs:
-        request.update(input)
-    kwargs = {"request": request, "config": config}
+    kwargs = {"request": inputs, "config": config}
 
     metadata = {
         "processID": process_id,
         "jobID": job_id,
     }
 
-    return adapter_code, entry_point, kwargs, metadata
+    return setup_code, entry_point, kwargs, metadata
