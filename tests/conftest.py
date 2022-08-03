@@ -17,4 +17,4 @@ import pytest
 
 @pytest.fixture
 def dev_env_proc_api_url() -> str:
-    return "http://localhost:8080/api/v1/processing/"
+    return "http://localhost:8080/api/retrieve/v1/"
