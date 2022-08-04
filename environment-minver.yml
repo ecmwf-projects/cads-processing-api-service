@@ -8,5 +8,4 @@ dependencies:
 # DO NOT EDIT ABOVE THIS LINE, ADD DEPENDENCIES BELOW
 - pip
 - pip:
-  - git+https://github.com/ecmwf-projects/cads-api-client.git
   - git+https://github.com/ecmwf-projects/ogc-api-processes-fastapi.git

@@ -20,5 +20,4 @@ dependencies:
 - uvicorn
 - pip:
   - fastapi-utils
-  - git+https://github.com/ecmwf-projects/cads-api-client.git
   - git+https://github.com/ecmwf-projects/ogc-api-processes-fastapi.git
