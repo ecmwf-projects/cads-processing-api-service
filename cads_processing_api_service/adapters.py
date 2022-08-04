@@ -59,7 +59,9 @@ def make_system_request(
     execution_content: ogc_api_processes_fastapi.models.Execute,
     job_id: str,
     resource: cads_catalogue.database.Resource,
-) -> tuple[str, str, dict[str, Any], dict[str, str]]:
+) -> dict[str, Any]:
+
+    compute_request: dict[str, Any] = {}
 
     try:
         setup_code = resource.adapter_code
@@ -84,4 +86,13 @@ def make_system_request(
         "jobID": job_id,
     }
 
-    return setup_code, entry_point, kwargs, metadata
+    compute_request["inputs"] = {
+        "setup_code": setup_code,
+        "entry_point": entry_point,
+        "kwargs": {
+            "value": kwargs,
+        },
+        "metadata": {"value": metadata},
+    }
+
+    return compute_request

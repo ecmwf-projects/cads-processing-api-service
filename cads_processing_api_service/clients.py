@@ -21,6 +21,7 @@ import uuid
 from typing import Any, Type
 
 import attrs
+import cads_api_client
 import cads_catalogue.config
 import cads_catalogue.database
 import fastapi_utils.session
@@ -174,7 +175,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         execution_content: ogc_api_processes_fastapi.models.Execute,
         job_id: str,
         resource: cads_catalogue.database.Resource,
-    ) -> None:
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Submit new job.
 
         Parameters
@@ -194,12 +195,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.StatusInfo
             Sumbitted job status info.
         """
-        setup_code, entry_point, kwargs, metadata = adapters.make_system_request(
+        request = adapters.make_system_request(
             process_id, execution_content, job_id, resource
         )
-        print(setup_code, entry_point, kwargs, metadata)
+        status_info = cads_api_client.Processing().process_execute(
+            process_id, **request
+        )
 
-        return None
+        return status_info  # type: ignore
 
     def request_job_status_mock(
         self, job_id: str
@@ -329,9 +332,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job_id, resource = self.validate_request(
                 process_id, execution_content, session
             )
-        status_info = self.submit_job_mock(
-            process_id, execution_content, job_id, resource
-        )
+        status_info = self.submit_job(process_id, execution_content, job_id, resource)
         return status_info
 
     def get_jobs(self) -> list[ogc_api_processes_fastapi.models.StatusInfo]:
