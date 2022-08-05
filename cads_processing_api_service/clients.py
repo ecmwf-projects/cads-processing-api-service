@@ -201,7 +201,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         settings = config.ensure_settings()
         status_info = cads_api_client.Processing(
             settings.compute_api_url
-        ).process_execute(process_id, **request)
+        ).process_execute("submit-workflow", **request)
 
         return status_info  # type: ignore
 
