@@ -29,6 +29,7 @@ class Settings(pydantic.BaseSettings):
     """
 
     document_storage_url: str = "/document-storage/"
+    compute_api_url: str = "http://compute-api-service:8000/"
 
 
 def ensure_settings(

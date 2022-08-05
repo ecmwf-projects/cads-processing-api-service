@@ -32,7 +32,7 @@ import ogc_api_processes_fastapi.models
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
-from . import adapters, exceptions, serializers
+from . import adapters, config, exceptions, serializers
 
 logger = logging.getLogger(__name__)
 
@@ -198,9 +198,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         request = adapters.make_system_request(
             process_id, execution_content, job_id, resource
         )
-        status_info = cads_api_client.Processing().process_execute(
-            process_id, **request
-        )
+        settings = config.ensure_settings()
+        status_info = cads_api_client.Processing(
+            settings.compute_api_url
+        ).process_execute(process_id, **request)
 
         return status_info  # type: ignore
 
