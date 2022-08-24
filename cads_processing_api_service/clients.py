@@ -202,11 +202,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         # status_info = cads_api_client.Processing(
         #     settings.compute_api_url
         # ).process_execute("submit-workflow", **request)
-        status_info = requests.post(
+        response = requests.post(
             f"{settings.compute_api_url}processes/submit-workflow/execute", json=request
         )
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
 
-        return status_info  # type: ignore
+        return status_info
 
     def request_job_status_mock(
         self, job_id: str
