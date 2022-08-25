@@ -30,11 +30,11 @@ def test_make_system_request_default() -> None:
     exp_kwargs = {"request": inputs, "config": adapters.FALLBACK_CONFIG}
     exp_metadata = {"processID": process_id, "jobID": job_id}
 
-    setup_code, entry_point, kwargs, metadata = adapters.make_system_request(
+    compute_request = adapters.make_system_request(
         process_id, execution_content, job_id, resource
     )
 
-    assert setup_code == exp_setup_code
-    assert entry_point == exp_entry_point
-    assert kwargs == exp_kwargs
-    assert metadata == exp_metadata
+    assert compute_request["inputs"]["setup_code"] == exp_setup_code
+    assert compute_request["inputs"]["entry_point"] == exp_entry_point
+    assert compute_request["inputs"]["kwargs"]["value"] == exp_kwargs
+    assert compute_request["inputs"]["metadata"]["value"] == exp_metadata
