@@ -396,7 +396,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         Returns
         -------
         ogc_api_processes_fastapi.models.Link
-            Link to the job results.
+            Job results.
 
         Raises
         ------
@@ -415,8 +415,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.ResultsNotReady()
         elif JOBS[job_id]["status"] == "failed":
             raise ogc_api_processes_fastapi.exceptions.JobResultsFailed()
-        results_link = ogc_api_processes_fastapi.models.Link(
+        results = ogc_api_processes_fastapi.models.Link(
             href=f"https://example.org/{job_id}-results.nc",
             title=f"Download link for the result of job {job_id}",
         )
-        return results_link
+        return results
