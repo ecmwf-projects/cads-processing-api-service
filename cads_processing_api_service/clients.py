@@ -21,6 +21,7 @@ import uuid
 from typing import Any, Type
 
 import attrs
+import cads_api_client
 import cads_catalogue.config
 import cads_catalogue.database
 import fastapi_utils.session
@@ -28,7 +29,6 @@ import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
-import requests  # type: ignore
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
@@ -199,13 +199,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             process_id, execution_content, job_id, resource
         )
         settings = config.ensure_settings()
-        # status_info = cads_api_client.Processing(
-        #     settings.compute_api_url
-        # ).process_execute("submit-workflow", **request)
-        response = requests.post(
-            f"{settings.compute_api_url}processes/submit-workflow/execute", json=request
-        )
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
+        response = cads_api_client.Processing(
+            url=settings.compute_api_url, force_exact_url=True
+        ).process_execute("submit-workflow", **request)
+        # TODO: extract processID from headers and put in status_info["processID"]
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json)
 
         return status_info
 
