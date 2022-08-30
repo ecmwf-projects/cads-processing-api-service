@@ -19,7 +19,7 @@ from typing import Any
 
 import cads_catalogue.database
 import ogc_api_processes_fastapi.models
-import requests  # type: ignore
+import requests
 
 from . import config, translators
 
@@ -70,7 +70,7 @@ def serialize_process_summary(
             "async-execute",
         ],
         outputTransmission=[
-            "reference",
+            "document",
         ],
     )
 
