@@ -81,18 +81,13 @@ def make_system_request(
     inputs = execution_content.dict()["inputs"]
     kwargs = {"request": inputs, "config": config}
 
-    metadata = {
-        "processID": process_id,
-        "jobID": job_id,
-    }
-
     compute_request["inputs"] = {
         "setup_code": setup_code,
         "entry_point": entry_point,
         "kwargs": {
             "value": kwargs,
         },
-        "metadata": {"value": metadata},
     }
+    compute_request["metadata"] = {"X-Job-ID": job_id, "X-Process-ID": process_id}
 
     return compute_request

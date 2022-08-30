@@ -201,7 +201,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         settings = config.ensure_settings()
         response = cads_api_client.Processing(
             url=settings.compute_api_url, force_exact_url=True
-        ).process_execute("submit-workflow", **request)
+        ).process_execute(
+            "submit-workflow", request["inputs"], headers=request["metadata"]
+        )
         # TODO: extract processID from headers and put in status_info["processID"]
         status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json)
 
