@@ -337,7 +337,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job_id, resource = self.validate_request(
                 process_id, execution_content, session
             )
-        status_info = self.submit_job(process_id, execution_content, job_id, resource)
+        status_info = self.submit_job_mock(
+            process_id, execution_content, job_id, resource
+        )
         return status_info
 
     def get_jobs(self) -> list[ogc_api_processes_fastapi.models.StatusInfo]:
@@ -383,7 +385,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return status_info
 
-    def get_job_results(self, job_id: str) -> ogc_api_processes_fastapi.models.Link:
+    def get_job_results(self, job_id: str) -> Any:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
 
         Get results for the job identifed by `job_id`.
@@ -395,7 +397,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.models.Link
+        ogc_api_processes_fastapi.models.Results
             Job results.
 
         Raises
@@ -415,8 +417,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.ResultsNotReady()
         elif JOBS[job_id]["status"] == "failed":
             raise ogc_api_processes_fastapi.exceptions.JobResultsFailed()
-        results = ogc_api_processes_fastapi.models.Link(
-            href=f"https://example.org/{job_id}-results.nc",
-            title=f"Download link for the result of job {job_id}",
-        )
+        results = {
+            "result1": "results",
+            "url": {"href": f"https://example.org/{job_id}-results.nc"},
+        }
         return results
