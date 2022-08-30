@@ -337,9 +337,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job_id, resource = self.validate_request(
                 process_id, execution_content, session
             )
-        status_info = self.submit_job_mock(
-            process_id, execution_content, job_id, resource
-        )
+        status_info = self.submit_job(process_id, execution_content, job_id, resource)
         return status_info
 
     def get_jobs(self) -> list[ogc_api_processes_fastapi.models.StatusInfo]:
