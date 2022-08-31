@@ -337,7 +337,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job_id, resource = self.validate_request(
                 process_id, execution_content, session
             )
-        status_info = self.submit_job(process_id, execution_content, job_id, resource)
+        status_info = self.submit_job_mock(
+            process_id, execution_content, job_id, resource
+        )
         return status_info
 
     def get_jobs(self) -> list[ogc_api_processes_fastapi.models.StatusInfo]:
@@ -416,7 +418,19 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         elif JOBS[job_id]["status"] == "failed":
             raise ogc_api_processes_fastapi.exceptions.JobResultsFailed()
         results = {
-            "result1": "results",
-            "url": {"href": f"https://example.org/{job_id}-results.nc"},
+            "asset": {
+                "value": {
+                    "type": "application/netcdf",
+                    "href": "./e7d452a747061ab880887d88814bfb0c27593a73cb7736d2dc340852.nc",
+                    "file:checksum": "e7d452a747061ab880887d88814bfb0c27593a73cb7736d2dc340852",
+                    "file:size": 8,
+                    "file:local_path": (
+                        "/cache-store/",
+                        "e7d452a747061ab880887d88814bfb0c27593a73cb7736d2dc340852.nc",
+                    ),
+                    "xarray:open_kwargs": {},
+                    "xarray:storage_options": {},
+                }
+            }
         }
         return results
