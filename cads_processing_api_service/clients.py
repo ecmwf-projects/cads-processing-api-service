@@ -204,8 +204,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ).process_execute(
             "submit-workflow", request["inputs"], headers=request["metadata"]
         )
-        # TODO: extract processID from headers and put in status_info["processID"]
         status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json)
+        response_headers = response.response.headers
+        status_info.processID = response_headers["X-Forward-Process-ID"]
 
         return status_info
 
