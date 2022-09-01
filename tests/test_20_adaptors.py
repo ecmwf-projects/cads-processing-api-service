@@ -15,7 +15,7 @@
 import cads_catalogue.database
 import ogc_api_processes_fastapi.models
 
-from cads_processing_api_service import adapters
+from cads_processing_api_service import adaptors
 
 
 def test_make_system_request_default() -> None:
@@ -25,12 +25,12 @@ def test_make_system_request_default() -> None:
     job_id = "test_job_id"
     resource = cads_catalogue.database.Resource()
 
-    exp_setup_code = adapters.FALLBACK_SETUP_CODE
-    exp_entry_point = adapters.FALLBACK_ENTRY_POINT
-    exp_kwargs = {"request": inputs, "config": adapters.FALLBACK_CONFIG}
+    exp_setup_code = adaptors.FALLBACK_SETUP_CODE
+    exp_entry_point = adaptors.FALLBACK_ENTRY_POINT
+    exp_kwargs = {"request": inputs, "config": adaptors.FALLBACK_CONFIG}
     exp_metadata = {"X-Forward-Process-ID": process_id, "X-Forward-Job-ID": job_id}
 
-    request = adapters.make_system_request(
+    request = adaptors.make_system_request(
         process_id, execution_content, job_id, resource
     )
 

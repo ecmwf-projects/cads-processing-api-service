@@ -1,4 +1,4 @@
-"""User requests to system requests adapters."""
+"""User requests to system requests adaptors."""
 
 # Copyright 2022, European Union.
 #
@@ -27,7 +27,7 @@ import xarray as xr
 
 
 @cacholote.cacheable
-def adapter(request, config, metadata):
+def adaptor(request, config, metadata):
 
     # parse input options
     collection_id = request.pop("collection_id", None)
@@ -49,7 +49,7 @@ def adapter(request, config, metadata):
     return data
 """
 
-FALLBACK_ENTRY_POINT = "adapter"
+FALLBACK_ENTRY_POINT = "adaptor"
 
 FALLBACK_CONFIG: dict[str, str] = {}
 
@@ -64,7 +64,7 @@ def make_system_request(
     compute_request: dict[str, Any] = {}
 
     try:
-        setup_code = resource.adapter_code
+        setup_code = resource.adaptor_code
     except AttributeError:
         setup_code = FALLBACK_SETUP_CODE
 

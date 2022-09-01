@@ -32,7 +32,7 @@ import ogc_api_processes_fastapi.models
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
-from . import adapters, config, exceptions, serializers
+from . import adaptors, config, exceptions, serializers
 
 logger = logging.getLogger(__name__)
 
@@ -195,7 +195,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.StatusInfo
             Sumbitted job status info.
         """
-        request = adapters.make_system_request(
+        request = adaptors.make_system_request(
             process_id, execution_content, job_id, resource
         )
         settings = config.ensure_settings()
