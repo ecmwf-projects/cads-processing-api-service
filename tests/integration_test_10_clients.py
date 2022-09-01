@@ -14,7 +14,7 @@
 
 import urllib.parse
 
-import requests  # type: ignore
+import requests
 
 EXISTING_PROCESS_ID = "reanalysis-era5-land"
 NON_EXISTING_PROCESS_ID = "non-existing-dataset"

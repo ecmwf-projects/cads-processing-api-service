@@ -88,6 +88,9 @@ def make_system_request(
             "value": kwargs,
         },
     }
-    compute_request["metadata"] = {"X-Job-ID": job_id, "X-Process-ID": process_id}
+    compute_request["metadata"] = {
+        "X-Forward-Job-ID": job_id,
+        "X-Forward-Process-ID": process_id,
+    }
 
     return compute_request

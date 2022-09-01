@@ -28,7 +28,7 @@ def test_make_system_request_default() -> None:
     exp_setup_code = adapters.FALLBACK_SETUP_CODE
     exp_entry_point = adapters.FALLBACK_ENTRY_POINT
     exp_kwargs = {"request": inputs, "config": adapters.FALLBACK_CONFIG}
-    exp_metadata = {"X-Process-ID": process_id, "X-Job-ID": job_id}
+    exp_metadata = {"X-Forward-Process-ID": process_id, "X-Forward-Job-ID": job_id}
 
     request = adapters.make_system_request(
         process_id, execution_content, job_id, resource
