@@ -24,6 +24,7 @@ import attrs
 import cads_api_client
 import cads_catalogue.config
 import cads_catalogue.database
+import fastapi
 import fastapi_utils.session
 import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
@@ -310,6 +311,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
+        request: fastapi.Request,
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
@@ -321,6 +323,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Process identifier.
         execution_content : ogc_api_processes_fastapi.models.Execute
             Process execution details (e.g. inputs).
+        request: fastapi.Request
+            Request.
 
         Returns
         -------
