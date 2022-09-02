@@ -21,8 +21,7 @@ import ogc_api_processes_fastapi.models
 
 FALLBACK_SETUP_CODE = """
 import cacholote
-import cadsapi
-import cdscdm
+import cdsapi
 import xarray as xr
 
 
@@ -30,21 +29,21 @@ import xarray as xr
 def adaptor(request, config, metadata):
 
     # parse input options
-    collection_id = request.pop("collection_id", None)
-    if collection_id:
-        raise ValueError(f"collection_id is required in request")
-    data_format = request.pop("format", "grib")
-    if data_format not in {"netcdf", "grib"}:
-        raise ValueError(f"{data_format=} is not supported")
+    collection_id = metadata.pop('process_id', None)
+    if not collection_id:
+        raise ValueError(f'collection_id is required in request')
+    data_format = request.pop('format', 'grib')
+    if data_format not in {'netcdf', 'grib'}:
+        raise ValueError(f'{data_format=} is not supported')
 
     # retrieve data
     client = cdsapi.Client()
-    client.retrieve(collection_id, request, "download.grib")  # TODO
-    data = xr.open_dataset("download.grib")
+    client.retrieve(collection_id, request, 'download.grib')  # TODO
+    data = xr.open_dataset('download.grib')
 
     # post-process data
-    if data_format == "netcdf":
-        data = cdscdm.open_dataset("download.grib")
+    if data_format == 'netcdf':
+        data = xr.open_dataset('download.grib')
 
     return data
 """
