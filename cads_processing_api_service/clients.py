@@ -176,7 +176,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         execution_content: ogc_api_processes_fastapi.models.Execute,
         job_id: str,
         resource: cads_catalogue.database.Resource,
-    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+    ) -> dict[str, Any]:
         """Submit new job.
 
         Parameters
@@ -193,7 +193,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.models.StatusInfo
+        dict[str, Any]
             Sumbitted job status info.
         """
         request = adaptors.make_system_request(
@@ -205,7 +205,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ).process_execute(
             "submit-workflow", request["inputs"], headers=request["metadata"]
         )
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json)
+        status_info = dict(**response.json)
+        status_info["processID"] = status_info["apiProcessID"]
 
         return status_info
 
@@ -312,7 +313,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
         request: fastapi.Request,
-    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+    ) -> dict[str, Any]:
         """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
         Request execution of the process identified by `process_id`.
@@ -328,7 +329,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.models.StatusInfo
+        dict[str, Any]
             Information on the status of the job.
 
         Raises
