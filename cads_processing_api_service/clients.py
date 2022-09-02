@@ -408,26 +408,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.JobResultsFailed
             If job `job_id` results preparation failed.
         """
-        if job_id not in JOBS.keys():
-            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-        if JOBS[job_id]["status"] in ("accepted", "running"):
-            raise ogc_api_processes_fastapi.exceptions.ResultsNotReady()
-        elif JOBS[job_id]["status"] == "failed":
-            raise ogc_api_processes_fastapi.exceptions.JobResultsFailed()
-        results = {
-            "asset": {
-                "value": {
-                    "type": "application/netcdf",
-                    "href": "./e7d452a747061ab880887d88814bfb0c27593a73cb7736d2dc340852.nc",
-                    "file:checksum": "e7d452a747061ab880887d88814bfb0c27593a73cb7736d2dc340852",
-                    "file:size": 8,
-                    "file:local_path": (
-                        "/cache-store/",
-                        "e7d452a747061ab880887d88814bfb0c27593a73cb7736d2dc340852.nc",
-                    ),
-                    "xarray:open_kwargs": {},
-                    "xarray:storage_options": {},
-                }
-            }
-        }
+        settings = config.ensure_settings()
+        response = cads_api_client.Processing(
+            url=settings.compute_api_url, force_exact_url=True
+        ).job_results(job_id)
+        results = {"asset": {"value": response.json}}
         return results
