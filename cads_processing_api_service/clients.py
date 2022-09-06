@@ -206,7 +206,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             "submit-workflow", request["inputs"], headers=request["metadata"]
         )
         status_info = dict(**response.json)
-        status_info["processID"] = status_info["apiProcessID"]
+        status_info["processID"] = response.response.headers["X-Forward-Process-ID"]
 
         return status_info
 
@@ -313,6 +313,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
         request: fastapi.Request,
+        response: fastapi.Response,
     ) -> dict[str, Any]:
         """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
@@ -326,6 +327,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Process execution details (e.g. inputs).
         request: fastapi.Request
             Request.
+        response: fastapi.Response
+            Response.
 
         Returns
         -------
