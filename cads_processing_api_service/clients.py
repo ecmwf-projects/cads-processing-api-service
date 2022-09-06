@@ -420,5 +420,5 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         response = cads_api_client.Processing(
             url=settings.compute_api_url, force_exact_url=True
         ).job_results(job_id)
-        results = {"asset": {"value": response.json}}
+        results = dict(**response.json)
         return results
