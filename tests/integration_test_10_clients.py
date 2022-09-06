@@ -14,7 +14,7 @@
 
 import urllib.parse
 
-import requests  # type: ignore
+import requests
 
 EXISTING_PROCESS_ID = "reanalysis-era5-land"
 NON_EXISTING_PROCESS_ID = "non-existing-dataset"
@@ -35,7 +35,7 @@ def test_get_processes(dev_env_proc_api_url: str) -> None:
     assert all([key in response_content for key in exp_keys])
 
     number_of_processes = len(response_content["processes"])
-    exp_number_of_processes = 3
+    exp_number_of_processes = 5
 
     assert number_of_processes == exp_number_of_processes
 

@@ -21,8 +21,10 @@ import uuid
 from typing import Any, Type
 
 import attrs
+import cads_api_client
 import cads_catalogue.config
 import cads_catalogue.database
+import fastapi
 import fastapi_utils.session
 import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
@@ -31,7 +33,7 @@ import ogc_api_processes_fastapi.models
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
-from . import adapters, exceptions, serializers
+from . import adaptors, config, exceptions, serializers
 
 logger = logging.getLogger(__name__)
 
@@ -148,9 +150,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def submit_job_mock(
         self,
-        job_id: str,
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
+        job_id: str,
+        resource: cads_catalogue.database.Resource,
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
 
         JOBS[job_id] = {
@@ -169,33 +172,43 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def submit_job(
         self,
-        job_id: str,
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
-    ) -> ogc_api_processes_fastapi.models.StatusInfo | None:
+        job_id: str,
+        resource: cads_catalogue.database.Resource,
+    ) -> dict[str, Any]:
         """Submit new job.
 
         Parameters
         ----------
-        job_id : str
-            Job ID.
         process_id: str
             Process ID.
         execution_content: ogc_api_processes_fastapi.models.Execute
             Body of the process execution request.
+        job_id : str
+            Job ID.
+        resource: cads_catalogue.database.Resource,
+            Catalogue resource corresponding to the requested retrieve process
+
 
         Returns
         -------
-        ogc_api_processes_fastapi.models.StatusInfo
+        dict[str, Any]
             Sumbitted job status info.
         """
-        # TODO: request adaptation
-        setup_code, entry_point, kwargs, metadata = adapters.adapt_user_request(
-            job_id, process_id, execution_content
+        request = adaptors.make_system_request(
+            process_id, execution_content, job_id, resource
         )
-        # TODO: submit request to broker
+        settings = config.ensure_settings()
+        response = cads_api_client.Processing(
+            url=settings.compute_api_url, force_exact_url=True
+        ).process_execute(
+            "submit-workflow", request["inputs"], headers=request["metadata"]
+        )
+        status_info = dict(**response.json)
+        status_info["processID"] = response.response.headers["X-Forward-Process-ID"]
 
-        return None
+        return status_info
 
     def request_job_status_mock(
         self, job_id: str
@@ -299,7 +312,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
-    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+        request: fastapi.Request,
+        response: fastapi.Response,
+    ) -> dict[str, Any]:
         """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
         Request execution of the process identified by `process_id`.
@@ -310,10 +325,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Process identifier.
         execution_content : ogc_api_processes_fastapi.models.Execute
             Process execution details (e.g. inputs).
+        request: fastapi.Request
+            Request.
+        response: fastapi.Response
+            Response.
 
         Returns
         -------
-        ogc_api_processes_fastapi.models.StatusInfo
+        dict[str, Any]
             Information on the status of the job.
 
         Raises
@@ -325,7 +344,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job_id, resource = self.validate_request(
                 process_id, execution_content, session
             )
-        status_info = self.submit_job_mock(job_id, process_id, execution_content)
+        status_info = self.submit_job(process_id, execution_content, job_id, resource)
         return status_info
 
     def get_jobs(self) -> list[ogc_api_processes_fastapi.models.StatusInfo]:
@@ -371,7 +390,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return status_info
 
-    def get_job_results(self, job_id: str) -> ogc_api_processes_fastapi.models.Link:
+    def get_job_results(self, job_id: str) -> dict[str, Any]:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
 
         Get results for the job identifed by `job_id`.
@@ -383,8 +402,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.models.Link
-            Link to the job results.
+        Dict[str, Any]
+            Job results.
 
         Raises
         ------
@@ -397,14 +416,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.JobResultsFailed
             If job `job_id` results preparation failed.
         """
-        if job_id not in JOBS.keys():
-            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-        if JOBS[job_id]["status"] in ("accepted", "running"):
-            raise ogc_api_processes_fastapi.exceptions.ResultsNotReady()
-        elif JOBS[job_id]["status"] == "failed":
-            raise ogc_api_processes_fastapi.exceptions.JobResultsFailed()
-        results_link = ogc_api_processes_fastapi.models.Link(
-            href=f"https://example.org/{job_id}-results.nc",
-            title=f"Download link for the result of job {job_id}",
-        )
-        return results_link
+        settings = config.ensure_settings()
+        response = cads_api_client.Processing(
+            url=settings.compute_api_url, force_exact_url=True
+        ).job_results(job_id)
+        results = dict(**response.json)
+        return results
