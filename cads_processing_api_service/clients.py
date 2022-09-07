@@ -384,9 +384,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
-        if job_id not in JOBS.keys():
-            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-        status_info = self.request_job_status_mock(job_id)
+        settings = config.ensure_settings()
+        response = cads_api_client.Processing(
+            url=settings.compute_api_url, force_exact_url=True
+        ).job(job_id)
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json)
+        # status_info["processID"] = response.response.headers["X-Forward-Process-ID"]
 
         return status_info
 
