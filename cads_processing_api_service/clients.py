@@ -393,7 +393,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             url=settings.compute_api_url, force_exact_url=True
         ).job(job_id)
         status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json)
-        # status_info["processID"] = response.response.headers["X-Forward-Process-ID"]
+        status_info.processID = response.response.headers["X-Forward-Process-ID"]
 
         return status_info
 
