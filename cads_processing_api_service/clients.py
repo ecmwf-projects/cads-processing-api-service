@@ -364,7 +364,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         jobs_list = [self.request_job_status_mock(job_id) for job_id in JOBS]
         return jobs_list
 
-    def get_job(self, job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
+    def get_job(
+        self, job_id: str, response: fastapi.Response
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
         Get status information for the job identifed by `job_id`.
@@ -373,6 +375,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         job_id : str
             Identifier of the job.
+        response: fastapi.Response
+            Response.
 
         Returns
         -------
