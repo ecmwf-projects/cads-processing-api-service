@@ -397,7 +397,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return status_info
 
-    def get_job_results(self, job_id: str) -> ogc_api_processes_fastapi.models.Results:
+    def get_job_results(self, job_id: str) -> dict[str, Any]:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
 
         Get results for the job identifed by `job_id`.
@@ -409,7 +409,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.models.Results
+        dict[str, Any]
             Job results.
 
         Raises
@@ -427,5 +427,5 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         response = cads_api_client.Processing(
             url=settings.compute_api_url, force_exact_url=True
         ).job_results(job_id)
-        results = ogc_api_processes_fastapi.models.Results.parse_obj(response.json)
+        results = dict(**response.json)
         return results
