@@ -364,7 +364,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         jobs_list = [self.request_job_status_mock(job_id) for job_id in JOBS]
         return jobs_list
 
-    def get_job(self, job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
+    def get_job(
+        self, job_id: str, response: fastapi.Response
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
         Get status information for the job identifed by `job_id`.
@@ -373,6 +375,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         job_id : str
             Identifier of the job.
+        response: fastapi.Response
+            Response.
 
         Returns
         -------
@@ -384,9 +388,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
-        if job_id not in JOBS.keys():
-            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-        status_info = self.request_job_status_mock(job_id)
+        settings = config.ensure_settings()
+        response = cads_api_client.Processing(
+            url=settings.compute_api_url, force_exact_url=True
+        ).job(job_id)
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json)
+        status_info.processID = response.response.headers["X-Forward-Process-ID"]
 
         return status_info
 
