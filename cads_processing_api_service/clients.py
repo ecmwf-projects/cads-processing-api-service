@@ -361,8 +361,18 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         list[ogc_api_processes_fastapi.models.StatusInfo]
             Information on the status of the job.
         """
-        jobs_list = [self.request_job_status_mock(job_id) for job_id in JOBS]
-        return jobs_list
+        settings = config.ensure_settings()
+        response = cads_api_client.Processing(
+            url=settings.compute_api_url, force_exact_url=True
+        ).jobs()
+        status_info_list = [
+            ogc_api_processes_fastapi.models.StatusInfo(**job)
+            for job in response.json["jobs"]
+        ]
+        for status_info in status_info_list:
+            status_info.processID = status_info.metadata.pop("apiProcessID")
+
+        return status_info_list
 
     def get_job(
         self, job_id: str, response: fastapi.Response
