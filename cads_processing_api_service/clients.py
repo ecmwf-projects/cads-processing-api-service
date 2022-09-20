@@ -176,7 +176,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         execution_content: ogc_api_processes_fastapi.models.Execute,
         job_id: str,
         resource: cads_catalogue.database.Resource,
-    ) -> dict[str, Any]:
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Submit new job.
 
         Parameters
@@ -193,7 +193,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        dict[str, Any]
+        ogc_api_processes_fastapi.models.StatusInfo
             Sumbitted job status info.
         """
         request = adaptors.make_system_request(
@@ -205,36 +205,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ).process_execute(
             "submit-workflow", request["inputs"], headers=request["metadata"]
         )
-        status_info = dict(**response.json)
-        status_info["processID"] = response.response.headers["X-Forward-Process-ID"]
-
-        return status_info
-
-    def request_job_status_mock(
-        self, job_id: str
-    ) -> ogc_api_processes_fastapi.models.StatusInfo:
-
-        if JOBS[job_id]["status"] == "accepted":
-            random_number = random.randint(1, 10)
-            if random_number >= 5:
-                JOBS[job_id]["status"] = "running"
-                JOBS[job_id]["updated"] = datetime.datetime.now()
-                JOBS[job_id]["started"] = datetime.datetime.now()
-            elif random_number <= 1:
-                JOBS[job_id]["status"] = "failed"
-                JOBS[job_id]["updated"] = datetime.datetime.now()
-                JOBS[job_id]["finished"] = datetime.datetime.now()
-        elif JOBS[job_id]["status"] == "running":
-            random_number = random.randint(1, 10)
-            if random_number >= 7:
-                JOBS[job_id]["status"] = "successful"
-                JOBS[job_id]["updated"] = datetime.datetime.now()
-                JOBS[job_id]["finished"] = datetime.datetime.now()
-            elif random_number <= 1:
-                JOBS[job_id]["status"] = "failed"
-                JOBS[job_id]["updated"] = datetime.datetime.now()
-                JOBS[job_id]["finished"] = datetime.datetime.now()
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json)
+        status_info.processID = status_info.metadata.pop("apiProcessID")
 
         return status_info
 
@@ -314,7 +286,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         execution_content: ogc_api_processes_fastapi.models.Execute,
         request: fastapi.Request,
         response: fastapi.Response,
-    ) -> dict[str, Any]:
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
         Request execution of the process identified by `process_id`.
@@ -332,7 +304,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        dict[str, Any]
+        ogc_api_processes_fastapi.models.StatusInfo
             Information on the status of the job.
 
         Raises
@@ -361,8 +333,18 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         list[ogc_api_processes_fastapi.models.StatusInfo]
             Information on the status of the job.
         """
-        jobs_list = [self.request_job_status_mock(job_id) for job_id in JOBS]
-        return jobs_list
+        settings = config.ensure_settings()
+        response = cads_api_client.Processing(
+            url=settings.compute_api_url, force_exact_url=True
+        ).jobs()
+        status_info_list = [
+            ogc_api_processes_fastapi.models.StatusInfo(**job)
+            for job in response.json["jobs"]
+        ]
+        for status_info in status_info_list:
+            status_info.processID = status_info.metadata.pop("apiProcessID")
+
+        return status_info_list
 
     def get_job(
         self, job_id: str, response: fastapi.Response
@@ -393,7 +375,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             url=settings.compute_api_url, force_exact_url=True
         ).job(job_id)
         status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json)
-        status_info.processID = response.response.headers["X-Forward-Process-ID"]
+        status_info.processID = status_info.metadata.pop("apiProcessID")
 
         return status_info
 
@@ -409,7 +391,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             Job results.
 
         Raises
