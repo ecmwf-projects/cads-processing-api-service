@@ -22,7 +22,6 @@ import ogc_api_processes_fastapi.models
 FALLBACK_SETUP_CODE = """
 import cacholote
 import cdsapi
-import xarray as xr
 
 
 @cacholote.cacheable
@@ -32,9 +31,6 @@ def adaptor(request, config, metadata):
     collection_id = metadata.pop('process_id', None)
     if not collection_id:
         raise ValueError(f'collection_id is required in request')
-    data_format = request.pop('format', 'grib')
-    if data_format not in {'netcdf', 'grib'}:
-        raise ValueError(f'{data_format=} is not supported')
 
     # retrieve data
     client = cdsapi.Client()
