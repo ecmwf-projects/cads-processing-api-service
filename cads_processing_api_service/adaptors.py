@@ -39,13 +39,8 @@ def adaptor(request, config, metadata):
     # retrieve data
     client = cdsapi.Client()
     client.retrieve(collection_id, request, 'download.grib')  # TODO
-    data = xr.open_dataset('download.grib')
 
-    # post-process data
-    if data_format == 'netcdf':
-        data = xr.open_dataset('download.grib')
-
-    return data
+    return open('download.grib')
 """
 
 FALLBACK_ENTRY_POINT = "adaptor"
