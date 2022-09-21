@@ -38,9 +38,8 @@ def adaptor(request, config, metadata):
 
     # retrieve data
     client = cdsapi.Client()
-    client.retrieve(collection_id, request, 'download.grib')  # TODO
 
-    return open('download.grib')
+    return open(client.retrieve(collection_id, request).download(), "rb")
 """
 
 FALLBACK_ENTRY_POINT = "adaptor"
