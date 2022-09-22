@@ -19,7 +19,6 @@ import uuid
 from typing import Any, Type
 
 import attrs
-import cads_api_client
 import cads_catalogue.config
 import cads_catalogue.database
 import fastapi
@@ -28,6 +27,7 @@ import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
+import requests
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
@@ -141,12 +141,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             process_id, execution_content, job_id, resource
         )
         settings = config.ensure_settings()
-        response = cads_api_client.Processing(
-            url=settings.compute_api_url, force_exact_url=True
-        ).process_execute(
-            "submit-workflow", request["inputs"], headers=request["metadata"]
+        response = requests.post(
+            url=f"{settings.compute_api_url}processes/submit-workflow/execute",
+            json={
+                "inputs": request["inputs"],
+                "response": "document",
+            },
+            headers=request["metadata"],
         )
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json)
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
         status_info.processID = status_info.metadata.pop("apiProcessID")
 
         return status_info
@@ -272,12 +275,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Information on the status of the job.
         """
         settings = config.ensure_settings()
-        response = cads_api_client.Processing(
-            url=settings.compute_api_url, force_exact_url=True
-        ).jobs()
+        response = requests.get(url=f"{settings.compute_api_url}jobs")
         status_info_list = [
             ogc_api_processes_fastapi.models.StatusInfo(**job)
-            for job in response.json["jobs"]
+            for job in response.json()["jobs"]
         ]
         for status_info in status_info_list:
             status_info.processID = status_info.metadata.pop("apiProcessID")
@@ -305,10 +306,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the job `job_id` is not found.
         """
         settings = config.ensure_settings()
-        response = cads_api_client.Processing(
-            url=settings.compute_api_url, force_exact_url=True
-        ).job(job_id)
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json)
+        response = requests.get(url=f"{settings.compute_api_url}jobs/{job_id}")
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
         status_info.processID = status_info.metadata.pop("apiProcessID")
 
         return status_info
@@ -340,8 +339,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If job `job_id` results preparation failed.
         """
         settings = config.ensure_settings()
-        response = cads_api_client.Processing(
-            url=settings.compute_api_url, force_exact_url=True
-        ).job_results(job_id)
-        results = dict(**response.json)
+        response = requests.get(url=f"{settings.compute_api_url}jobs/{job_id}/results")
+        results = dict(**response.json())
         return results
