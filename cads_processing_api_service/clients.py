@@ -142,8 +142,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         settings = config.ensure_settings()
         response = requests.post(
-            url=f"{settings.compute_api_url}/processes/sumbit-workflow/execute",
-            json=request["inputs"],
+            url=f"{settings.compute_api_url}processes/submit-workflow/execute",
+            json={
+                "inputs": request["inputs"],
+                "response": "document",
+            },
             headers=request["metadata"],
         )
         status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
@@ -272,7 +275,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Information on the status of the job.
         """
         settings = config.ensure_settings()
-        response = requests.get(url=f"{settings.compute_api_url}/jobs")
+        response = requests.get(url=f"{settings.compute_api_url}jobs")
         status_info_list = [
             ogc_api_processes_fastapi.models.StatusInfo(**job)
             for job in response.json()["jobs"]
@@ -303,7 +306,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the job `job_id` is not found.
         """
         settings = config.ensure_settings()
-        response = requests.get(url=f"{settings.compute_api_url}/jobs/{job_id}")
+        response = requests.get(url=f"{settings.compute_api_url}jobs/{job_id}")
         status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
         status_info.processID = status_info.metadata.pop("apiProcessID")
 
@@ -336,6 +339,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If job `job_id` results preparation failed.
         """
         settings = config.ensure_settings()
-        response = requests.get(url=f"{settings.compute_api_url}/jobs/{job_id}/results")
+        response = requests.get(url=f"{settings.compute_api_url}jobs/{job_id}/results")
         results = dict(**response.json())
         return results
