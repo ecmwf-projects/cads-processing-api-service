@@ -226,7 +226,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
         request: fastapi.Request,
-        response: fastapi.Response,
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
@@ -240,8 +239,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Process execution details (e.g. inputs).
         request: fastapi.Request
             Request.
-        response: fastapi.Response
-            Response.
 
         Returns
         -------
@@ -287,9 +284,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return status_info_list
 
-    def get_job(
-        self, job_id: str, response: fastapi.Response
-    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+    def get_job(self, job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
         Get status information for the job identifed by `job_id`.
@@ -298,8 +293,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         job_id : str
             Identifier of the job.
-        response: fastapi.Response
-            Response.
 
         Returns
         -------
