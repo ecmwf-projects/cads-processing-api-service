@@ -143,7 +143,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         settings = config.ensure_settings()
         response = requests.post(
             url=f"{settings.compute_api_url}/processes/sumbit-workflow/execute",
-            json=request["input"],
+            json=request["inputs"],
             headers=request["metadata"],
         )
         status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
