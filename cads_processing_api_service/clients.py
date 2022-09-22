@@ -14,9 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-import datetime
 import logging
-import random
 import uuid
 from typing import Any, Type
 
@@ -36,41 +34,6 @@ import sqlalchemy.orm.exc
 from . import adaptors, config, exceptions, serializers
 
 logger = logging.getLogger(__name__)
-
-JOBS: dict[str, dict[str, str | datetime.datetime | None]] = {}
-
-
-def update_job_status(job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
-    """Randomly update status of job `job_id`.
-
-    Parameters
-    ----------
-    job_id : str
-        Job ID.
-    """
-    if JOBS[job_id]["status"] == "accepted":
-        random_number = random.randint(1, 10)
-        if random_number >= 5:
-            JOBS[job_id]["status"] = "running"
-            JOBS[job_id]["updated"] = datetime.datetime.now()
-            JOBS[job_id]["started"] = datetime.datetime.now()
-        elif random_number <= 1:
-            JOBS[job_id]["status"] = "failed"
-            JOBS[job_id]["updated"] = datetime.datetime.now()
-            JOBS[job_id]["finished"] = datetime.datetime.now()
-    elif JOBS[job_id]["status"] == "running":
-        random_number = random.randint(1, 10)
-        if random_number >= 7:
-            JOBS[job_id]["status"] = "successful"
-            JOBS[job_id]["updated"] = datetime.datetime.now()
-            JOBS[job_id]["finished"] = datetime.datetime.now()
-        elif random_number <= 1:
-            JOBS[job_id]["status"] = "failed"
-            JOBS[job_id]["updated"] = datetime.datetime.now()
-            JOBS[job_id]["finished"] = datetime.datetime.now()
-    status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
-
-    return status_info
 
 
 @attrs.define
@@ -147,28 +110,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_id = str(uuid.uuid4())
         print(execution_content, resource)
         return job_id, resource
-
-    def submit_job_mock(
-        self,
-        process_id: str,
-        execution_content: ogc_api_processes_fastapi.models.Execute,
-        job_id: str,
-        resource: cads_catalogue.database.Resource,
-    ) -> ogc_api_processes_fastapi.models.StatusInfo:
-
-        JOBS[job_id] = {
-            "jobID": job_id,
-            "status": "accepted",
-            "type": "process",
-            "created": datetime.datetime.now(),
-            "started": None,
-            "finished": None,
-            "updated": datetime.datetime.now(),
-            "processID": process_id,
-        }
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(**JOBS[job_id])
-
-        return status_info
 
     def submit_job(
         self,
