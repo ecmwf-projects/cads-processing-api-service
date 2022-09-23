@@ -286,7 +286,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ]
         for status_info in status_info_list:
             status_info.processID = status_info.metadata.pop("apiProcessID")
-
         return status_info_list
 
     def get_job(self, job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
@@ -311,9 +310,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         settings = config.ensure_settings()
         response = requests.get(url=f"{settings.compute_api_url}jobs/{job_id}")
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
-        status_info.processID = status_info.metadata.pop("apiProcessID")
-
+        if response.status_code == fastapi.status.HTTP_200_OK:
+            status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
+            status_info.processID = status_info.metadata.pop("apiProcessID")
+        elif response.status_code == fastapi.status.HTTP_404_NOT_FOUND:
+            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
+        else:
+            raise NotImplementedError()
         return status_info
 
     def get_job_results(self, job_id: str) -> dict[str, Any]:
@@ -344,5 +347,19 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         settings = config.ensure_settings()
         response = requests.get(url=f"{settings.compute_api_url}jobs/{job_id}/results")
-        results = dict(**response.json())
+        response_status = response.status_code
+        response_body = response.json()
+        if response_status == fastapi.status.HTTP_200_OK:
+            results = dict(**response_body)
+        elif response_status == fastapi.status.HTTP_404_NOT_FOUND:
+            if "no-such-job" in response_body["type"]:
+                raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
+            elif "result-not-ready" in response_body["type"]:
+                raise ogc_api_processes_fastapi.exceptions.ResultsNotReady()
+        else:
+            raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
+                status_code=response_status,
+                type=response_body["type"],
+                detail=response_body["detail"],
+            )
         return results
