@@ -21,7 +21,7 @@ import requests
 EXISTING_PROCESS_ID = "reanalysis-era5-pressure-levels"
 NON_EXISTING_PROCESS_ID = "non-existing-dataset"
 NON_EXISTING_JOB_ID = "1234"
-POST_PROCESS_REQUEST_BODY = {
+POST_PROCESS_REQUEST_BODY_SUCCESS = {
     "inputs": {
         "product_type": "reanalysis",
         "format": "grib",
@@ -33,44 +33,66 @@ POST_PROCESS_REQUEST_BODY = {
         "time": "06:00",
     }
 }
+POST_PROCESS_REQUEST_BODY_FAIL = {
+    "inputs": {
+        "product_type": "non-existing-product-type",
+        "format": "grib",
+        "variable": "temperature",
+        "pressure_level": "1",
+        "year": "1971",
+        "month": "01",
+        "day": "25",
+        "time": "06:00",
+    }
+}
+POST_PROCESS_REQUEST_BODY_SLOW = {
+    "inputs": {
+        "product_type": "reanalysis",
+        "format": "grib",
+        "variable": "temperature",
+        "pressure_level": "1",
+        "year": [f"{year}" for year in range(1959, 2022)],
+        "month": [f"{month:02}" for month in range(1, 13)],
+        "day": [f"{day:02}" for day in range(1, 32)],
+        "time": [f"{hour:02}:00" for hour in range(0, 24)],
+    }
+}
 
 
 def test_get_processes(dev_env_proc_api_url: str) -> None:
 
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "processes")
-    response = requests.get(request_url)
+    response = requests.get(urllib.parse.urljoin(dev_env_proc_api_url, "processes"))
     response_status_code = response.status_code
-    response_content = response.json()
-
     exp_status_code = 200
     assert response_status_code == exp_status_code
 
+    response_body = response.json()
     exp_keys = ("links", "processes")
-    assert all([key in response_content for key in exp_keys])
+    assert all([key in response_body for key in exp_keys])
 
-    number_of_processes = len(response_content["processes"])
+    number_of_processes = len(response_body["processes"])
     exp_number_of_processes = 5
     assert number_of_processes == exp_number_of_processes
 
     limit = 2
     offset = 1
-    request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes?limit={limit}&offset={offset}"
+    response_limit = requests.get(
+        urllib.parse.urljoin(
+            dev_env_proc_api_url, f"processes?limit={limit}&offset={offset}"
+        )
     )
-    response_limit = requests.get(request_url)
     response_status_code = response.status_code
-    response_content = response.json()
 
     exp_status_code = 200
     assert response_status_code == exp_status_code
 
-    response_limit_content = response_limit.json()
-    processes = response_limit_content["processes"]
+    response_limit_body = response_limit.json()
+    processes = response_limit_body["processes"]
     number_of_processes = len(processes)
     exp_number_of_processes = 2
     assert number_of_processes == exp_number_of_processes
 
-    exp_processes = response_content["processes"][1:3]
+    exp_processes = response_body["processes"][1:3]
     assert processes == exp_processes
 
 
@@ -80,11 +102,11 @@ def test_get_process(dev_env_proc_api_url: str) -> None:
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"processes/{process_id}")
     response = requests.get(request_url)
     response_status_code = response.status_code
-    response_content = response.json()
 
     exp_status_code = 200
     assert response_status_code == exp_status_code
 
+    response_body = response.json()
     exp_keys = (
         "title",
         "description",
@@ -97,7 +119,7 @@ def test_get_process(dev_env_proc_api_url: str) -> None:
         "inputs",
         "outputs",
     )
-    assert all([key in response_content for key in exp_keys])
+    assert all([key in response_body for key in exp_keys])
 
 
 def test_post_process_execute(  # type: ignore
@@ -109,13 +131,13 @@ def test_post_process_execute(  # type: ignore
     request_url = urllib.parse.urljoin(
         dev_env_proc_api_url, f"processes/{process_id}/execute"
     )
-    response = requests.post(request_url, json=POST_PROCESS_REQUEST_BODY)
+    response = requests.post(request_url, json=POST_PROCESS_REQUEST_BODY_SUCCESS)
     response_status_code = response.status_code
-    response_content = response.json()
 
     exp_status_code = 201
     assert response_status_code == exp_status_code
 
+    response_body = response.json()
     exp_keys = (
         "processID",
         "type",
@@ -126,15 +148,15 @@ def test_post_process_execute(  # type: ignore
         "metadata",
         "links",
     )
-    assert all([key in response_content for key in exp_keys])
+    assert all([key in response_body for key in exp_keys])
 
     exp_process_id = process_id
-    assert response_content["processID"] == exp_process_id
+    assert response_body["processID"] == exp_process_id
 
     exp_status = "accepted"
-    assert response_content["status"] == exp_status
+    assert response_body["status"] == exp_status
 
-    request.config.cache.set("job_id", response_content["jobID"])
+    request.config.cache.set("job_id", response_body["jobID"])
 
 
 def test_get_job(request, dev_env_proc_api_url: str) -> None:  # type: ignore
@@ -144,13 +166,13 @@ def test_get_job(request, dev_env_proc_api_url: str) -> None:  # type: ignore
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
     response = requests.get(request_url)
     response_status_code = response.status_code
-    response_content = response.json()
 
     exp_status_code = 200
     assert response_status_code == exp_status_code
 
+    response_body = response.json()
     exp_status = "accepted"
-    assert response_content["status"] == exp_status
+    assert response_body["status"] == exp_status
 
     exp_keys = (
         "processID",
@@ -162,7 +184,7 @@ def test_get_job(request, dev_env_proc_api_url: str) -> None:  # type: ignore
         "metadata",
         "links",
     )
-    assert all([key in response_content for key in exp_keys])
+    assert all([key in response_body for key in exp_keys])
 
 
 def test_get_job_successful(request, dev_env_proc_api_url: str) -> None:  # type: ignore
@@ -171,14 +193,12 @@ def test_get_job_successful(request, dev_env_proc_api_url: str) -> None:  # type
 
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
     response = requests.get(request_url)
-    response_content = response.json()
-
-    while response_content["status"] not in ("successful", "failed"):
+    response_body = response.json()
+    while response_body["status"] not in ("successful", "failed"):
         time.sleep(5)
         response = requests.get(request_url)
-        response_content = response.json()
-
-    if response_content["status"] == "successful":
+        response_body = response.json()
+    if response_body["status"] == "successful":
         exp_keys = (
             "processID",
             "type",
@@ -190,13 +210,13 @@ def test_get_job_successful(request, dev_env_proc_api_url: str) -> None:  # type
             "metadata",
             "links",
         )
-        assert all([key in response_content for key in exp_keys])
+        assert all([key in response_body for key in exp_keys])
 
         exp_results_link = {
             "href": f"{request_url}/results",
             "rel": "results",
         }
-        assert exp_results_link in response_content["links"]
+        assert exp_results_link in response_body["links"]
 
         request.config.cache.set("results_url", exp_results_link["href"])
 
@@ -216,111 +236,170 @@ def test_get_job_successful_results(request) -> None:  # type: ignore
 
 def test_get_jobs(dev_env_proc_api_url: str) -> None:
 
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs")
+    response = requests.get(request_url)
+
+    exp_status_code = 200
+    assert response.status_code == exp_status_code
+
+    response_body = response.json()
+    exp_keys = ("jobs", "links")
+    assert all([key in response_body for key in exp_keys])
+
+    number_of_existing_jobs = len(response_body["jobs"])
     process_id = EXISTING_PROCESS_ID
-    number_of_jobs = 3
+    number_of_new_jobs = 3
     request_execute_url = urllib.parse.urljoin(
         dev_env_proc_api_url, f"processes/{process_id}/execute"
     )
-    for i in range(number_of_jobs):
-        print(i)
-        requests.post(request_execute_url, json=POST_PROCESS_REQUEST_BODY)
-
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs")
-    response = requests.get(request_url)
-    exp_status_code = 200
-
-    assert response.status_code == exp_status_code
-
-    response_content = response.json()
-    exp_keys = ("jobs", "links")
-
-    assert all([key in response_content for key in exp_keys])
-
-    response_jobs = response_content["jobs"]
-    print(response_jobs)
-    actual_number_of_jobs = len(response_jobs)
-    exp_number_of_jobs = number_of_jobs + 1
-
-    assert actual_number_of_jobs == exp_number_of_jobs
+    for _ in range(number_of_new_jobs):
+        requests.post(request_execute_url, json=POST_PROCESS_REQUEST_BODY_SUCCESS)
+    response = requests.get(urllib.parse.urljoin(dev_env_proc_api_url, "jobs"))
+    number_of_jobs = len(response.json()["jobs"])
+    exp_number_of_jobs = number_of_existing_jobs + number_of_new_jobs
+    assert number_of_jobs == exp_number_of_jobs
 
 
-def test_get_process_exceptions(dev_env_proc_api_url: str) -> None:
+def test_get_process_exc_no_such_process(dev_env_proc_api_url: str) -> None:
 
     process_id = NON_EXISTING_PROCESS_ID
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"processes/{process_id}")
     response = requests.get(request_url)
     response_status_code = response.status_code
-    response_content = response.json()
-
     exp_status_code = 404
     assert response_status_code == exp_status_code
 
-    exp_response_content = {
+    response_body = response.json()
+    exp_response_body = {
         "type": "http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-process",
         "title": "process not found",
         "detail": f"process {process_id} has not been found",
         "instance": request_url,
     }
-    assert response_content == exp_response_content
+    assert response_body == exp_response_body
 
 
-def test_post_process_execute_exceptions(dev_env_proc_api_url: str) -> None:
+def test_post_process_execute_exc_no_such_process(dev_env_proc_api_url: str) -> None:
 
     process_id = NON_EXISTING_PROCESS_ID
     request_url = urllib.parse.urljoin(
         dev_env_proc_api_url, f"processes/{process_id}/execute"
     )
     response = requests.post(request_url, json={})
+    response_status_code = response.status_code
     exp_status_code = 404
+    assert response_status_code == exp_status_code
 
-    assert response.status_code == exp_status_code
-
-    response_content = response.json()
-    exp_response_content = {
+    response_body = response.json()
+    exp_response_body = {
         "type": "http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-process",
         "title": "process not found",
         "detail": f"process {process_id} has not been found",
         "instance": request_url,
     }
+    assert response_body == exp_response_body
 
-    assert response_content == exp_response_content
 
-
-def test_get_job_exceptions(dev_env_proc_api_url: str) -> None:
+def test_get_job_exc_no_such_job(dev_env_proc_api_url: str) -> None:
 
     job_id = NON_EXISTING_JOB_ID
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
     response = requests.get(request_url)
+    response_status_code = response.status_code
+
     exp_status_code = 404
+    assert response_status_code == exp_status_code
 
-    assert response.status_code == exp_status_code
-
-    response_content = response.json()
-    exp_response_content = {
+    response_body = response.json()
+    exp_response_body = {
         "type": "http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-job",
         "title": "job not found",
         "detail": f"job {job_id} has not been found",
         "instance": request_url,
     }
+    assert response_body == exp_response_body
 
-    assert response_content == exp_response_content
 
-
-def test_get_job_results_exceptions(dev_env_proc_api_url: str) -> None:
+def test_get_job_results_exc_no_such_job(dev_env_proc_api_url: str) -> None:
 
     job_id = NON_EXISTING_JOB_ID
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}/results")
     response = requests.get(request_url)
+    response_status_code = response.status_code
+
     exp_status_code = 404
+    assert response_status_code == exp_status_code
 
-    assert response.status_code == exp_status_code
-
-    response_content = response.json()
-    exp_response_content = {
+    response_body = response.json()
+    exp_response_body = {
         "type": "http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-job",
         "title": "job not found",
         "detail": f"job {job_id} has not been found",
         "instance": request_url,
     }
+    assert response_body == exp_response_body
 
-    assert response_content == exp_response_content
+
+def test_get_job_results_exc_job_results_failed(dev_env_proc_api_url: str) -> None:
+
+    process_id = EXISTING_PROCESS_ID
+    response = requests.post(
+        urllib.parse.urljoin(dev_env_proc_api_url, f"processes/{process_id}/execute"),
+        json=POST_PROCESS_REQUEST_BODY_FAIL,
+    )
+    if response.status_code != 201:
+        pytest.skip("Job sumbission unexpectedly failed")
+    job_id = response.json()["jobID"]
+    job_status = response.json()["status"]
+    while job_status != "failed":
+        response = requests.get(
+            urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
+        )
+        job_status = response.json()["status"]
+        time.sleep(3)
+
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}/results")
+    response = requests.get(request_url)
+    response_status_code = response.status_code
+    assert response_status_code != 200
+
+    response_body = response.json()
+    exp_response_body = {
+        "type": "RuntimeError",
+        "title": "job failed",
+        "instance": request_url,
+    }
+    assert [(key, val) in response_body for key, val in exp_response_body.items()]
+
+
+def test_get_job_results_exc_results_not_ready(dev_env_proc_api_url: str) -> None:
+
+    process_id = EXISTING_PROCESS_ID
+    response = requests.post(
+        urllib.parse.urljoin(dev_env_proc_api_url, f"processes/{process_id}/execute"),
+        json=POST_PROCESS_REQUEST_BODY_SLOW,
+    )
+    if response.status_code != 201:
+        pytest.skip("Job sumbission unexpectedly failed")
+    job_id = response.json()["jobID"]
+    job_status = response.json()["status"]
+    while job_status not in ("accepted", "running"):
+        response = requests.get(
+            urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
+        )
+        job_status = response.json()["status"]
+        time.sleep(3)
+
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}/results")
+    response = requests.get(request_url)
+    response_status_code = response.status_code
+    assert response_status_code == 404
+
+    response_body = response.json()
+    exp_response_body = {
+        "type": "http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/result-not-ready",
+        "title": "job results not ready",
+        "detail": f"job {job_id} results are not yet ready",
+        "instance": request_url,
+    }
+    assert [(key, val) in response_body for key, val in exp_response_body.items()]

@@ -22,17 +22,14 @@ def test_make_system_request_default() -> None:
     process_id = "test_process"
     inputs = {"input": "string_input"}
     execution_content = ogc_api_processes_fastapi.models.Execute(inputs=inputs)
-    job_id = "test_job_id"
     resource = cads_catalogue.database.Resource()
 
     exp_setup_code = adaptors.FALLBACK_SETUP_CODE
     exp_entry_point = adaptors.FALLBACK_ENTRY_POINT
     exp_kwargs = {"request": inputs, "config": adaptors.FALLBACK_CONFIG}
-    exp_metadata = {"X-Forward-Process-ID": process_id, "X-Forward-Job-ID": job_id}
+    exp_metadata = {"X-Forward-Process-ID": process_id}
 
-    request = adaptors.make_system_request(
-        process_id, execution_content, job_id, resource
-    )
+    request = adaptors.make_system_request(process_id, execution_content, resource)
 
     assert request["inputs"]["setup_code"] == exp_setup_code
     assert request["inputs"]["entry_point"] == exp_entry_point

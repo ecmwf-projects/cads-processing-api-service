@@ -70,7 +70,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         id: str,
         session: sqlalchemy.orm.Session,
-    ) -> Any:
+    ) -> cads_catalogue.database.BaseModel:
 
         try:
             process = self._lookup_id(id=id, record=self.process_table, session=session)
@@ -84,12 +84,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
         session: sqlalchemy.orm.Session,
-    ) -> tuple[str, cads_catalogue.database.Resource]:
+    ) -> cads_catalogue.database.BaseModel:
         """Validate retrieve process execution request.
 
         Check if requested dataset exists and if execution content is valid.
-        In case the check is successful, creates and returns the job ID and the
-        resource (dataset) associated to the process request.
+        In case the check is successful, returns the resource (dataset)
+        associated to the process request.
 
         Parameters
         ----------
@@ -102,20 +102,18 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        tuple[str, cads_catalogue.database.Resource]
-            Job ID and resource (dataset) associated to the process request.
+        cads_catalogue.database.BaseModel
+            Resource (dataset) associated to the process request.
         """
         # TODO: implement inputs validation
         resource = self.lookup_resource_by_id(process_id, session)
-        job_id = str(uuid.uuid4())
         print(execution_content, resource)
-        return job_id, resource
+        return resource
 
     def submit_job(
         self,
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
-        job_id: str,
         resource: cads_catalogue.database.Resource,
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Submit new job.
@@ -126,8 +124,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Process ID.
         execution_content: ogc_api_processes_fastapi.models.Execute
             Body of the process execution request.
-        job_id : str
-            Job ID.
         resource: cads_catalogue.database.Resource,
             Catalogue resource corresponding to the requested retrieve process
 
@@ -137,18 +133,28 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.StatusInfo
             Sumbitted job status info.
         """
-        request = adaptors.make_system_request(
-            process_id, execution_content, job_id, resource
-        )
         settings = config.ensure_settings()
-        response = requests.post(
-            url=f"{settings.compute_api_url}processes/submit-workflow/execute",
-            json={
-                "inputs": request["inputs"],
-                "response": "document",
-            },
-            headers=request["metadata"],
-        )
+        request = adaptors.make_system_request(process_id, execution_content, resource)
+        job_accepted = False
+        while not job_accepted:
+            job_id = str(uuid.uuid4())
+            request["metadata"].update({"X-Forward-Job-ID": job_id})
+            response = requests.post(
+                url=f"{settings.compute_api_url}processes/submit-workflow/execute",
+                json={
+                    "inputs": request["inputs"],
+                    "response": "document",
+                },
+                headers=request["metadata"],
+            )
+            if response.status_code == fastapi.status.HTTP_201_CREATED:
+                job_accepted = True
+            elif "type" in response.json():
+                if response.json()["type"] == "not-valid-job-id":
+                    job_accepted = False
+            else:
+                raise NotImplementedError()
+
         status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
         status_info.processID = status_info.metadata.pop("apiProcessID")
 
@@ -254,10 +260,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the process `process_id` is not found.
         """
         with self.reader.context_session() as session:
-            job_id, resource = self.validate_request(
-                process_id, execution_content, session
-            )
-        status_info = self.submit_job(process_id, execution_content, job_id, resource)
+            resource = self.validate_request(process_id, execution_content, session)
+        status_info = self.submit_job(process_id, execution_content, resource)
         return status_info
 
     def get_jobs(self) -> list[ogc_api_processes_fastapi.models.StatusInfo]:
@@ -282,7 +286,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ]
         for status_info in status_info_list:
             status_info.processID = status_info.metadata.pop("apiProcessID")
-
         return status_info_list
 
     def get_job(self, job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
@@ -307,9 +310,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         settings = config.ensure_settings()
         response = requests.get(url=f"{settings.compute_api_url}jobs/{job_id}")
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
-        status_info.processID = status_info.metadata.pop("apiProcessID")
-
+        if response.status_code == fastapi.status.HTTP_200_OK:
+            status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
+            status_info.processID = status_info.metadata.pop("apiProcessID")
+        elif response.status_code == fastapi.status.HTTP_404_NOT_FOUND:
+            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
+        else:
+            raise NotImplementedError()
         return status_info
 
     def get_job_results(self, job_id: str) -> dict[str, Any]:
@@ -340,5 +347,19 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         settings = config.ensure_settings()
         response = requests.get(url=f"{settings.compute_api_url}jobs/{job_id}/results")
-        results = dict(**response.json())
+        response_status = response.status_code
+        response_body = response.json()
+        if response_status == fastapi.status.HTTP_200_OK:
+            results = dict(**response_body)
+        elif response_status == fastapi.status.HTTP_404_NOT_FOUND:
+            if "no-such-job" in response_body["type"]:
+                raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
+            elif "result-not-ready" in response_body["type"]:
+                raise ogc_api_processes_fastapi.exceptions.ResultsNotReady()
+        else:
+            raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
+                status_code=response_status,
+                type=response_body["type"],
+                detail=response_body["detail"],
+            )
         return results

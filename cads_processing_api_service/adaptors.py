@@ -46,7 +46,6 @@ FALLBACK_CONFIG: dict[str, str] = {}
 def make_system_request(
     process_id: str,
     execution_content: ogc_api_processes_fastapi.models.Execute,
-    job_id: str,
     resource: cads_catalogue.database.Resource,
 ) -> dict[str, Any]:
 
@@ -78,7 +77,6 @@ def make_system_request(
         },
     }
     compute_request["metadata"] = {
-        "X-Forward-Job-ID": job_id,
         "X-Forward-Process-ID": process_id,
     }
 
