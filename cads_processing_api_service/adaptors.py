@@ -25,7 +25,7 @@ import cdsapi
 
 
 @cacholote.cacheable
-def adaptor(request, config, metadata):
+def cds_adaptor(request, config, metadata):
 
     # parse input options
     collection_id = config.pop('collection_id', None)
@@ -38,7 +38,7 @@ def adaptor(request, config, metadata):
     return open(result_path, "rb")
 """
 
-FALLBACK_ENTRY_POINT = "adaptor"
+FALLBACK_ENTRY_POINT = "cds_adaptor"
 
 FALLBACK_CONFIG: dict[str, str] = {
     "url": "https://cds.climate.copernicus.eu/api/v2",
