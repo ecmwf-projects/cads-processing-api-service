@@ -28,19 +28,22 @@ import cdsapi
 def adaptor(request, config, metadata):
 
     # parse input options
-    collection_id = metadata.pop('process_id', None)
+    collection_id = config.pop('collection_id', None)
     if not collection_id:
         raise ValueError(f'collection_id is required in request')
 
     # retrieve data
-    client = cdsapi.Client()
-
-    return open(client.retrieve(collection_id, request).download(), "rb")
+    client = cdsapi.Client(config["url"], config["key"])
+    result_path = client.retrieve(collection_id, request).download()
+    return open(result_path, "rb")
 """
 
 FALLBACK_ENTRY_POINT = "adaptor"
 
-FALLBACK_CONFIG: dict[str, str] = {}
+FALLBACK_CONFIG: dict[str, str] = {
+    "url": "https://cds.climate.copernicus.eu/api/v2",
+    "key": "155265:cd60cf87-5f89-4ef4-8350-3817254b3884",
+}
 
 
 def make_system_request(
@@ -64,10 +67,14 @@ def make_system_request(
     try:
         config = resource.config
     except AttributeError:
-        config = FALLBACK_CONFIG
+        config = FALLBACK_CONFIG.copy()
+        config["collection_id"] = process_id
 
     inputs = execution_content.dict()["inputs"]
-    kwargs = {"request": inputs, "config": config}
+    kwargs = {
+        "request": inputs,
+        "config": config,
+    }
 
     compute_request["inputs"] = {
         "setup_code": setup_code,
