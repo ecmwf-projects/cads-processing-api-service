@@ -107,7 +107,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         # TODO: implement inputs validation
         resource = self.lookup_resource_by_id(process_id, session)
-        print(execution_content, resource)
         return resource
 
     def submit_job(
