@@ -16,7 +16,6 @@
 
 import json
 import logging
-import uuid
 from typing import Any, Type
 
 import attrs
@@ -134,33 +133,23 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.StatusInfo
             Sumbitted job status info.
         """
-        request = adaptors.make_system_request(process_id, execution_content, resource)
-        job_accepted = False
-        while not job_accepted:
-            job_id = str(uuid.uuid4())
-            request["metadata"].update({"X-Forward-Job-ID": job_id})
-            try:
-                job = cads_broker.database.create_request(
-                    process_id=process_id,
-                    request_uid=job_id,
-                    **request["inputs"],
-                )
-            except sqlalchemy.exc.IntegrityError:
-                raise exceptions.NotValidJobId(
-                    detail=f"Job ID {job_id} already exists."
-                )
-            except sqlalchemy.exc.StatementError:
-                raise exceptions.NotValidJobId(detail=f"Job ID {job_id} is not valid.")
-            status_info = ogc_api_processes_fastapi.models.StatusInfo(
-                processID=job["process_id"],
-                type=ogc_api_processes_fastapi.models.JobType("process"),
-                jobID=job["request_uid"],
-                status=ogc_api_processes_fastapi.models.StatusCode(job["status"]),
-                created=job["created_at"],
-                started=job["started_at"],
-                finished=job["finished_at"],
-                updated=job["updated_at"],
-            )
+        job_kwargs = adaptors.make_system_job_kwargs(
+            process_id, execution_content, resource
+        )
+        job = cads_broker.database.create_request(
+            process_id=process_id,
+            **job_kwargs,
+        )
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(
+            processID=job["process_id"],
+            type=ogc_api_processes_fastapi.models.JobType("process"),
+            jobID=job["request_uid"],
+            status=ogc_api_processes_fastapi.models.StatusCode(job["status"]),
+            created=job["created_at"],
+            started=job["started_at"],
+            finished=job["finished_at"],
+            updated=job["updated_at"],
+        )
 
         return status_info
 

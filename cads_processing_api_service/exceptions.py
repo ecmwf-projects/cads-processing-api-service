@@ -13,9 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License
-import attrs
-import fastapi
-import ogc_api_processes_fastapi.models
 
 
 class OGCProcessesApiError(Exception):
@@ -34,22 +31,3 @@ class NotFoundError(OGCProcessesApiError):
     """Resource not found."""
 
     pass
-
-
-@attrs.define
-class NotValidJobId(Exception):
-    detail: str | None = None
-
-
-def not_valid_job_id_exception_handler(
-    request: fastapi.Request, exc: Exception
-) -> fastapi.responses.JSONResponse:
-    return fastapi.responses.JSONResponse(
-        status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=ogc_api_processes_fastapi.models.Exception(
-            type="not-valid-job-id",
-            title="not valid job id",
-            detail=exc.detail,
-            instance=str(request.url),
-        ).dict(exclude_unset=True),
-    )

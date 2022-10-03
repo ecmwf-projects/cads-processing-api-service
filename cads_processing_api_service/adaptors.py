@@ -46,13 +46,13 @@ FALLBACK_CONFIG: dict[str, str] = {
 }
 
 
-def make_system_request(
+def make_system_job_kwargs(
     process_id: str,
     execution_content: ogc_api_processes_fastapi.models.Execute,
     resource: cads_catalogue.database.Resource,
 ) -> dict[str, Any]:
 
-    compute_request: dict[str, Any] = {}
+    job_kwargs: dict[str, Any] = {}
 
     try:
         setup_code = resource.adaptor_code
@@ -76,15 +76,10 @@ def make_system_request(
         "config": config,
     }
 
-    compute_request["inputs"] = {
+    job_kwargs = {
         "setup_code": setup_code,
         "entry_point": entry_point,
-        "kwargs": {
-            "value": kwargs,
-        },
-    }
-    compute_request["metadata"] = {
-        "X-Forward-Process-ID": process_id,
+        "kwargs": kwargs,
     }
 
-    return compute_request
+    return job_kwargs
