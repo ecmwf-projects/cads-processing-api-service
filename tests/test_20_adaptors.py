@@ -18,7 +18,7 @@ import ogc_api_processes_fastapi.models
 from cads_processing_api_service import adaptors
 
 
-def test_make_system_request_default() -> None:
+def test_make_system_job_kwargs_default() -> None:
     process_id = "test_process"
     inputs = {"input": "string_input"}
     execution_content = ogc_api_processes_fastapi.models.Execute(inputs=inputs)
@@ -26,12 +26,14 @@ def test_make_system_request_default() -> None:
 
     exp_setup_code = adaptors.FALLBACK_SETUP_CODE
     exp_entry_point = adaptors.FALLBACK_ENTRY_POINT
+    exp_config = adaptors.FALLBACK_CONFIG
+    exp_config.update({"collection_id": process_id})
     exp_kwargs = {"request": inputs, "config": adaptors.FALLBACK_CONFIG}
-    exp_metadata = {"X-Forward-Process-ID": process_id}
 
-    request = adaptors.make_system_request(process_id, execution_content, resource)
+    job_kwargs = adaptors.make_system_job_kwargs(
+        process_id, execution_content, resource
+    )
 
-    assert request["inputs"]["setup_code"] == exp_setup_code
-    assert request["inputs"]["entry_point"] == exp_entry_point
-    assert request["inputs"]["kwargs"]["value"] == exp_kwargs
-    assert request["metadata"] == exp_metadata
+    assert job_kwargs["setup_code"] == exp_setup_code
+    assert job_kwargs["entry_point"] == exp_entry_point
+    assert job_kwargs["kwargs"] == exp_kwargs
