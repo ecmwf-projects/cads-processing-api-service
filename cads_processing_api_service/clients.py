@@ -391,7 +391,3 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
                 f"Status of {job_id} is {job.status}."
             )
-        else:
-            raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
-                f"Can't find the job {job_id}."
-            )
