@@ -64,9 +64,8 @@ def make_system_request(
     except AttributeError:
         entry_point = FALLBACK_ENTRY_POINT
 
-    try:
-        config = resource.config
-    except AttributeError:
+    config = resource.adaptor_configuration
+    if config is None:
         config = FALLBACK_CONFIG.copy()
         config["collection_id"] = process_id
 
