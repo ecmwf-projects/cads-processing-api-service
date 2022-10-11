@@ -14,11 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import json
 import logging
-import uuid
 from typing import Any, Type
 
 import attrs
+import cads_broker.database
 import cads_catalogue.config
 import cads_catalogue.database
 import fastapi
@@ -27,11 +28,11 @@ import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
-import requests
+import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
-from . import adaptors, config, exceptions, serializers
+from . import adaptors, exceptions, serializers
 
 logger = logging.getLogger(__name__)
 
@@ -132,30 +133,23 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.StatusInfo
             Sumbitted job status info.
         """
-        settings = config.ensure_settings()
-        request = adaptors.make_system_request(process_id, execution_content, resource)
-        job_accepted = False
-        while not job_accepted:
-            job_id = str(uuid.uuid4())
-            request["metadata"].update({"X-Forward-Job-ID": job_id})
-            response = requests.post(
-                url=f"{settings.compute_api_url}processes/submit-workflow/execute",
-                json={
-                    "inputs": request["inputs"],
-                    "response": "document",
-                },
-                headers=request["metadata"],
-            )
-            if response.status_code == fastapi.status.HTTP_201_CREATED:
-                job_accepted = True
-            elif "type" in response.json():
-                if response.json()["type"] == "not-valid-job-id":
-                    job_accepted = False
-            else:
-                raise NotImplementedError()
-
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
-        status_info.processID = status_info.metadata.pop("apiProcessID")
+        job_kwargs = adaptors.make_system_job_kwargs(
+            process_id, execution_content, resource
+        )
+        job = cads_broker.database.create_request(
+            process_id=process_id,
+            **job_kwargs,
+        )
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(
+            processID=job["process_id"],
+            type=ogc_api_processes_fastapi.models.JobType("process"),
+            jobID=job["request_uid"],
+            status=ogc_api_processes_fastapi.models.StatusCode(job["status"]),
+            created=job["created_at"],
+            started=job["started_at"],
+            finished=job["finished_at"],
+            updated=job["updated_at"],
+        )
 
         return status_info
 
@@ -218,13 +212,27 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             resource = self.lookup_resource_by_id(process_id, session)
             process_description = serializers.serialize_process_description(resource)
             process_description.outputs = {
-                "download_url": ogc_api_processes_fastapi.models.OutputDescription(
-                    title="Download URL",
-                    description="URL to download process result",
-                    schema_=ogc_api_processes_fastapi.models.SchemaItem(  # type: ignore
-                        type="string", format="url"
-                    ),
-                )
+                "asset": {
+                    "title": "Asset",
+                    "description": "Downloadable asset description",
+                    "schema_": {
+                        "type": "object",
+                        "properties": {
+                            "value": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {"type": "string"},
+                                    "href": {"type": "string"},
+                                    "file:checksum": {"type": "integer"},
+                                    "file:size": {"type": "integer"},
+                                    "file:local_path": {"type": "string"},
+                                    "tmp:storage_option": {"type": "object"},
+                                    "tmp:open_kwargs": {"type": "object"},
+                                },
+                            },
+                        },
+                    },
+                },
             }
 
         return process_description
@@ -233,7 +241,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
-        request: fastapi.Request,
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
@@ -245,8 +252,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Process identifier.
         execution_content : ogc_api_processes_fastapi.models.Execute
             Process execution details (e.g. inputs).
-        request: fastapi.Request
-            Request.
 
         Returns
         -------
@@ -277,14 +282,25 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         list[ogc_api_processes_fastapi.models.StatusInfo]
             Information on the status of the job.
         """
-        settings = config.ensure_settings()
-        response = requests.get(url=f"{settings.compute_api_url}jobs")
+        session_obj = cads_broker.database.ensure_session_obj(None)
+        with session_obj() as session:
+            statement = sqlalchemy.select(cads_broker.database.SystemRequest).order_by(
+                cads_broker.database.SystemRequest.created_at.desc()
+            )
+            jobs = session.scalars(statement).all()
         status_info_list = [
-            ogc_api_processes_fastapi.models.StatusInfo(**job)
-            for job in response.json()["jobs"]
+            ogc_api_processes_fastapi.models.StatusInfo(
+                type=ogc_api_processes_fastapi.models.JobType("process"),
+                jobID=job.request_uid,
+                processID=job.process_id,
+                status=ogc_api_processes_fastapi.models.StatusCode(job.status),
+                created=job.created_at,
+                started=job.started_at,
+                finished=job.finished_at,
+                updated=job.updated_at,
+            )
+            for job in jobs
         ]
-        for status_info in status_info_list:
-            status_info.processID = status_info.metadata.pop("apiProcessID")
         return status_info_list
 
     def get_job(self, job_id: str) -> ogc_api_processes_fastapi.models.StatusInfo:
@@ -307,15 +323,25 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
-        settings = config.ensure_settings()
-        response = requests.get(url=f"{settings.compute_api_url}jobs/{job_id}")
-        if response.status_code == fastapi.status.HTTP_200_OK:
-            status_info = ogc_api_processes_fastapi.models.StatusInfo(**response.json())
-            status_info.processID = status_info.metadata.pop("apiProcessID")
-        elif response.status_code == fastapi.status.HTTP_404_NOT_FOUND:
-            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-        else:
-            raise NotImplementedError()
+        try:
+            job = cads_broker.database.get_request(request_uid=job_id)
+        except (
+            sqlalchemy.exc.StatementError,
+            sqlalchemy.exc.NoResultFound,
+        ):
+            raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
+                f"Can't find the job {job_id}."
+            )
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(
+            processID=job.process_id,
+            type=ogc_api_processes_fastapi.models.JobType("process"),
+            jobID=job.request_uid,
+            status=ogc_api_processes_fastapi.models.StatusCode(job.status),
+            created=job.created_at,
+            started=job.started_at,
+            finished=job.finished_at,
+            updated=job.updated_at,
+        )
         return status_info
 
     def get_job_results(self, job_id: str) -> dict[str, Any]:
@@ -344,21 +370,24 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.JobResultsFailed
             If job `job_id` results preparation failed.
         """
-        settings = config.ensure_settings()
-        response = requests.get(url=f"{settings.compute_api_url}jobs/{job_id}/results")
-        response_status = response.status_code
-        response_body = response.json()
-        if response_status == fastapi.status.HTTP_200_OK:
-            results = dict(**response_body)
-        elif response_status == fastapi.status.HTTP_404_NOT_FOUND:
-            if "no-such-job" in response_body["type"]:
-                raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-            elif "result-not-ready" in response_body["type"]:
-                raise ogc_api_processes_fastapi.exceptions.ResultsNotReady()
-        else:
-            raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
-                status_code=response_status,
-                type=response_body["type"],
-                detail=response_body["detail"],
+        try:
+            job = cads_broker.database.get_request(request_uid=job_id)
+        except (
+            sqlalchemy.exc.StatementError,
+            sqlalchemy.exc.NoResultFound,
+        ):
+            raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
+                f"Can't find the job {job_id}."
             )
-        return results
+        if job.status == "successful":
+            return {"asset": {"value": json.loads(job.response_body.get("result"))}}
+        elif job.status == "failed":
+            raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
+                type="RuntimeError",
+                detail=job.response_body.get("traceback"),
+                status_code=fastapi.status.HTTP_400_BAD_REQUEST,
+            )
+        elif job.status in ("accepted", "running"):
+            raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
+                f"Status of {job_id} is {job.status}."
+            )

@@ -16,7 +16,7 @@ import time
 import urllib.parse
 
 import pytest
-import requests
+import requests  # type: ignore
 
 EXISTING_PROCESS_ID = "reanalysis-era5-pressure-levels"
 NON_EXISTING_PROCESS_ID = "non-existing-dataset"
@@ -71,7 +71,7 @@ def test_get_processes(dev_env_proc_api_url: str) -> None:
     assert all([key in response_body for key in exp_keys])
 
     number_of_processes = len(response_body["processes"])
-    exp_number_of_processes = 5
+    exp_number_of_processes = 6
     assert number_of_processes == exp_number_of_processes
 
     limit = 2
@@ -145,7 +145,6 @@ def test_post_process_execute(  # type: ignore
         "status",
         "created",
         "updated",
-        "metadata",
         "links",
     )
     assert all([key in response_body for key in exp_keys])
@@ -181,7 +180,6 @@ def test_get_job(request, dev_env_proc_api_url: str) -> None:  # type: ignore
         "status",
         "created",
         "updated",
-        "metadata",
         "links",
     )
     assert all([key in response_body for key in exp_keys])
@@ -207,7 +205,6 @@ def test_get_job_successful(request, dev_env_proc_api_url: str) -> None:  # type
             "created",
             "updated",
             "finished",
-            "metadata",
             "links",
         )
         assert all([key in response_body for key in exp_keys])
