@@ -26,9 +26,11 @@ def test_make_system_job_kwargs_default() -> None:
 
     exp_setup_code = adaptors.FALLBACK_SETUP_CODE
     exp_entry_point = adaptors.FALLBACK_ENTRY_POINT
-    exp_config = adaptors.FALLBACK_CONFIG
-    exp_config.update({"collection_id": process_id})
-    exp_kwargs = {"request": inputs, "config": adaptors.FALLBACK_CONFIG}
+    exp_kwargs = {
+        "request": inputs,
+        "config": adaptors.FALLBACK_CONFIG | {"collection_id": process_id},
+    }
+    exp_metadata = {"X-Forward-Process-ID": process_id}
 
     job_kwargs = adaptors.make_system_job_kwargs(
         process_id, execution_content, resource
