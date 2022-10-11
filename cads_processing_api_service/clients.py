@@ -241,6 +241,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         process_id: str,
         execution_content: ogc_api_processes_fastapi.models.Execute,
+        request: fastapi.Request,
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
