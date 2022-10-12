@@ -18,12 +18,13 @@ import cads_catalogue.config
 import fastapi
 import fastapi_utils.session
 import ogc_api_processes_fastapi
-
-from . import clients
 from starlette_exporter import PrometheusMiddleware, handle_metrics
+
+from . import clients, metrics
 
 app = fastapi.FastAPI()
 app.add_middleware(PrometheusMiddleware)
+metrics.add_metrics_middleware(app)
 connection_string = cads_catalogue.config.ensure_settings().connection_string
 sql_session_reader = fastapi_utils.session.FastAPISessionMaker(connection_string)
 app = ogc_api_processes_fastapi.include_routers(
