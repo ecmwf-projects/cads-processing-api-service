@@ -14,10 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any
+from typing import Any, Dict
 
 import cads_catalogue.database
-import ogc_api_processes_fastapi.models
 
 FALLBACK_SETUP_CODE = """
 import cacholote
@@ -48,7 +47,7 @@ FALLBACK_CONFIG: dict[str, str] = {
 
 def make_system_job_kwargs(
     process_id: str,
-    execution_content: ogc_api_processes_fastapi.models.Execute,
+    execution_content: Dict[str, Any],
     resource: cads_catalogue.database.Resource,
 ) -> dict[str, Any]:
 
@@ -69,7 +68,7 @@ def make_system_job_kwargs(
         config = FALLBACK_CONFIG.copy()
         config["collection_id"] = process_id
 
-    inputs = execution_content.dict()["inputs"]
+    inputs = execution_content["inputs"]
     kwargs = {
         "request": inputs,
         "config": config,

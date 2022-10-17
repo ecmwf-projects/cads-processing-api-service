@@ -15,10 +15,9 @@
 # limitations under the License.
 
 import urllib.parse
-from typing import Any
+from typing import Any, Dict
 
 import cads_catalogue.database
-import ogc_api_processes_fastapi.models
 import requests
 
 from . import config, translators
@@ -47,7 +46,7 @@ def get_cds_form(cds_form_url: str) -> list[Any]:
 
 def serialize_process_summary(
     db_model: cads_catalogue.database.Resource,
-) -> ogc_api_processes_fastapi.models.ProcessSummary:
+) -> Dict[str, Any]:
     """Convert provided database entry into a representation of a process summary.
 
     Parameters
@@ -60,26 +59,26 @@ def serialize_process_summary(
     ogc_api_processes_fastapi.models.ProcessSummary
         Process summary representation.
     """
-    retval = ogc_api_processes_fastapi.models.ProcessSummary(
-        title=f"{db_model.title}",
-        description=db_model.abstract,
-        keywords=db_model.keywords,
-        id=db_model.resource_uid,
-        version="1.0.0",
-        jobControlOptions=[
-            ogc_api_processes_fastapi.models.JobControlOptions.async_execute,
+    retval = {
+        "title": f"{db_model.title}",
+        "description": db_model.abstract,
+        "keywords": db_model.keywords,
+        "id": db_model.resource_uid,
+        "version": "1.0.0",
+        "jobControlOptions": [
+            "async-execute",
         ],
-        outputTransmission=[
-            ogc_api_processes_fastapi.models.TransmissionMode.reference,
+        "outputTransmission": [
+            "reference",
         ],
-    )
+    }
 
     return retval
 
 
 def serialize_process_inputs(
     db_model: cads_catalogue.database.Resource,
-) -> dict[str, ogc_api_processes_fastapi.models.InputDescription]:
+) -> Dict[str, Any]:
     """Convert provided database entry into a representation of a process inputs.
 
     Returns
@@ -95,7 +94,7 @@ def serialize_process_inputs(
 
 def serialize_process_description(
     db_model: cads_catalogue.database.Resource,
-) -> ogc_api_processes_fastapi.models.ProcessDescription:
+) -> Dict[str, Any]:
     """Convert provided database entry into a representation of a process description.
 
     Parameters
@@ -109,9 +108,8 @@ def serialize_process_description(
         Process description representation.
     """
     process_summary = serialize_process_summary(db_model)
-    retval = ogc_api_processes_fastapi.models.ProcessDescription(
-        **process_summary.dict(),
-        inputs=serialize_process_inputs(db_model),
-    )
-
+    retval = {
+        **process_summary,
+        "inputs": serialize_process_inputs(db_model),
+    }
     return retval
