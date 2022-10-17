@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+from typing import Dict, Optional
+
 import cads_catalogue.config
 import fastapi
 import fastapi_utils.session
@@ -30,6 +32,7 @@ sql_session_reader = fastapi_utils.session.FastAPISessionMaker(connection_string
 api = ogc_api_processes_fastapi.OGCProcessesAPI(
     app=app,
     client=clients.DatabaseClient(reader=sql_session_reader),
+    add_resp_params={"StatusInfo": {"metadata": (Optional[Dict[str, str]], {})}},
 )
 app = api.app
 app = ogc_api_processes_fastapi.include_exception_handlers(app=app)
