@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-import json
 import logging
 from typing import Any, Type
 
@@ -380,7 +379,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 f"Can't find the job {job_id}."
             )
         if job.status == "successful":
-            return {"asset": {"value": json.loads(job.response_body.get("result"))}}
+            result = cads_broker.database.get_request_result(
+                request_uid=job.request_uid
+            )["args"][0]
+            return {"asset": {"value": result}}
         elif job.status == "failed":
             raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
                 type="RuntimeError",
