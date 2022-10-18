@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import cads_catalogue.database
-import ogc_api_processes_fastapi.models
 
 from cads_processing_api_service import adaptors
 
@@ -21,7 +20,7 @@ from cads_processing_api_service import adaptors
 def test_make_system_job_kwargs_default() -> None:
     process_id = "test_process"
     inputs = {"input": "string_input"}
-    execution_content = ogc_api_processes_fastapi.models.Execute(inputs=inputs)
+    execution_content = {"inputs": inputs}
     resource = cads_catalogue.database.Resource()
 
     exp_setup_code = adaptors.FALLBACK_SETUP_CODE
