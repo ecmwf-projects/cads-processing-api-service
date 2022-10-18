@@ -75,11 +75,8 @@ def test_get_processes(dev_env_proc_api_url: str) -> None:
     assert number_of_processes == exp_number_of_processes
 
     limit = 2
-    offset = 1
     response_limit = requests.get(
-        urllib.parse.urljoin(
-            dev_env_proc_api_url, f"processes?limit={limit}&offset={offset}"
-        )
+        urllib.parse.urljoin(dev_env_proc_api_url, f"processes?limit={limit}")
     )
     response_status_code = response.status_code
 
@@ -92,7 +89,7 @@ def test_get_processes(dev_env_proc_api_url: str) -> None:
     exp_number_of_processes = 2
     assert number_of_processes == exp_number_of_processes
 
-    exp_processes = response_body["processes"][1:3]
+    exp_processes = response_body["processes"][:2]
     assert processes == exp_processes
 
 
