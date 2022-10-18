@@ -115,7 +115,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str,
         execution_content: dict[str, Any],
         resource: cads_catalogue.database.Resource,
-    ) -> ogc_api_processes_fastapi.responses.schema["StatusInfo"]:  # noqa
+    ) -> ogc_api_processes_fastapi.responses.StatusInfo:
         """Submit new job.
 
         Parameters
@@ -140,7 +140,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             process_id=process_id,
             **job_kwargs,
         )
-        status_info = ogc_api_processes_fastapi.responses.schema["StatusInfo"](
+        status_info = ogc_api_processes_fastapi.responses.StatusInfo(
             processID=job["process_id"],
             type="process",
             jobID=job["request_uid"],
@@ -155,8 +155,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def get_processes(
         self, limit: int | None = fastapi.Query(None)
-    ) -> list[ogc_api_processes_fastapi.responses.schema["ProcessSummary"]]:  # noqa
-        """
+    ) -> ogc_api_processes_fastapi.responses.ProcessesList:
+        """Implement OGC API - Processes `GET /processes` endpoint.
+
+        Get the list of available processes.
 
         Parameters
         ----------
@@ -181,7 +183,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def get_process(
         self, process_id: str = fastapi.Path(...)
-    ) -> ogc_api_processes_fastapi.responses.schema["ProcessDescription"]:  # noqa
+    ) -> ogc_api_processes_fastapi.responses.ProcessDescription:
         """Implement OGC API - Processes `GET /processes/{process_id}` endpoint.
 
         Get the description of the process identified by `process_id`.
@@ -234,7 +236,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         process_id: str = fastapi.Path(...),
         execution_content: dict[str, Any] = fastapi.Body(...),
-    ) -> ogc_api_processes_fastapi.responses.schema["StatusInfo"]:  # noqa
+    ) -> ogc_api_processes_fastapi.responses.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
         Request execution of the process identified by `process_id`.
@@ -263,7 +265,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def get_jobs(
         self,
-    ) -> list[ogc_api_processes_fastapi.responses.schema["StatusInfo"]]:  # noqa
+    ) -> ogc_api_processes_fastapi.responses.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
 
         Get jobs' status information list.
@@ -284,7 +286,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             )
             jobs = session.scalars(statement).all()
         status_info_list = [
-            ogc_api_processes_fastapi.responses.schema["StatusInfo"](
+            ogc_api_processes_fastapi.responses.StatusInfo(
                 type="process",
                 jobID=job.request_uid,
                 processID=job.process_id,
@@ -300,7 +302,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def get_job(
         self, job_id: str = fastapi.Path(...)
-    ) -> ogc_api_processes_fastapi.responses.schema["StatusInfo"]:  # noqa
+    ) -> ogc_api_processes_fastapi.responses.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
         Get status information for the job identifed by `job_id`.
@@ -329,7 +331,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 f"Can't find the job {job_id}."
             )
-        status_info = ogc_api_processes_fastapi.responses.schema["StatusInfo"](
+        status_info = ogc_api_processes_fastapi.responses.StatusInfo(
             processID=job.process_id,
             type="process",
             jobID=job.request_uid,
@@ -343,7 +345,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def get_job_results(
         self, job_id: str = fastapi.Path(...)
-    ) -> ogc_api_processes_fastapi.responses.schema["Results"]:  # noqa
+    ) -> ogc_api_processes_fastapi.responses.Results:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
 
         Get results for the job identifed by `job_id`.
