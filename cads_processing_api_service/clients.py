@@ -410,6 +410,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
                 f"Status of {job_id} is {job.status}."
             )
-        job_results = {"asset": {"value": json.loads(job.response_body.get("result"))}}
+        asset_value = json.loads(job.response_body.get("result"))
+        job_results = {"asset": {"value": asset_value}}
 
         return job_results
