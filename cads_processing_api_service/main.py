@@ -27,10 +27,8 @@ app.add_middleware(starlette_exporter.PrometheusMiddleware)
 metrics.add_metrics_middleware(app)
 connection_string = cads_catalogue.config.ensure_settings().connection_string
 sql_session_reader = fastapi_utils.session.FastAPISessionMaker(connection_string)
-api = ogc_api_processes_fastapi.OGCProcessesAPI(
-    app=app,
-    client=clients.DatabaseClient(reader=sql_session_reader),
+app = ogc_api_processes_fastapi.instantiate_app(
+    clients.DatabaseClient(reader=sql_session_reader)
 )
-app = api.app
 app = ogc_api_processes_fastapi.include_exception_handlers(app=app)
 app.add_route("/metrics", starlette_exporter.handle_metrics)
