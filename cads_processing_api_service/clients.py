@@ -155,7 +155,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def get_processes(
         self, limit: int | None = fastapi.Query(None)
-    ) -> ogc_api_processes_fastapi.responses.ProcessesList:
+    ) -> ogc_api_processes_fastapi.responses.ProcessList:
         """Implement OGC API - Processes `GET /processes` endpoint.
 
         Get the list of available processes.
@@ -172,14 +172,18 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         with self.reader.context_session() as session:
             if limit:
-                processes = session.query(self.process_table).limit(limit).all()
+                processes_entries = session.query(self.process_table).limit(limit).all()
             else:
-                processes = session.query(self.process_table).all()
-            processes_list = [
-                serializers.serialize_process_summary(process) for process in processes
+                processes_entries = session.query(self.process_table).all()
+            processes = [
+                serializers.serialize_process_summary(process)
+                for process in processes_entries
             ]
+        process_list = ogc_api_processes_fastapi.responses.ProcessList(
+            processes=processes
+        )
 
-        return processes_list
+        return process_list
 
     def get_process(
         self, process_id: str = fastapi.Path(...)
@@ -284,8 +288,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement = sqlalchemy.select(cads_broker.database.SystemRequest).order_by(
                 cads_broker.database.SystemRequest.created_at.desc()
             )
-            jobs = session.scalars(statement).all()
-        status_info_list = [
+            jobs_entries = session.scalars(statement).all()
+        jobs = [
             ogc_api_processes_fastapi.responses.StatusInfo(
                 type="process",
                 jobID=job.request_uid,
@@ -296,9 +300,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 finished=job.finished_at,
                 updated=job.updated_at,
             )
-            for job in jobs
+            for job in jobs_entries
         ]
-        return status_info_list
+        job_list = ogc_api_processes_fastapi.responses.JobList(jobs=jobs)
+
+        return job_list
 
     def get_job(
         self, job_id: str = fastapi.Path(...)
@@ -382,8 +388,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job_results = {
                 "asset": {"value": json.loads(job.response_body.get("result"))}
             }
-            response_body = job_results
-            return response_body
+            return job_results
         elif job.status == "failed":
             raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
                 type="RuntimeError",
