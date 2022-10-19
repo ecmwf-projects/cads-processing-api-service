@@ -227,6 +227,24 @@ def test_get_job_successful_results(request) -> None:  # type: ignore
     exp_status_code = 200
     assert response_status == exp_status_code
 
+    response_body = response.json()
+    exp_keys = ("asset",)
+    assert all([key in response_body for key in exp_keys])
+
+    exp_asset_keys = ("value",)
+    assert all([key in response_body["asset"] for key in exp_asset_keys])
+
+    exp_value_keys = (
+        "type",
+        "href",
+        "file:checksum",
+        "file:size",
+        "file:local_path",
+        "tmp:storage_options",
+        "tmp:open_kwargs",
+    )
+    assert all([key in response_body["asset"]["value"] for key in exp_value_keys])
+
 
 def test_get_jobs(dev_env_proc_api_url: str) -> None:
 
