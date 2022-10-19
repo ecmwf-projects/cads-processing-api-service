@@ -18,12 +18,12 @@ import cads_catalogue.config
 import fastapi
 import fastapi_utils.session
 import ogc_api_processes_fastapi
-from starlette_exporter import PrometheusMiddleware, handle_metrics
+import starlette_exporter
 
 from . import clients, metrics
 
 app = fastapi.FastAPI()
-app.add_middleware(PrometheusMiddleware)
+app.add_middleware(starlette_exporter.PrometheusMiddleware)
 metrics.add_metrics_middleware(app)
 connection_string = cads_catalogue.config.ensure_settings().connection_string
 sql_session_reader = fastapi_utils.session.FastAPISessionMaker(connection_string)
@@ -33,4 +33,4 @@ api = ogc_api_processes_fastapi.OGCProcessesAPI(
 )
 app = api.app
 app = ogc_api_processes_fastapi.include_exception_handlers(app=app)
-app.add_route("/metrics", handle_metrics)
+app.add_route("/metrics", starlette_exporter.handle_metrics)
