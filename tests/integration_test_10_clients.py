@@ -16,7 +16,7 @@ import time
 import urllib.parse
 
 import pytest
-import requests  # type: ignore
+import requests
 
 EXISTING_PROCESS_ID = "reanalysis-era5-pressure-levels"
 NON_EXISTING_PROCESS_ID = "non-existing-dataset"

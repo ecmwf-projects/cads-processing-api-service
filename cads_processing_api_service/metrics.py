@@ -1,3 +1,5 @@
+# type: ignore
+
 import cads_broker
 import prometheus_client
 import starlette.requests

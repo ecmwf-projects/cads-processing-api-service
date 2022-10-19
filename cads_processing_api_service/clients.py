@@ -1,3 +1,5 @@
+# type: ignore
+
 """CADS Processing client, implementing the OGC API Processes standard."""
 
 # Copyright 2022, European Union.
@@ -211,27 +213,41 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             resource = self.lookup_resource_by_id(process_id, session)
             process_description = serializers.serialize_process_description(resource)
             process_description.outputs = {
-                "asset": {
-                    "title": "Asset",
-                    "description": "Downloadable asset description",
-                    "schema_": {
-                        "type": "object",
-                        "properties": {
-                            "value": {
-                                "type": "object",
-                                "properties": {
-                                    "type": {"type": "string"},
-                                    "href": {"type": "string"},
-                                    "file:checksum": {"type": "integer"},
-                                    "file:size": {"type": "integer"},
-                                    "file:local_path": {"type": "string"},
-                                    "tmp:storage_option": {"type": "object"},
-                                    "tmp:open_kwargs": {"type": "object"},
+                "asset": ogc_api_processes_fastapi.responses.OutputDescription(
+                    title="Asset",
+                    description="Downloadable asset description",
+                    schema_=ogc_api_processes_fastapi.responses.SchemaItem(
+                        type="object",
+                        properties={
+                            "value": ogc_api_processes_fastapi.responses.SchemaItem(
+                                type="object",
+                                properties={
+                                    "type": ogc_api_processes_fastapi.responses.SchemaItem(
+                                        type="string"
+                                    ),
+                                    "href": ogc_api_processes_fastapi.responses.SchemaItem(
+                                        type="string"
+                                    ),
+                                    "file:checksum": ogc_api_processes_fastapi.responses.SchemaItem(
+                                        type="integer"
+                                    ),
+                                    "file:size": ogc_api_processes_fastapi.responses.SchemaItem(
+                                        type="integer"
+                                    ),
+                                    "file:local_path": ogc_api_processes_fastapi.responses.SchemaItem(
+                                        type="string"
+                                    ),
+                                    "tmp:storage_option": ogc_api_processes_fastapi.responses.SchemaItem(
+                                        type="object"
+                                    ),
+                                    "tmp:open_kwargs": ogc_api_processes_fastapi.responses.SchemaItem(
+                                        type="object"
+                                    ),
                                 },
-                            },
+                            ),
                         },
-                    },
-                },
+                    ),
+                ),
             }
 
         return process_description
@@ -332,7 +348,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job = cads_broker.database.get_request(request_uid=job_id)
         except (
             sqlalchemy.exc.StatementError,
-            sqlalchemy.exc.NoResultFound,
+            sqlalchemy.orm.exc.NoResultFound,
         ):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 f"Can't find the job {job_id}."
@@ -379,17 +395,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job = cads_broker.database.get_request(request_uid=job_id)
         except (
             sqlalchemy.exc.StatementError,
-            sqlalchemy.exc.NoResultFound,
+            sqlalchemy.orm.exc.NoResultFound,
         ):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 f"Can't find the job {job_id}."
             )
-        if job.status == "successful":
-            job_results = {
-                "asset": {"value": json.loads(job.response_body.get("result"))}
-            }
-            return job_results
-        elif job.status == "failed":
+        if job.status == "failed":
             raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
                 type="RuntimeError",
                 detail=job.response_body.get("traceback"),
@@ -399,3 +410,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
                 f"Status of {job_id} is {job.status}."
             )
+        job_results = {"asset": {"value": json.loads(job.response_body.get("result"))}}
+
+        return job_results
