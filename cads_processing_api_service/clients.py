@@ -39,121 +39,126 @@ from . import adaptors, exceptions, serializers
 logger = logging.getLogger(__name__)
 
 
+def lookup_id(
+    id: str,
+    record: Type[cads_catalogue.database.BaseModel],
+    session: sqlalchemy.orm.Session,
+) -> cads_catalogue.database.BaseModel:
+
+    try:
+        row = session.query(record).filter(record.resource_uid == id).one()
+    except sqlalchemy.orm.exc.NoResultFound:
+        raise exceptions.NotFoundError(f"{record.__name__} {id} not found")
+    return row
+
+
+def lookup_resource_by_id(
+    id: str,
+    session: sqlalchemy.orm.Session,
+    process_table: Type[cads_catalogue.database.Resource],
+) -> cads_catalogue.database.BaseModel:
+
+    try:
+        process = lookup_id(id=id, record=process_table, session=session)
+    except exceptions.NotFoundError:
+        raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
+
+    return process
+
+
+def validate_request(
+    process_id: str,
+    session: sqlalchemy.orm.Session,
+    process_table: Type[cads_catalogue.database.Resource],
+) -> cads_catalogue.database.BaseModel:
+    """Validate retrieve process execution request.
+
+    Check if requested dataset exists and if execution content is valid.
+    In case the check is successful, returns the resource (dataset)
+    associated to the process request.
+
+    Parameters
+    ----------
+    process_id : str
+        Process ID.
+    session : sqlalchemy.orm.Session
+        SQLAlchemy ORM session
+
+    Returns
+    -------
+    cads_catalogue.database.BaseModel
+        Resource (dataset) associated to the process request.
+    """
+    # TODO: implement inputs validation
+    resource = lookup_resource_by_id(process_id, session, process_table)
+    return resource
+
+
+def submit_job(
+    process_id: str,
+    execution_content: dict[str, Any],
+    resource: cads_catalogue.database.Resource,
+) -> ogc_api_processes_fastapi.responses.StatusInfo:
+    """Submit new job.
+
+    Parameters
+    ----------
+    process_id: str
+        Process ID.
+    execution_content: ogc_api_processes_fastapi.models.Execute
+        Body of the process execution request.
+    resource: cads_catalogue.database.Resource,
+        Catalogue resource corresponding to the requested retrieve process
+
+
+    Returns
+    -------
+    ogc_api_processes_fastapi.responses.schema["StatusInfo"]
+        Sumbitted job status info.
+    """
+    job_kwargs = adaptors.make_system_job_kwargs(
+        process_id, execution_content, resource
+    )
+    job = cads_broker.database.create_request(
+        process_id=process_id,
+        **job_kwargs,
+    )
+    status_info = ogc_api_processes_fastapi.responses.StatusInfo(
+        processID=job["process_id"],
+        type="process",
+        jobID=job["request_uid"],
+        status=job["status"],
+        created=job["created_at"],
+        started=job["started_at"],
+        finished=job["finished_at"],
+        updated=job["updated_at"],
+    )
+
+    return status_info
+
+
 @attrs.define
 class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     """Database implementation of the OGC API - Processes endpoints.
 
     Attributes
     ----------
-    reader : fastapi_utils.session.FastAPISessionMaker
-        SQLAlchemy ORM session reader.
     process_table: Type[cads_catalogue.database.Resource]
         Processes record/table.
     """
 
-    reader: fastapi_utils.session.FastAPISessionMaker
     process_table: Type[cads_catalogue.database.Resource] = attrs.field(
         default=cads_catalogue.database.Resource
     )
 
-    def _lookup_id(
-        self,
-        id: str,
-        record: Type[cads_catalogue.database.BaseModel],
-        session: sqlalchemy.orm.Session,
-    ) -> cads_catalogue.database.BaseModel:
-
-        try:
-            row = session.query(record).filter(record.resource_uid == id).one()
-        except sqlalchemy.orm.exc.NoResultFound:
-            raise exceptions.NotFoundError(f"{record.__name__} {id} not found")
-        return row
-
-    def lookup_resource_by_id(
-        self,
-        id: str,
-        session: sqlalchemy.orm.Session,
-    ) -> cads_catalogue.database.BaseModel:
-
-        try:
-            process = self._lookup_id(id=id, record=self.process_table, session=session)
-        except exceptions.NotFoundError:
-            raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
-
-        return process
-
-    def validate_request(
-        self,
-        process_id: str,
-        execution_content: dict[str, Any],
-        session: sqlalchemy.orm.Session,
-    ) -> cads_catalogue.database.BaseModel:
-        """Validate retrieve process execution request.
-
-        Check if requested dataset exists and if execution content is valid.
-        In case the check is successful, returns the resource (dataset)
-        associated to the process request.
-
-        Parameters
-        ----------
-        process_id : str
-            Process ID.
-        execution_content : Dict[str, Any]
-            Body of the process execution request.
-        session : sqlalchemy.orm.Session
-            SQLAlchemy ORM session
-
-        Returns
-        -------
-        cads_catalogue.database.BaseModel
-            Resource (dataset) associated to the process request.
-        """
-        # TODO: implement inputs validation
-        resource = self.lookup_resource_by_id(process_id, session)
-        return resource
-
-    def submit_job(
-        self,
-        process_id: str,
-        execution_content: dict[str, Any],
-        resource: cads_catalogue.database.Resource,
-    ) -> ogc_api_processes_fastapi.responses.StatusInfo:
-        """Submit new job.
-
-        Parameters
-        ----------
-        process_id: str
-            Process ID.
-        execution_content: ogc_api_processes_fastapi.models.Execute
-            Body of the process execution request.
-        resource: cads_catalogue.database.Resource,
-            Catalogue resource corresponding to the requested retrieve process
-
-
-        Returns
-        -------
-        ogc_api_processes_fastapi.responses.schema["StatusInfo"]
-            Sumbitted job status info.
-        """
-        job_kwargs = adaptors.make_system_job_kwargs(
-            process_id, execution_content, resource
+    @property
+    def reader(self) -> fastapi_utils.session.FastAPISessionMaker:
+        """Return the reader for the catalogue database."""
+        connection_string = cads_catalogue.config.ensure_settings().connection_string
+        sql_session_reader = fastapi_utils.session.FastAPISessionMaker(
+            connection_string
         )
-        job = cads_broker.database.create_request(
-            process_id=process_id,
-            **job_kwargs,
-        )
-        status_info = ogc_api_processes_fastapi.responses.StatusInfo(
-            processID=job["process_id"],
-            type="process",
-            jobID=job["request_uid"],
-            status=job["status"],
-            created=job["created_at"],
-            started=job["started_at"],
-            finished=job["finished_at"],
-            updated=job["updated_at"],
-        )
-
-        return status_info
+        return sql_session_reader
 
     def get_processes(
         self, limit: int | None = fastapi.Query(None)
@@ -210,7 +215,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the process `process_id` is not found.
         """
         with self.reader.context_session() as session:
-            resource = self.lookup_resource_by_id(process_id, session)
+            resource = lookup_resource_by_id(process_id, session, self.process_table)
             process_description = serializers.serialize_process_description(resource)
             process_description.outputs = {
                 "asset": ogc_api_processes_fastapi.responses.OutputDescription(
@@ -279,8 +284,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the process `process_id` is not found.
         """
         with self.reader.context_session() as session:
-            resource = self.validate_request(process_id, execution_content, session)
-            status_info = self.submit_job(process_id, execution_content, resource)
+            resource = validate_request(process_id, session, self.process_table)
+            status_info = submit_job(process_id, execution_content, resource)
         return status_info
 
     def get_jobs(

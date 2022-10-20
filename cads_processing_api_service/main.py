@@ -14,9 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-import cads_catalogue.config
 import fastapi
-import fastapi_utils.session
 import ogc_api_processes_fastapi
 import starlette_exporter  # type: ignore
 
@@ -25,10 +23,8 @@ from . import clients, metrics
 app = fastapi.FastAPI()
 app.add_middleware(starlette_exporter.PrometheusMiddleware)
 metrics.add_metrics_middleware(app)  # type: ignore
-connection_string = cads_catalogue.config.ensure_settings().connection_string
-sql_session_reader = fastapi_utils.session.FastAPISessionMaker(connection_string)
 app = ogc_api_processes_fastapi.instantiate_app(
-    clients.DatabaseClient(reader=sql_session_reader)  # type: ignore
+    clients.DatabaseClient()  # type: ignore
 )
 app = ogc_api_processes_fastapi.include_exception_handlers(app=app)
 app.add_route("/metrics", starlette_exporter.handle_metrics)
