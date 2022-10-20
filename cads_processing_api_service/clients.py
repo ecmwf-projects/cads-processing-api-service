@@ -18,7 +18,7 @@
 
 import json
 import logging
-from typing import Any, Type
+from typing import Any, Optional, Type
 
 import attrs
 import cads_broker.database
@@ -33,6 +33,7 @@ import ogc_api_processes_fastapi.responses
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
+import sqlalchemy.sql.selectable
 
 from . import adaptors, exceptions, serializers
 
@@ -64,6 +65,59 @@ def lookup_resource_by_id(
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
 
     return process
+
+
+def apply_jobs_filters(
+    statement: sqlalchemy.sql.selectable.Select,
+    resource: Type[cads_broker.database.SystemRequest],
+    filters: dict[str, Optional[list[str]]],
+):
+    """Apply search filters to the running query.
+
+    Parameters
+    ----------
+        statement: sqlalchemy.sql.selectable.Select
+            select statement
+        resource: Type[cads_broker.database.SystemRequest]
+            sqlalchemy declarative base
+        filters: dict[str, Optional[list[str]]]
+            filters as key-value pairs
+    """
+    for filter_key, filter_value in filters.items():
+        if filter_value:
+            statement = statement.where(getattr(resource, filter_key).in_(filter_value))
+    return statement
+
+
+def apply_limit(
+    statement: sqlalchemy.sql.selectable.Select,
+    limit: Optional[int],
+):
+    """Apply limit to the running query.
+
+    Parameters
+    ----------
+        statement: sqlalchemy.sql.selectable.Select
+            select statement
+        limit: Optional[int]
+            requested number of results to be shown
+    """
+    statement = statement.limit(limit)
+    return statement
+
+
+def make_jobs_query_statement(
+    job_table: Type[
+        cads_broker.database.SystemRequest,
+    ],
+    filters: dict[str, Optional[list[str]]],
+    limit: Optional[int],
+) -> sqlalchemy.sql.selectable.Select:
+    statement = sqlalchemy.select(job_table)
+    statement = apply_jobs_filters(statement, job_table, filters)
+    statement = apply_limit(statement, limit)
+
+    return statement
 
 
 def validate_request(
@@ -149,6 +203,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     process_table: Type[cads_catalogue.database.Resource] = attrs.field(
         default=cads_catalogue.database.Resource
+    )
+    job_table: Type[cads_broker.database.SystemRequest] = attrs.field(
+        default=cads_broker.database.SystemRequest
     )
 
     @property
@@ -290,6 +347,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def get_jobs(
         self,
+        processID: Optional[list[str]] = fastapi.Query(None),
+        status: Optional[list[str]] = fastapi.Query(None),
+        limit: Optional[int] = fastapi.Query(10, ge=1, le=10000),
     ) -> ogc_api_processes_fastapi.responses.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
 
@@ -297,7 +357,17 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Parameters
         ----------
-        ...
+        processID: Optional[List[str]] = fastapi.Query(None)
+            If the parameter is specified with the operation, only jobs that have a value for
+            the processID property that matches one of the values specified for the processID
+            parameter shall be included in the response.
+        status: Optional[List[str]] = fastapi.Query(None)
+            If the parameter is specified with the operation, only jobs that have a value for
+            the status property that matches one of the specified values of the status parameter
+            shall be included in the response.
+        limit: Optional[int] = fastapi.Query(10, ge=1, le=10000)
+            The response shall not contain more jobs than specified by the optional ``limit``
+            parameter.
 
         Returns
         -------
@@ -306,8 +376,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         session_obj = cads_broker.database.ensure_session_obj(None)
         with session_obj() as session:
-            statement = sqlalchemy.select(cads_broker.database.SystemRequest).order_by(
-                cads_broker.database.SystemRequest.created_at.desc()
+            statement = make_jobs_query_statement(
+                self.job_table,
+                filters={"process_id": processID, "status": status},
+                limit=limit,
             )
             jobs_entries = session.scalars(statement).all()
         jobs = [
