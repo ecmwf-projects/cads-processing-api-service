@@ -17,8 +17,6 @@
 import itertools
 from typing import Any
 
-from ogc_api_processes_fastapi import models
-
 ACCEPTED_INPUTS = [
     "product_type",
     "variable",
@@ -83,7 +81,7 @@ def build_input_ogc_schema(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
 
 def translate_cds_into_ogc_inputs(
     cds_form: list[Any],
-) -> dict[str, models.InputDescription]:
+) -> dict[str, Any]:
     """Translate CDS forms inputs into OGC API compliants ones.
 
     Convert inputs information contained in the provided CDS form file
@@ -102,11 +100,9 @@ def translate_cds_into_ogc_inputs(
     inputs_ogc = {}
     for input_cds_schema in cds_form:
         if input_cds_schema["name"] in ACCEPTED_INPUTS:
-            inputs_ogc[input_cds_schema["name"]] = models.InputDescription(
-                title=input_cds_schema["label"],
-                schema_=models.SchemaItem(  # type: ignore
-                    **build_input_ogc_schema(input_cds_schema)
-                ),
-            )
+            inputs_ogc[input_cds_schema["name"]] = {
+                "title": input_cds_schema["label"],
+                "schema_": {**build_input_ogc_schema(input_cds_schema)},
+            }
 
     return inputs_ogc
