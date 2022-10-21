@@ -16,7 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-import json
 import logging
 from typing import Any, Optional, Type
 
@@ -477,17 +476,18 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 f"Can't find the job {job_id}."
             )
-        if job.status == "failed":
+        if job.status == "successful":
+            asset_value = cads_broker.database.get_request_result(
+                request_uid=job.request_uid
+            )["args"][0]
+            return {"asset": {"value": asset_value}}
+        elif job.status == "failed":
             raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
                 type="RuntimeError",
-                detail=job.response_body.get("traceback"),
+                detail=job.response_traceback,
                 status_code=fastapi.status.HTTP_400_BAD_REQUEST,
             )
         elif job.status in ("accepted", "running"):
             raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
                 f"Status of {job_id} is {job.status}."
             )
-        asset_value = json.loads(job.response_body.get("result"))
-        job_results = {"asset": {"value": asset_value}}
-
-        return job_results
