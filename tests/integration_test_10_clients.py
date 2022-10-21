@@ -240,8 +240,6 @@ def test_get_job_successful_results(request) -> None:  # type: ignore
         "file:checksum",
         "file:size",
         "file:local_path",
-        "tmp:storage_options",
-        "tmp:open_kwargs",
     )
     assert all([key in response_body["asset"]["value"] for key in exp_value_keys])
 
