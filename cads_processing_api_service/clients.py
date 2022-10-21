@@ -386,7 +386,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         elif job.status == "failed":
             raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
                 type="RuntimeError",
-                detail=job.response_body.get("traceback"),
+                detail=job.response_traceback,
                 status_code=fastapi.status.HTTP_400_BAD_REQUEST,
             )
         elif job.status in ("accepted", "running"):
