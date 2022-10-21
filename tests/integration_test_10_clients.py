@@ -16,7 +16,7 @@ import time
 import urllib.parse
 
 import pytest
-import requests  # type: ignore
+import requests
 
 EXISTING_PROCESS_ID = "reanalysis-era5-pressure-levels"
 NON_EXISTING_PROCESS_ID = "non-existing-dataset"
@@ -75,11 +75,8 @@ def test_get_processes(dev_env_proc_api_url: str) -> None:
     assert number_of_processes == exp_number_of_processes
 
     limit = 2
-    offset = 1
     response_limit = requests.get(
-        urllib.parse.urljoin(
-            dev_env_proc_api_url, f"processes?limit={limit}&offset={offset}"
-        )
+        urllib.parse.urljoin(dev_env_proc_api_url, f"processes?limit={limit}")
     )
     response_status_code = response.status_code
 
@@ -92,7 +89,7 @@ def test_get_processes(dev_env_proc_api_url: str) -> None:
     exp_number_of_processes = 2
     assert number_of_processes == exp_number_of_processes
 
-    exp_processes = response_body["processes"][1:3]
+    exp_processes = response_body["processes"][:2]
     assert processes == exp_processes
 
 
@@ -230,6 +227,24 @@ def test_get_job_successful_results(request) -> None:  # type: ignore
     exp_status_code = 200
     assert response_status == exp_status_code
 
+    response_body = response.json()
+    exp_keys = ("asset",)
+    assert all([key in response_body for key in exp_keys])
+
+    exp_asset_keys = ("value",)
+    assert all([key in response_body["asset"] for key in exp_asset_keys])
+
+    exp_value_keys = (
+        "type",
+        "href",
+        "file:checksum",
+        "file:size",
+        "file:local_path",
+        "tmp:storage_options",
+        "tmp:open_kwargs",
+    )
+    assert all([key in response_body["asset"]["value"] for key in exp_value_keys])
+
 
 def test_get_jobs(dev_env_proc_api_url: str) -> None:
 
@@ -243,18 +258,30 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
     exp_keys = ("jobs", "links")
     assert all([key in response_body for key in exp_keys])
 
-    number_of_existing_jobs = len(response_body["jobs"])
     process_id = EXISTING_PROCESS_ID
     number_of_new_jobs = 3
     request_execute_url = urllib.parse.urljoin(
         dev_env_proc_api_url, f"processes/{process_id}/execute"
     )
     for _ in range(number_of_new_jobs):
-        requests.post(request_execute_url, json=POST_PROCESS_REQUEST_BODY_SUCCESS)
-    response = requests.get(urllib.parse.urljoin(dev_env_proc_api_url, "jobs"))
-    number_of_jobs = len(response.json()["jobs"])
-    exp_number_of_jobs = number_of_existing_jobs + number_of_new_jobs
-    assert number_of_jobs == exp_number_of_jobs
+        requests.post(request_execute_url, json=POST_PROCESS_REQUEST_BODY_FAIL)
+
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=2")
+    response = requests.get(request_url)
+    response_body = response.json()
+    assert len(response_body["jobs"]) == 2
+
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?status=successful")
+    response = requests.get(request_url)
+    response_body = response.json()
+    assert [job["status"] == "successful" for job in response_body["jobs"]]
+
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"jobs?processID={NON_EXISTING_PROCESS_ID}"
+    )
+    response = requests.get(request_url)
+    response_body = response.json()
+    assert len(response_body["jobs"]) == 0
 
 
 def test_get_process_exc_no_such_process(dev_env_proc_api_url: str) -> None:
