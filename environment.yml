@@ -22,3 +22,4 @@ dependencies:
   - fastapi-utils
   - git+https://github.com/ecmwf-projects/ogc-api-processes-fastapi.git
   - starlette-exporter
+  - syslog-rfc5424-formatter
