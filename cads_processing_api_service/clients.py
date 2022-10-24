@@ -16,7 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-import logging
 from typing import Any, Optional, Type
 
 import attrs
@@ -34,9 +33,7 @@ import sqlalchemy.orm
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
-from . import adaptors, exceptions, serializers
-
-from . import rfc5424_log
+from . import adaptors, exceptions, rfc5424_log, serializers
 
 logger = rfc5424_log.get_logger(__name__)
 
