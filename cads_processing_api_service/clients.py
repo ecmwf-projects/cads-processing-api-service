@@ -34,8 +34,6 @@ import sqlalchemy.orm
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
-from rfc5424_log import get_rfc5424_logger, log_job_submission
-
 # type: ignore
 
 """CADS Processing client, implementing the OGC API Processes standard."""
@@ -72,11 +70,11 @@ import sqlalchemy.orm
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
-from rfc5424_log import get_logger
+from . import rfc5424_log
 
 from . import adaptors, exceptions, serializers
 
-logger = get_logger(__name__)
+logger = rfc5424_log.get_logger(__name__)
 
 def lookup_id(
     id: str,
@@ -218,7 +216,7 @@ def submit_job(
     )
 
     # Log job submission info
-    log_job_submission(logger, job)
+    rfc5424_log.log_job_submission(logger, job)
 
     status_info = ogc_api_processes_fastapi.responses.StatusInfo(
         processID=job["process_id"],
