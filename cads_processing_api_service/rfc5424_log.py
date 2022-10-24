@@ -1,5 +1,7 @@
-"""Syslog module for the CADS Processing API Service. This module is used to
-log in rfc5424 format."""
+"""Syslog module for the CADS Processing API Service.
+
+This module is used to log in rfc5424 format.
+"""
 
 # Copyright 2022, European Union.
 
@@ -17,8 +19,8 @@ log in rfc5424 format."""
 
 import logging
 import logging.handlers
-from syslog_rfc5424_formatter import RFC5424Formatter
 
+from syslog_rfc5424_formatter import RFC5424Formatter
 
 SD_ID = "cads_processing_api_service"
 
@@ -46,27 +48,36 @@ def log_job_submission(log: logging.Logger, job: dict) -> None:
 
     # Check the job kwargs
     if "config" not in job_kwargs:
-        log.warning("Job submission without process_id. Unable to log job submission info.")
+        log.warning(
+            "Job submission without process_id. Unable to log job submission info."
+        )
         return
 
     # We need config and collection_id
     config = job_kwargs["config"]
     if "collection_id" not in config:
-        log.warning("Job submission without collection_id. Unable to log job submission info.")
+        log.warning(
+            "Job submission without collection_id. Unable to log job submission info."
+        )
         return
 
     # We need request
     if "request" not in job_kwargs:
-        log.warning("Job submission without request. Unable to log job submission info.")
+        log.warning(
+            "Job submission without request. Unable to log job submission info."
+        )
         return
 
     # We have all the data we need, log it
     collection_id = config["collection_id"]
     request = job_kwargs["request"]
 
-    log.info("Submitted job", {
-        'structured_data': {
-            'collection_id': collection_id,
-            'request': request,
-        }})
-
+    log.info(
+        "Submitted job",
+        {
+            "structured_data": {
+                "collection_id": collection_id,
+                "request": request,
+            }
+        },
+    )

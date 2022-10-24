@@ -13,20 +13,20 @@
 # limitations under the License.
 import logging
 
-from cads_processing_api_service.rfc5424_log import log_job_submission, get_logger
+from cads_processing_api_service.rfc5424_log import get_logger, log_job_submission
 
 
 def test_logger_with_process() -> None:
 
     # this is the output expected from adaptors.make_system_job_kwargs
     mock_job_kwargs = {
-        "setup_code": '',
-        "entry_point": '',
+        "setup_code": "",
+        "entry_point": "",
         "kwargs": {
             "config": {
                 "key": "00000:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
                 "url": "https://cds.climate.copernicus.eu/api/v2",
-                "collection_id": "reanalysis-era5-single-levels"
+                "collection_id": "reanalysis-era5-single-levels",
             },
             "request": {
                 "day": ["20"],
@@ -35,9 +35,9 @@ def test_logger_with_process() -> None:
                 "month": ["10"],
                 "format": "grib",
                 "variable": ["mean_sea_level_pressure"],
-                "product_type": ["reanalysis"]
-            }
-        }
+                "product_type": ["reanalysis"],
+            },
+        },
     }
 
     # Log the job kwargs
@@ -62,7 +62,6 @@ def test_logger_with_process() -> None:
 
 
 class LogFilter(logging.Filter):
-
     def __init__(self):
         self.messages = []
         super().__init__()
