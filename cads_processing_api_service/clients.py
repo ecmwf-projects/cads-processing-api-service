@@ -177,7 +177,7 @@ def submit_job(
     )
 
     # Log job submission info
-    rfc5424_log.log_job_submission(logger, job)
+    rfc5424_log.log_job_submission(logger, job_kwargs)
 
     status_info = ogc_api_processes_fastapi.responses.StatusInfo(
         processID=job["process_id"],
