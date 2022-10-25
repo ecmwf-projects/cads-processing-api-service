@@ -25,17 +25,19 @@ from syslog_rfc5424_formatter import RFC5424Formatter
 SD_ID = "cads_processing_api_service"
 
 
-def get_logger(name: str) -> logging.Logger:
+def configure():
+    """
+    Configure the logging module.
+
+    This function configures the logging module to log in rfc5424 format.
+    """
     fmt = RFC5424Formatter(
         sd_id=SD_ID,
     )
-
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger = logging.getLogger()
     handler = logging.StreamHandler()
     handler.setFormatter(fmt)
     logger.addHandler(handler)
-    return logger
 
 
 def log_job_submission(log: logging.Logger, job: dict) -> None:

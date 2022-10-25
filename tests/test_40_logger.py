@@ -13,7 +13,11 @@
 # limitations under the License.
 import logging
 
-from cads_processing_api_service.rfc5424_log import get_logger, log_job_submission
+from cads_processing_api_service.rfc5424_log import configure, log_job_submission
+
+configure()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def test_logger_with_process() -> None:
@@ -40,9 +44,6 @@ def test_logger_with_process() -> None:
         },
     }
 
-    # Log the job kwargs
-    logger = get_logger(__name__)
-
     # Intercept log messages from the logging module in order to check the format
     # of the log message
     log_filter = LogFilter()
@@ -51,6 +52,7 @@ def test_logger_with_process() -> None:
     log_job_submission(logger, mock_job_kwargs)
 
     messages = log_filter.get_messages()
+
     assert len(messages) == 1
 
     sd = messages[0].sd
@@ -62,6 +64,12 @@ def test_logger_with_process() -> None:
 
 
 class LogFilter(logging.Filter):
+    """Log filter.
+
+    This class is used to intercept log messages from the logging module in order
+    to check the format of the log message.
+    """
+
     def __init__(self):
         self.messages = []
         super().__init__()

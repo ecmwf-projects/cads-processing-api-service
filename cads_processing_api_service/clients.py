@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import logging
 from typing import Any, Optional, Type
 
 import attrs
@@ -35,7 +36,7 @@ import sqlalchemy.sql.selectable
 
 from . import adaptors, exceptions, rfc5424_log, serializers
 
-logger = rfc5424_log.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def lookup_id(

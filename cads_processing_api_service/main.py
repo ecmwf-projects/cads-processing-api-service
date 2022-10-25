@@ -18,8 +18,9 @@ import fastapi
 import ogc_api_processes_fastapi
 import starlette_exporter  # type: ignore
 
-from . import clients, metrics
+from . import clients, metrics, rfc5424_log
 
+rfc5424_log.configure()
 app = fastapi.FastAPI()
 app.add_middleware(starlette_exporter.PrometheusMiddleware)
 metrics.add_metrics_middleware(app)  # type: ignore
