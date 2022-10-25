@@ -169,13 +169,6 @@ def submit_job(
     ogc_api_processes_fastapi.responses.schema["StatusInfo"]
         Sumbitted job status info.
     """
-    # Log job submission info
-    logger.info(
-        f"submit_job inputs: process_id: {process_id},"
-        f"execution_content: {execution_content},"
-        f"resource: {resource},"
-    )
-
     job_kwargs = adaptors.make_system_job_kwargs(
         process_id, execution_content, resource
     )
@@ -347,6 +340,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
+        logger.info(
+            "post_process_execute",
+            {
+                "structured_data": {
+                    "process_id": process_id,
+                    "execution_content": execution_content,
+                }
+            },
+        )
         with self.reader.context_session() as session:
             resource = validate_request(process_id, session, self.process_table)
             status_info = submit_job(process_id, execution_content, resource)
