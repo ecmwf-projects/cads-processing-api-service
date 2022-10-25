@@ -264,10 +264,51 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
     for _ in range(number_of_new_jobs):
         requests.post(request_execute_url, json=POST_PROCESS_REQUEST_BODY_FAIL)
 
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=4&dir=asc")
+    response = requests.get(request_url)
+    response_body = response.json()
+    assert len(response_body["jobs"]) == 4
+    created_datetimes = [job["created"] for job in response_body["jobs"]]
+    sorted_datetimes = sorted(created_datetimes)
+    assert created_datetimes == sorted_datetimes
+
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=4")
+    response = requests.get(request_url)
+    response_body = response.json()
+    assert len(response_body["jobs"]) == 4
+    created_datetimes = [job["created"] for job in response_body["jobs"]]
+    sorted_datetimes = sorted(created_datetimes)
+    assert created_datetimes == list(reversed(sorted_datetimes))
+
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=2")
     response = requests.get(request_url)
     response_body = response.json()
     assert len(response_body["jobs"]) == 2
+    links = response_body["links"]
+    exp_rels = ["next", "prev"]
+    all_rels = [link["rel"] for link in links]
+    assert all(rel in all_rels for rel in exp_rels)
+    first_page_created_datetimes = [job["created"] for job in response_body["jobs"]]
+    assert first_page_created_datetimes == created_datetimes[:2]
+
+    for link in links:
+        if link["rel"] == "next":
+            request_url = link["href"]
+    response = requests.get(request_url)
+    response_body = response.json()
+    assert len(response_body["jobs"]) == 2
+    second_page_created_datetimes = [job["created"] for job in response_body["jobs"]]
+    assert second_page_created_datetimes == created_datetimes[2:4]
+    links = response_body["links"]
+
+    for link in links:
+        if link["rel"] == "prev":
+            request_url = link["href"]
+    response = requests.get(request_url)
+    response_body = response.json()
+    assert len(response_body["jobs"]) == 2
+    third_page_created_datetimes = [job["created"] for job in response_body["jobs"]]
+    assert third_page_created_datetimes == first_page_created_datetimes
 
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?status=successful")
     response = requests.get(request_url)
