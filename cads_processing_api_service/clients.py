@@ -34,7 +34,7 @@ import sqlalchemy.orm
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
-from . import adaptors, exceptions, rfc5424_log, serializers
+from . import adaptors, exceptions, serializers
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +169,13 @@ def submit_job(
     ogc_api_processes_fastapi.responses.schema["StatusInfo"]
         Sumbitted job status info.
     """
+    # Log job submission info
+    logger.info(
+        f"submit_job inputs: process_id: {process_id},"
+        f"execution_content: {execution_content},"
+        f"resource: {resource},"
+    )
+
     job_kwargs = adaptors.make_system_job_kwargs(
         process_id, execution_content, resource
     )
@@ -176,9 +183,6 @@ def submit_job(
         process_id=process_id,
         **job_kwargs,
     )
-
-    # Log job submission info
-    rfc5424_log.log_job_submission(logger, job_kwargs)
 
     status_info = ogc_api_processes_fastapi.responses.StatusInfo(
         processID=job["process_id"],
