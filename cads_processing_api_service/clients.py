@@ -345,7 +345,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             {
                 "structured_data": {
                     "process_id": process_id,
-                    "execution_content": execution_content,
+                    **execution_content,
                 }
             },
         )
