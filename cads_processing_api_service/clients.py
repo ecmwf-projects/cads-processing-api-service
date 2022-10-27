@@ -19,6 +19,7 @@
 import base64
 import enum
 import logging
+import urllib.parse
 from typing import Any, Callable, Optional, Type
 
 import attrs
@@ -31,6 +32,7 @@ import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.responses
+import requests
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.orm.attributes
@@ -38,7 +40,7 @@ import sqlalchemy.orm.decl_api
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
-from . import adaptors, exceptions, serializers
+from . import adaptors, config, exceptions, serializers
 
 logger = logging.getLogger(__name__)
 
@@ -354,6 +356,19 @@ def submit_job(
     return status_info
 
 
+def validate_pat(
+    pat: Optional[str] = fastapi.Header(None, description="Personal Access Token"),
+):
+    settings = config.ensure_settings()
+    request_url = urllib.parse.urljoin(
+        settings.internal_proxy_url,
+        f"{settings.profiles_base_url}account/verification/pat",
+    )
+    response = requests.post(request_url, headers={"X-PAT": pat})
+    # TODO: take action based on response
+    return response
+
+
 @attrs.define
 class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     """Database implementation of the OGC API - Processes endpoints.
@@ -413,7 +428,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         return process_list
 
     def get_process(
-        self, process_id: str = fastapi.Path(...)
+        self,
+        process_id: str = fastapi.Path(...),
     ) -> ogc_api_processes_fastapi.responses.ProcessDescription:
         """Implement OGC API - Processes `GET /processes/{process_id}` endpoint.
 
@@ -481,6 +497,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         process_id: str = fastapi.Path(...),
         execution_content: dict[str, Any] = fastapi.Body(...),
+        user_credentials=fastapi.Depends(validate_pat),
     ) -> ogc_api_processes_fastapi.responses.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
@@ -503,6 +520,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
+        print(user_credentials)
         with self.reader.context_session() as session:
             resource = validate_request(process_id, session, self.process_table)
             status_info = submit_job(process_id, execution_content, resource)
