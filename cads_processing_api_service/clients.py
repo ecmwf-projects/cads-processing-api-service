@@ -34,7 +34,7 @@ import sqlalchemy.orm
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
-from . import adaptors, exceptions, rfc5424_log, serializers
+from . import adaptors, exceptions, serializers
 
 logger = logging.getLogger(__name__)
 
@@ -176,9 +176,6 @@ def submit_job(
         process_id=process_id,
         **job_kwargs,
     )
-
-    # Log job submission info
-    rfc5424_log.log_job_submission(logger, job_kwargs)
 
     status_info = ogc_api_processes_fastapi.responses.StatusInfo(
         processID=job["process_id"],
@@ -343,6 +340,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
+        logger.info(
+            "post_process_execute",
+            {
+                "structured_data": {
+                    "process_id": process_id,
+                    "execution_content": execution_content,
+                }
+            },
+        )
         with self.reader.context_session() as session:
             resource = validate_request(process_id, session, self.process_table)
             status_info = submit_job(process_id, execution_content, resource)
