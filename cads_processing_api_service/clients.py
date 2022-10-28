@@ -40,7 +40,7 @@ import sqlalchemy.orm.decl_api
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
-from . import adaptors, config, serializers
+from . import adaptors, config, exceptions, serializers
 
 logger = logging.getLogger(__name__)
 
@@ -345,16 +345,25 @@ def submit_job(
 
 
 def validate_pat(
-    pat: Optional[str] = fastapi.Header(None, description="Personal Access Token"),
-):
+    pat: Optional[str] = fastapi.Header(
+        None, description="Personal Access Token", alias="X-PAT"
+    ),
+) -> dict[str, str]:
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}account/verification/pat",
     )
     response = requests.post(request_url, headers={"X-PAT": pat})
-    # TODO: take action based on response
-    return response
+    if response.status_code in (
+        fastapi.status.HTTP_401_UNAUTHORIZED,
+        fastapi.status.HTTP_403_FORBIDDEN,
+    ):
+        raise exceptions.AuthenticationError(
+            status_code=response.status_code, detail=response.json()["detail"]
+        )
+    user_credentials = response.json()
+    return user_credentials
 
 
 @attrs.define
@@ -487,7 +496,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         process_id: str = fastapi.Path(...),
         execution_content: dict[str, Any] = fastapi.Body(...),
-        user_credentials=fastapi.Depends(validate_pat),
+        user_credentials: dict[str, str] = fastapi.Depends(validate_pat),
     ) -> ogc_api_processes_fastapi.responses.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
@@ -499,6 +508,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Process identifier.
         execution_content : ogc_api_processes_fastapi.models.Execute
             Process execution details (e.g. inputs).
+        user_credentials: dict[str, str]
+            Authenticated user credentials.
 
         Returns
         -------
@@ -510,7 +521,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        print(user_credentials)
         with self.reader.context_session() as session:
             resource = validate_request(process_id, session, self.process_table)
             status_info = submit_job(process_id, execution_content, resource)
@@ -525,6 +535,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         dir: Optional[SortDirection] = fastapi.Query("desc"),
         cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
         back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
+        user_credentials: dict[str, str] = fastapi.Depends(validate_pat),
     ) -> ogc_api_processes_fastapi.responses.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
 
@@ -547,13 +558,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Hash string used for pagination
         back: Optional[bool] = fastapi.Query(None),
             Boolean parameter used for pagination
+        user_credentials: dict[str, str]
+            Authenticated user credentials.
 
         Returns
         -------
         ogc_api_processes_fastapi.responses.JobList
             Information on the status of the job.
         """
-        print(cursor)
         session_obj = cads_broker.database.ensure_session_obj(None)
         with session_obj() as session:
             statement = make_jobs_query_statement(
@@ -586,7 +598,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         return job_list
 
     def get_job(
-        self, job_id: str = fastapi.Path(...)
+        self,
+        job_id: str = fastapi.Path(...),
+        user_credentials: dict[str, str] = fastapi.Depends(validate_pat),
     ) -> ogc_api_processes_fastapi.responses.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -596,6 +610,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         job_id : str
             Identifier of the job.
+        user_credentials: dict[str, str]
+            Authenticated user credentials.
 
         Returns
         -------
@@ -629,7 +645,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         return status_info
 
     def get_job_results(
-        self, job_id: str = fastapi.Path(...)
+        self,
+        job_id: str = fastapi.Path(...),
+        user_credentials: dict[str, str] = fastapi.Depends(validate_pat),
     ) -> ogc_api_processes_fastapi.responses.Results:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
 
@@ -639,6 +657,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         job_id : str
             Identifier of the job.
+        user_credentials: dict[str, str]
+            Authenticated user credentials.
 
         Returns
         -------
