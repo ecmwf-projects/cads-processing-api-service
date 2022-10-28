@@ -40,7 +40,7 @@ import sqlalchemy.orm.decl_api
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
-from . import adaptors, config, exceptions, serializers
+from . import adaptors, config, serializers
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class SortDirection(str, enum.Enum):
     desc: str = "desc"
 
 
-def lookup_id(
+def lookup_resource_by_id(
     id: str,
     record: Type[cads_catalogue.database.BaseModel],
     session: sqlalchemy.orm.Session,
@@ -66,22 +66,8 @@ def lookup_id(
     try:
         row = session.query(record).filter(record.resource_uid == id).one()
     except sqlalchemy.orm.exc.NoResultFound:
-        raise exceptions.NotFoundError(f"{record.__name__} {id} not found")
-    return row
-
-
-def lookup_resource_by_id(
-    id: str,
-    session: sqlalchemy.orm.Session,
-    process_table: Type[cads_catalogue.database.Resource],
-) -> cads_catalogue.database.BaseModel:
-
-    try:
-        process = lookup_id(id=id, record=process_table, session=session)
-    except exceptions.NotFoundError:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
-
-    return process
+    return row
 
 
 def apply_jobs_filters(
@@ -309,7 +295,9 @@ def validate_request(
         Resource (dataset) associated to the process request.
     """
     # TODO: implement inputs validation
-    resource = lookup_resource_by_id(process_id, session, process_table)
+    resource = lookup_resource_by_id(
+        id=process_id, record=process_table, session=session
+    )
     return resource
 
 
@@ -451,7 +439,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the process `process_id` is not found.
         """
         with self.reader.context_session() as session:
-            resource = lookup_resource_by_id(process_id, session, self.process_table)
+            resource = lookup_resource_by_id(
+                id=process_id, record=self.process_table, session=session
+            )
             process_description = serializers.serialize_process_description(resource)
             process_description.outputs = {
                 "asset": ogc_api_processes_fastapi.responses.OutputDescription(
