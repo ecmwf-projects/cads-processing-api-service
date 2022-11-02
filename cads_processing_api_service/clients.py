@@ -345,8 +345,8 @@ def submit_job(
 
 
 def validate_pat(
-    pat: Optional[str] = fastapi.Header(
-        None, description="Personal Access Token", alias="X-PAT"
+    authorization: Optional[str] = fastapi.Header(
+        None, description="Personal Access Token", alias="Authorization"
     ),
 ) -> dict[str, str]:
     settings = config.ensure_settings()
@@ -354,7 +354,7 @@ def validate_pat(
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}account/verification/pat",
     )
-    response = requests.post(request_url, headers={"X-PAT": pat})
+    response = requests.post(request_url, headers={"Authorization": authorization})
     if response.status_code in (
         fastapi.status.HTTP_401_UNAUTHORIZED,
         fastapi.status.HTTP_403_FORBIDDEN,
@@ -496,7 +496,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         process_id: str = fastapi.Path(...),
         execution_content: dict[str, Any] = fastapi.Body(...),
-        user_credentials: dict[str, str] = fastapi.Depends(validate_pat),
+        user: dict[str, str] = fastapi.Depends(validate_pat),
     ) -> ogc_api_processes_fastapi.responses.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
 
@@ -508,7 +508,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Process identifier.
         execution_content : ogc_api_processes_fastapi.models.Execute
             Process execution details (e.g. inputs).
-        user_credentials: dict[str, str]
+        user: dict[str, str]
             Authenticated user credentials.
 
         Returns

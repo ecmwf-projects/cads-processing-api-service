@@ -57,7 +57,7 @@ POST_PROCESS_REQUEST_BODY_SLOW = {
         "time": [f"{hour:02}:00" for hour in range(0, 24)],
     }
 }
-TEST_PAT = "mysecretpat"
+VALID_PAT = "mysecretpat"
 INVALID_PAT = "0123"
 
 
@@ -138,13 +138,15 @@ def test_post_process_execute(  # type: ignore
     response = requests.post(
         request_url,
         json=POST_PROCESS_REQUEST_BODY_SUCCESS,
-        headers={"X-PAT": INVALID_PAT},
+        headers={"Authorization": f"Bearer {INVALID_PAT}"},
     )
     exp_status_code = 403
     assert response.status_code == exp_status_code
 
     response = requests.post(
-        request_url, json=POST_PROCESS_REQUEST_BODY_SUCCESS, headers={"X-PAT": TEST_PAT}
+        request_url,
+        json=POST_PROCESS_REQUEST_BODY_SUCCESS,
+        headers={"Authorization": f"Bearer {VALID_PAT}"},
     )
     response_status_code = response.status_code
     exp_status_code = 201
@@ -182,12 +184,14 @@ def test_get_job(request, dev_env_proc_api_url: str) -> None:  # type: ignore
 
     response = requests.get(
         request_url,
-        headers={"X-PAT": INVALID_PAT},
+        headers={"Authorization": f"Bearer {INVALID_PAT}"},
     )
     exp_status_code = 403
     assert response.status_code == exp_status_code
 
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_status_code = response.status_code
     exp_status_code = 200
     assert response_status_code == exp_status_code
@@ -213,11 +217,15 @@ def test_get_job_successful(request, dev_env_proc_api_url: str) -> None:  # type
     job_id = request.config.cache.get("job_id", None)
 
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_body = response.json()
     while response_body["status"] not in ("successful", "failed"):
         time.sleep(5)
-        response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+        response = requests.get(
+            request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+        )
         response_body = response.json()
     if response_body["status"] == "successful":
         exp_keys = (
@@ -247,7 +255,9 @@ def test_get_job_successful(request, dev_env_proc_api_url: str) -> None:  # type
 def test_get_job_successful_results(request) -> None:  # type: ignore
 
     request_url = request.config.cache.get("results_url", None)
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_status = response.status_code
 
     exp_status_code = 200
@@ -279,13 +289,14 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
     assert response.status_code == exp_status_code
 
     response = requests.get(
-        request_url,
-        headers={"X-PAT": INVALID_PAT},
+        request_url, headers={"Authorization": f"Bearer {INVALID_PAT}"}
     )
     exp_status_code = 403
     assert response.status_code == exp_status_code
 
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     exp_status_code = 200
     assert response.status_code == exp_status_code
 
@@ -302,11 +313,13 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
         requests.post(
             request_execute_url,
             json=POST_PROCESS_REQUEST_BODY_FAIL,
-            headers={"X-PAT": TEST_PAT},
+            headers={"Authorization": f"Bearer {VALID_PAT}"},
         )
 
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=4&dir=asc")
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_body = response.json()
     assert len(response_body["jobs"]) == 4
     created_datetimes = [job["created"] for job in response_body["jobs"]]
@@ -314,7 +327,9 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
     assert created_datetimes == sorted_datetimes
 
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=4")
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_body = response.json()
     assert len(response_body["jobs"]) == 4
     created_datetimes = [job["created"] for job in response_body["jobs"]]
@@ -322,7 +337,9 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
     assert created_datetimes == list(reversed(sorted_datetimes))
 
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=2")
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_body = response.json()
     assert len(response_body["jobs"]) == 2
     links = response_body["links"]
@@ -335,7 +352,9 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
     for link in links:
         if link["rel"] == "next":
             request_url = link["href"]
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_body = response.json()
     assert len(response_body["jobs"]) == 2
     second_page_created_datetimes = [job["created"] for job in response_body["jobs"]]
@@ -345,21 +364,27 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
     for link in links:
         if link["rel"] == "prev":
             request_url = link["href"]
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_body = response.json()
     assert len(response_body["jobs"]) == 2
     third_page_created_datetimes = [job["created"] for job in response_body["jobs"]]
     assert third_page_created_datetimes == first_page_created_datetimes
 
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?status=successful")
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_body = response.json()
     assert [job["status"] == "successful" for job in response_body["jobs"]]
 
     request_url = urllib.parse.urljoin(
         dev_env_proc_api_url, f"jobs?processID={NON_EXISTING_PROCESS_ID}"
     )
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_body = response.json()
     assert len(response_body["jobs"]) == 0
 
@@ -368,7 +393,9 @@ def test_get_process_exc_no_such_process(dev_env_proc_api_url: str) -> None:
 
     process_id = NON_EXISTING_PROCESS_ID
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"processes/{process_id}")
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_status_code = response.status_code
     exp_status_code = 404
     assert response_status_code == exp_status_code
@@ -389,7 +416,9 @@ def test_post_process_execute_exc_no_such_process(dev_env_proc_api_url: str) -> 
     request_url = urllib.parse.urljoin(
         dev_env_proc_api_url, f"processes/{process_id}/execute"
     )
-    response = requests.post(request_url, json={}, headers={"X-PAT": TEST_PAT})
+    response = requests.post(
+        request_url, json={}, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_status_code = response.status_code
     exp_status_code = 404
     assert response_status_code == exp_status_code
@@ -408,7 +437,9 @@ def test_get_job_exc_no_such_job(dev_env_proc_api_url: str) -> None:
 
     job_id = NON_EXISTING_JOB_ID
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_status_code = response.status_code
 
     exp_status_code = 404
@@ -428,7 +459,9 @@ def test_get_job_results_exc_no_such_job(dev_env_proc_api_url: str) -> None:
 
     job_id = NON_EXISTING_JOB_ID
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}/results")
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_status_code = response.status_code
 
     exp_status_code = 404
@@ -450,7 +483,7 @@ def test_get_job_results_exc_job_results_failed(dev_env_proc_api_url: str) -> No
     response = requests.post(
         urllib.parse.urljoin(dev_env_proc_api_url, f"processes/{process_id}/execute"),
         json=POST_PROCESS_REQUEST_BODY_FAIL,
-        headers={"X-PAT": TEST_PAT},
+        headers={"Authorization": f"Bearer {VALID_PAT}"},
     )
     if response.status_code != 201:
         pytest.skip("Job sumbission unexpectedly failed")
@@ -459,13 +492,15 @@ def test_get_job_results_exc_job_results_failed(dev_env_proc_api_url: str) -> No
     while job_status != "failed":
         response = requests.get(
             urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}"),
-            headers={"X-PAT": TEST_PAT},
+            headers={"Authorization": f"Bearer {VALID_PAT}"},
         )
         job_status = response.json()["status"]
         time.sleep(3)
 
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}/results")
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_status_code = response.status_code
     assert response_status_code != 200
 
@@ -484,7 +519,7 @@ def test_get_job_results_exc_results_not_ready(dev_env_proc_api_url: str) -> Non
     response = requests.post(
         urllib.parse.urljoin(dev_env_proc_api_url, f"processes/{process_id}/execute"),
         json=POST_PROCESS_REQUEST_BODY_SLOW,
-        headers={"X-PAT": TEST_PAT},
+        headers={"Authorization": f"Bearer {VALID_PAT}"},
     )
     if response.status_code != 201:
         pytest.skip("Job sumbission unexpectedly failed")
@@ -493,13 +528,15 @@ def test_get_job_results_exc_results_not_ready(dev_env_proc_api_url: str) -> Non
     while job_status not in ("accepted", "running"):
         response = requests.get(
             urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}"),
-            headers={"X-PAT": TEST_PAT},
+            headers={"Authorization": f"Bearer {VALID_PAT}"},
         )
         job_status = response.json()["status"]
         time.sleep(3)
 
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}/results")
-    response = requests.get(request_url, headers={"X-PAT": TEST_PAT})
+    response = requests.get(
+        request_url, headers={"Authorization": f"Bearer {VALID_PAT}"}
+    )
     response_status_code = response.status_code
     assert response_status_code == 404
 
