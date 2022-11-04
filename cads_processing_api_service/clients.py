@@ -348,21 +348,29 @@ def validate_pat(
     authorization: Optional[str] = fastapi.Header(
         None, description="Personal Access Token", alias="Authorization"
     ),
+    enable_auth: Optional[bool] = fastapi.Header(
+        False,
+        description="Temporary flag for authentication enabling",
+        alias="Enable-Authorization",
+    ),
 ) -> dict[str, str]:
-    settings = config.ensure_settings()
-    request_url = urllib.parse.urljoin(
-        settings.internal_proxy_url,
-        f"{settings.profiles_base_url}account/verification/pat",
-    )
-    response = requests.post(request_url, headers={"Authorization": authorization})
-    if response.status_code in (
-        fastapi.status.HTTP_401_UNAUTHORIZED,
-        fastapi.status.HTTP_403_FORBIDDEN,
-    ):
-        raise exceptions.AuthenticationError(
-            status_code=response.status_code, detail=response.json()["detail"]
+    if enable_auth:
+        settings = config.ensure_settings()
+        request_url = urllib.parse.urljoin(
+            settings.internal_proxy_url,
+            f"{settings.profiles_base_url}account/verification/pat",
         )
-    user = response.json()
+        response = requests.post(request_url, headers={"Authorization": authorization})
+        if response.status_code in (
+            fastapi.status.HTTP_401_UNAUTHORIZED,
+            fastapi.status.HTTP_403_FORBIDDEN,
+        ):
+            raise exceptions.AuthenticationError(
+                status_code=response.status_code, detail=response.json()["detail"]
+            )
+        user = response.json()
+    else:
+        user = {"id": "test-user"}
     return user
 
 
