@@ -501,13 +501,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return process_description
 
-    def post_process_execute(
+    def post_process_execution(
         self,
         process_id: str = fastapi.Path(...),
         execution_content: dict[str, Any] = fastapi.Body(...),
         user: dict[str, str] = fastapi.Depends(validate_pat),
     ) -> ogc_api_processes_fastapi.responses.StatusInfo:
-        """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
+        """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
 
         Request execution of the process identified by `process_id`.
 
@@ -531,7 +531,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the process `process_id` is not found.
         """
         logger.info(
-            "post_process_execute",
+            "post_process_execution",
             {
                 "structured_data": {
                     "process_id": process_id,
