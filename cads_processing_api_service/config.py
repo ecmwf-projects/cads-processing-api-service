@@ -33,7 +33,8 @@ class Settings(pydantic.BaseSettings):
     """
 
     document_storage_url: str = "/document-storage/"
-    compute_api_url: str = "http://compute-api-service:8000/"
+    internal_proxy_url: str = "http://proxy"
+    profiles_base_url: str = "/api/profiles/"
 
 
 def ensure_settings(

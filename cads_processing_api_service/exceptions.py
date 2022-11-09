@@ -1,4 +1,4 @@
-"""Exceptions definitions."""
+"""CADS Processing API specific exceptions."""
 
 # Copyright 2022, European Union.
 
@@ -14,20 +14,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-
-class OGCProcessesApiError(Exception):
-    """Generic API error."""
-
-    pass
+import attrs
+import fastapi
 
 
-class DatabaseError(OGCProcessesApiError):
-    """Generic database errors."""
+@attrs.define
+class AuthenticationError(Exception):
 
-    pass
+    type: str = "authentication error"
+    status_code: int = fastapi.status.HTTP_403_FORBIDDEN
+    title: str = "authentication error"
+    detail: str = "authentication failed"
 
 
-class NotFoundError(OGCProcessesApiError):
-    """Resource not found."""
+def authentication_error_exception_handler(
+    request: fastapi.Request, exc: AuthenticationError
+) -> fastapi.responses.JSONResponse:
+    return fastapi.responses.JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "type": exc.type,
+            "title": exc.title,
+            "detail": exc.detail,
+            "instance": str(request.url),
+        },
+    )
 
-    pass
+
+def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
+    """Add CADS Processes API exceptions handlers to a FastAPI application.
+
+    Parameters
+    ----------
+    app : fastapi.FastAPI
+        FastAPI application to which CADS Processes API exceptions handlers
+        should be added.
+
+    Returns
+    -------
+    fastapi.FastAPI
+        FastAPI application including CADS Processes API exceptions handlers.
+    """
+    app.add_exception_handler(
+        AuthenticationError, authentication_error_exception_handler
+    )
+    return app
