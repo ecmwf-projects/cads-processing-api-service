@@ -330,6 +330,7 @@ def submit_job(
         process_id=process_id,
         **job_kwargs,
     )
+
     status_info = ogc_api_processes_fastapi.responses.StatusInfo(
         processID=job["process_id"],
         type="process",
@@ -529,6 +530,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
+        logger.info(
+            "post_process_execute",
+            {
+                "structured_data": {
+                    "process_id": process_id,
+                    **execution_content,
+                }
+            },
+        )
         with self.reader.context_session() as session:
             resource = validate_request(process_id, session, self.process_table)
             status_info = submit_job(process_id, execution_content, resource)
