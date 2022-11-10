@@ -716,3 +716,50 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
                 f"Status of {job_id} is {job.status}."
             )
+
+    def delete_job(
+        self,
+        job_id: str = fastapi.Path(...),
+        user: dict[str, str] = fastapi.Depends(validate_pat),
+    ) -> ogc_api_processes_fastapi.responses.StatusInfo:
+        """Implement OGC API - Processes `DELETE /jobs/{job_id}` endpoint.
+
+        Dismiss the job identifed by `job_id`.
+
+        Parameters
+        ----------
+        job_id : str
+            Identifier of the job.
+        user: dict[str, str]
+            Authenticated user credentials.
+
+        Returns
+        -------
+        ogc_api_processes_fastapi.responses.StatusInfo
+            Information on the status of the job.
+
+        Raises
+        ------
+        ogc_api_processes_fastapi.exceptions.NoSuchJob
+            If the job `job_id` is not found.
+        """
+        try:
+            job = cads_broker.database.delete_request(request_uid=job_id)
+        except (
+            sqlalchemy.exc.StatementError,
+            sqlalchemy.orm.exc.NoResultFound,
+        ):
+            raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
+                f"Can't find the job {job_id}."
+            )
+        status_info = ogc_api_processes_fastapi.responses.StatusInfo(
+            processID=job.process_id,
+            type="process",
+            jobID=job.request_uid,
+            status=job.status,
+            created=job.created_at,
+            started=job.started_at,
+            finished=job.finished_at,
+            updated=job.updated_at,
+        )
+        return status_info
