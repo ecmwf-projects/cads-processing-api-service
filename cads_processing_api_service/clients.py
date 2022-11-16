@@ -70,6 +70,33 @@ def lookup_resource_by_id(
     return row
 
 
+def apply_user_filter(
+    statement: sqlalchemy.sql.selectable.Select,
+    resource: cads_broker.database.SystemRequest,
+    user_id: int,
+) -> sqlalchemy.sql.selectable.Select:
+    """Apply search filters to the running query.
+
+    Parameters
+    ----------
+        statement: sqlalchemy.sql.selectable.Select
+            select statement
+        resource: cads_broker.database.SystemRequest
+            sqlalchemy declarative base
+        user_id: int
+            ID of the requesting user
+
+
+    Returns
+    -------
+        sqlalchemy.sql.selectable.Select
+            updated select statement
+    """
+    if user_id:
+        statement = statement.where(resource.user_id == user_id)
+    return statement
+
+
 def apply_jobs_filters(
     statement: sqlalchemy.sql.selectable.Select,
     resource: cads_broker.database.SystemRequest,
@@ -229,12 +256,14 @@ def make_jobs_query_statement(
     job_table: Type[
         cads_broker.database.SystemRequest,
     ],
+    user_id: int,
     filters: dict[str, Optional[list[str]]],
     sorting: dict[str, Optional[str]],
     bookmark: dict[str, Optional[str]],
     limit: Optional[int],
 ) -> sqlalchemy.sql.selectable.Select:
     statement = sqlalchemy.select(job_table)
+    statement = apply_user_filter(statement, job_table, user_id)
     statement = apply_jobs_filters(statement, job_table, filters)
     if bookmark["cursor"]:
         statement = apply_bookmark(statement, job_table, bookmark, sorting)
@@ -302,6 +331,7 @@ def validate_request(
 
 
 def submit_job(
+    user_id: int,
     process_id: str,
     execution_content: dict[str, Any],
     resource: cads_catalogue.database.Resource,
@@ -310,12 +340,14 @@ def submit_job(
 
     Parameters
     ----------
+    user_id: int,
+        User identifier.
     process_id: str
         Process ID.
     execution_content: ogc_api_processes_fastapi.models.Execute
         Body of the process execution request.
     resource: cads_catalogue.database.Resource,
-        Catalogue resource corresponding to the requested retrieve process
+        Catalogue resource corresponding to the requested retrieve process.
 
 
     Returns
@@ -327,6 +359,7 @@ def submit_job(
         process_id, execution_content, resource
     )
     job = cads_broker.database.create_request(
+        user_id=user_id,
         process_id=process_id,
         **job_kwargs,
     )
@@ -371,7 +404,7 @@ def validate_pat(
             )
         user = response.json()
     else:
-        user = {"id": "test-user"}
+        user = {}
     return user
 
 
@@ -530,10 +563,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
+        user_id = user.get("id", None)
         logger.info(
             "post_process_execution",
             {
                 "structured_data": {
+                    "user_id": user_id,
                     "process_id": process_id,
                     **execution_content,
                 }
@@ -541,7 +576,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         with self.reader.context_session() as session:
             resource = validate_request(process_id, session, self.process_table)
-            status_info = submit_job(process_id, execution_content, resource)
+            status_info = submit_job(user_id, process_id, execution_content, resource)
         return status_info
 
     def get_jobs(
@@ -573,9 +608,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             The response shall not contain more jobs than specified by the optional ``limit``
             parameter.
         cursor: Optional[str] = fastapi.Query(None)
-            Hash string used for pagination
+            Hash string used for pagination.
         back: Optional[bool] = fastapi.Query(None),
-            Boolean parameter used for pagination
+            Boolean parameter used for pagination.
         user: dict[str, str]
             Authenticated user credentials.
 
@@ -588,6 +623,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         with session_obj() as session:
             statement = make_jobs_query_statement(
                 self.job_table,
+                user_id=user.get("id", None),
                 filters={"process_id": processID, "status": status},
                 sorting={"sort_key": sort, "sort_dir": dir},
                 bookmark={"cursor": cursor, "back": back},
