@@ -70,12 +70,12 @@ def lookup_resource_by_id(
     return row
 
 
-def apply_jobs_filters(
+def apply_job_filters(
     statement: sqlalchemy.sql.selectable.Select,
     resource: cads_broker.database.SystemRequest,
     filters: dict[str, Optional[list[str]]],
 ) -> sqlalchemy.sql.selectable.Select:
-    """Apply search filters to the running query.
+    """Apply search filters related to the job status to the running query.
 
     Parameters
     ----------
@@ -92,9 +92,11 @@ def apply_jobs_filters(
         sqlalchemy.sql.selectable.Select
             updated select statement
     """
-    for filter_key, filter_value in filters.items():
-        if filter_value:
-            statement = statement.where(getattr(resource, filter_key).in_(filter_value))
+    for filter_key, filter_values in filters.items():
+        if filter_values:
+            statement = statement.where(
+                getattr(resource, filter_key).in_(filter_values)
+            )
     return statement
 
 
@@ -235,7 +237,7 @@ def make_jobs_query_statement(
     limit: Optional[int],
 ) -> sqlalchemy.sql.selectable.Select:
     statement = sqlalchemy.select(job_table)
-    statement = apply_jobs_filters(statement, job_table, filters)
+    statement = apply_job_filters(statement, job_table, filters)
     if bookmark["cursor"]:
         statement = apply_bookmark(statement, job_table, bookmark, sorting)
     statement = apply_sorting(statement, job_table, bookmark, sorting)
