@@ -83,7 +83,7 @@ def apply_metadata_filters(
             select statement
         resource: cads_broker.database.SystemRequest
             sqlalchemy declarative base
-        filters: dict[str, Optional[list[str]]]
+        filters: dict[str, Optional[list[str]]],
             filters as key-value pairs
 
 
@@ -95,7 +95,7 @@ def apply_metadata_filters(
     for filter_key, filter_values in filters.items():
         if filter_values:
             statement = statement.where(
-                getattr(resource.request_metadata, filter_key).in_(filter_values)
+                (resource.request_metadata[filter_key].astext).in_(filter_values)
             )
     return statement
 
@@ -628,7 +628,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         with session_obj() as session:
             statement = make_jobs_query_statement(
                 self.job_table,
-                metadata_filters={"user": user.get("id", None)},
+                metadata_filters={"user_id": [str(user.get("id", None))]},
                 job_filters={"process_id": processID, "status": status},
                 sorting={"sort_key": sort, "sort_dir": dir},
                 bookmark={"cursor": cursor, "back": back},
