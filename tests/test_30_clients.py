@@ -17,7 +17,7 @@ import ogc_api_processes_fastapi.responses
 import pytest
 import sqlalchemy
 
-from cads_processing_api_service import clients
+from cads_processing_api_service import clients, exceptions
 
 
 def test_get_compare_and_sort_method_name() -> None:
@@ -47,11 +47,26 @@ def test_encode_decode_base64() -> None:
     assert decoded == exp_decoded
 
 
-def test_apply_jobs_filters() -> None:
+def test_apply_metadata_filters() -> None:
+    job_table = cads_broker.database.SystemRequest
+    statement = sqlalchemy.select(job_table)
+    metadata_filters = {"user_id": [0]}
+    statement = clients.apply_metadata_filters(statement, job_table, metadata_filters)
+    compiled_statement = statement.compile()
+    exp_params = {"param_1": [0], "request_metadata_1": "user_id"}
+    exp_substatement = (
+        "WHERE (system_requests.request_metadata ->> :request_metadata_1) "
+        "IN (__[POSTCOMPILE_param_1])"
+    )
+    assert compiled_statement.params == exp_params
+    assert exp_substatement in compiled_statement.string
+
+
+def test_apply_job_filters() -> None:
     job_table = cads_broker.database.SystemRequest
     statement = sqlalchemy.select(job_table)
     filters = {"process_id": ["process"], "status": ["successful", "failed"]}
-    statement = clients.apply_jobs_filters(statement, job_table, filters)
+    statement = clients.apply_job_filters(statement, job_table, filters)
     compiled_statement = statement.compile()
     exp_params = {"process_id_1": ["process"], "status_1": ["successful", "failed"]}
     exp_substatement = (
@@ -88,12 +103,13 @@ def test_apply_sorting() -> None:
 
 def test_make_jobs_query_statement() -> None:
     job_table = cads_broker.database.SystemRequest
-    filters = {"process_id": ["process"], "status": ["successful", "failed"]}
+    metadata_filters = {"user_id": [0]}
+    job_filters = {"process_id": ["process"], "status": ["successful", "failed"]}
     sorting = {"sort_key": "created", "sort_dir": "desc"}
     bookmark = {"cursor": "MjAyMi0xMC0yNCAxMzozMjowMy4xNzgzOTc=", "back": False}
     limit = 10
     statement = clients.make_jobs_query_statement(
-        job_table, filters, sorting, bookmark, limit
+        job_table, metadata_filters, job_filters, sorting, bookmark, limit
     )
     compiled_statement = statement.compile()
     exp_substatement = "system_requests.created_at < :created_at_1"
@@ -101,7 +117,7 @@ def test_make_jobs_query_statement() -> None:
 
     bookmark = {"cursor": None, "back": None}
     statement = clients.make_jobs_query_statement(
-        job_table, filters, sorting, bookmark, limit
+        job_table, metadata_filters, job_filters, sorting, bookmark, limit
     )
     compiled_statement = statement.compile()
     exp_substatement = "WHERE system_requests.created_at < :created_at_1"
@@ -172,3 +188,18 @@ def test_make_pagination_qs() -> None:
         prev={"cursor": clients.encode_base64(str(jobs[0].created)), "back": True},
     )
     assert pagination_qs == exp_qs
+
+
+def test_verify_permission() -> None:
+
+    job = cads_broker.database.SystemRequest(request_metadata={"user_id": 0})
+
+    user = {"id": 0}
+    try:
+        clients.verify_permission(user, job)
+    except exceptions.PermissionDenied as exc:
+        assert False, f"'{user} / {job}' raised an exception {exc}"
+
+    user = {"id": 1}
+    with pytest.raises(exceptions.PermissionDenied):
+        clients.verify_permission(user, job)
