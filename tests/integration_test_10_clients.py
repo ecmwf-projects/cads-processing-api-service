@@ -202,6 +202,11 @@ def test_get_job(request, dev_env_proc_api_url: str) -> None:  # type: ignore
     exp_status_code = 403
     assert response.status_code == exp_status_code
 
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_2)
+    response_status_code = response.status_code
+    exp_status_code = 403
+    assert response_status_code == exp_status_code
+
     response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
     response_status_code = response.status_code
     exp_status_code = 200
@@ -257,7 +262,14 @@ def test_get_job_successful(request, dev_env_proc_api_url: str) -> None:  # type
 
 
 def test_get_job_successful_results(request) -> None:  # type: ignore
+
     request_url = request.config.cache.get("results_url", None)
+
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_2)
+    response_status_code = response.status_code
+    exp_status_code = 403
+    assert response_status_code == exp_status_code
+
     response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
     response_status = response.status_code
     exp_status_code = 200
@@ -309,6 +321,15 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
             json=POST_PROCESS_REQUEST_BODY_SUCCESS,
             headers=AUTH_HEADERS_VALID_1,
         )
+
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs")
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_2)
+    response_status_code = response.status_code
+    exp_status_code = 200
+    assert response_status_code == exp_status_code
+    response_body = response.json()
+    exp_number_of_jobs = 0
+    assert len(response_body["jobs"]) == exp_number_of_jobs
 
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=4&dir=asc")
     response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
@@ -411,6 +432,11 @@ def test_delete_job(dev_env_proc_api_url: str) -> None:
     )
     exp_status_code = 403
     assert response.status_code == exp_status_code
+
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_2)
+    response_status_code = response.status_code
+    exp_status_code = 403
+    assert response_status_code == exp_status_code
 
     response = requests.delete(request_url, headers=AUTH_HEADERS_VALID_1)
     response_status_code = response.status_code
