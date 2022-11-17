@@ -19,16 +19,16 @@ import fastapi
 
 
 @attrs.define
-class AuthenticationError(Exception):
+class PermissionDenied(Exception):
 
-    type: str = "authentication error"
+    type: str = "permission denied"
     status_code: int = fastapi.status.HTTP_403_FORBIDDEN
-    title: str = "authentication error"
-    detail: str = "authentication failed"
+    title: str = "permission denied"
+    detail: str = "permission denied"
 
 
-def authentication_error_exception_handler(
-    request: fastapi.Request, exc: AuthenticationError
+def permission_denied_exception_handler(
+    request: fastapi.Request, exc: PermissionDenied
 ) -> fastapi.responses.JSONResponse:
     return fastapi.responses.JSONResponse(
         status_code=exc.status_code,
@@ -55,7 +55,5 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     fastapi.FastAPI
         FastAPI application including CADS Processes API exceptions handlers.
     """
-    app.add_exception_handler(
-        AuthenticationError, authentication_error_exception_handler
-    )
+    app.add_exception_handler(PermissionDenied, permission_denied_exception_handler)
     return app

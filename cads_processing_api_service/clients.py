@@ -404,13 +404,21 @@ def validate_pat(
             fastapi.status.HTTP_401_UNAUTHORIZED,
             fastapi.status.HTTP_403_FORBIDDEN,
         ):
-            raise exceptions.AuthenticationError(
+            raise exceptions.PermissionDenied(
                 status_code=response.status_code, detail=response.json()["detail"]
             )
         user = response.json()
     else:
         user = {}
     return user
+
+
+def verify_permission(
+    user: dict[str, str], job: cads_broker.database.SystemRequest
+) -> None:
+    user_id = user.get("id", None)
+    if not job.request_metadata["user_id"] == user_id:
+        raise exceptions.PermissionDenied(detail="Operation not permitted")
 
 
 @attrs.define
@@ -625,13 +633,18 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Information on the status of the job.
         """
         session_obj = cads_broker.database.ensure_session_obj(None)
+        user_id = user.get("id", None)
+        metadata_filters = {"user_id": [str(user_id)] if user_id else []}
+        job_filters = {"process_id": processID, "status": status}
+        sorting = {"sort_key": sort, "sort_dir": dir}
+        bookmark = {"cursor": cursor, "back": back}
         with session_obj() as session:
             statement = make_jobs_query_statement(
                 self.job_table,
-                metadata_filters={"user_id": [str(user.get("id", None))]},
-                job_filters={"process_id": processID, "status": status},
-                sorting={"sort_key": sort, "sort_dir": dir},
-                bookmark={"cursor": cursor, "back": back},
+                metadata_filters=metadata_filters,
+                job_filters=job_filters,
+                sorting=sorting,
+                bookmark=bookmark,
                 limit=limit,
             )
             job_entries = session.scalars(statement).all()
@@ -691,6 +704,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 f"Can't find the job {job_id}."
             )
+        verify_permission(user, job)
         status_info = ogc_api_processes_fastapi.responses.StatusInfo(
             processID=job.process_id,
             type="process",
@@ -742,6 +756,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 f"Can't find the job {job_id}."
             )
+        verify_permission(user, job)
         if job.status == "successful":
             asset_value = cads_broker.database.get_request_result(
                 request_uid=job.request_uid
@@ -785,7 +800,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the job `job_id` is not found.
         """
         try:
-            job = cads_broker.database.delete_request(request_uid=job_id)
+            job = cads_broker.database.get_request(request_uid=job_id)
         except (
             sqlalchemy.exc.StatementError,
             sqlalchemy.orm.exc.NoResultFound,
@@ -793,6 +808,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 f"Can't find the job {job_id}."
             )
+        verify_permission(user, job)
+        job = cads_broker.database.delete_request(request_uid=job_id)
         status_info = ogc_api_processes_fastapi.responses.StatusInfo(
             processID=job.process_id,
             type="process",
