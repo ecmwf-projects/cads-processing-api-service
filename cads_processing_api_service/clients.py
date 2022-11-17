@@ -70,10 +70,10 @@ def lookup_resource_by_id(
     return row
 
 
-def apply_user_filter(
+def apply_metadata_filters(
     statement: sqlalchemy.sql.selectable.Select,
     resource: cads_broker.database.SystemRequest,
-    user_id: int,
+    filters: dict[str, Optional[list[str]]],
 ) -> sqlalchemy.sql.selectable.Select:
     """Apply search filters to the running query.
 
@@ -83,8 +83,8 @@ def apply_user_filter(
             select statement
         resource: cads_broker.database.SystemRequest
             sqlalchemy declarative base
-        user_id: int
-            ID of the requesting user
+        filters: dict[str, Optional[list[str]]]
+            filters as key-value pairs
 
 
     Returns
@@ -92,8 +92,11 @@ def apply_user_filter(
         sqlalchemy.sql.selectable.Select
             updated select statement
     """
-    if user_id:
-        statement = statement.where(resource.user_id == user_id)
+    for filter_key, filter_values in filters.items():
+        if filter_values:
+            statement = statement.where(
+                getattr(resource.request_metadata, filter_key).in_(filter_values)
+            )
     return statement
 
 
@@ -258,15 +261,15 @@ def make_jobs_query_statement(
     job_table: Type[
         cads_broker.database.SystemRequest,
     ],
-    user_id: int,
-    filters: dict[str, Optional[list[str]]],
+    metadata_filters: dict[str, Optional[list[str]]],
+    job_filters: dict[str, Optional[list[str]]],
     sorting: dict[str, Optional[str]],
     bookmark: dict[str, Optional[str]],
     limit: Optional[int],
 ) -> sqlalchemy.sql.selectable.Select:
     statement = sqlalchemy.select(job_table)
-    statement = apply_user_filter(statement, job_table, user_id)
-    statement = apply_job_filters(statement, job_table, filters)
+    statement = apply_metadata_filters(statement, job_table, metadata_filters)
+    statement = apply_job_filters(statement, job_table, job_filters)
     if bookmark["cursor"]:
         statement = apply_bookmark(statement, job_table, bookmark, sorting)
     statement = apply_sorting(statement, job_table, bookmark, sorting)
@@ -625,8 +628,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         with session_obj() as session:
             statement = make_jobs_query_statement(
                 self.job_table,
-                user_id=user.get("id", None),
-                filters={"process_id": processID, "status": status},
+                metadata_filters={"user": user.get("id", None)},
+                job_filters={"process_id": processID, "status": status},
                 sorting={"sort_key": sort, "sort_dir": dir},
                 bookmark={"cursor": cursor, "back": back},
                 limit=limit,
