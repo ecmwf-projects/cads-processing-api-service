@@ -140,7 +140,7 @@ def test_post_process_execution(  # type: ignore
 ) -> None:
     process_id = EXISTING_PROCESS_ID
     request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/execute"
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
     )
     response = requests.post(
         request_url,
@@ -312,12 +312,12 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
 
     process_id = EXISTING_PROCESS_ID
     number_of_new_jobs = 3
-    request_execute_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/execute"
+    request_execution_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
     )
     for _ in range(number_of_new_jobs):
         requests.post(
-            request_execute_url,
+            request_execution_url,
             json=POST_PROCESS_REQUEST_BODY_SUCCESS,
             headers=AUTH_HEADERS_VALID_1,
         )
@@ -390,11 +390,11 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
     assert len(response_body["jobs"]) == 0
 
     process_id = EXISTING_PROCESS_ID
-    request_execute_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/execute"
+    request_execution_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
     )
     requests.post(
-        request_execute_url,
+        request_execution_url,
         json=POST_PROCESS_REQUEST_BODY_SUCCESS,
         headers=AUTH_HEADERS_VALID_2,
     )
@@ -408,7 +408,7 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
 def test_delete_job(dev_env_proc_api_url: str) -> None:
     process_id = EXISTING_PROCESS_ID
     request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/execute"
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
     )
     response = requests.post(
         request_url,
@@ -482,10 +482,10 @@ def test_get_process_exc_no_such_process(dev_env_proc_api_url: str) -> None:
     assert response_body == exp_response_body
 
 
-def test_post_process_execute_exc_no_such_process(dev_env_proc_api_url: str) -> None:
+def test_post_process_execution_exc_no_such_process(dev_env_proc_api_url: str) -> None:
     process_id = NON_EXISTING_PROCESS_ID
     request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/execute"
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
     )
     response = requests.post(request_url, json={}, headers=AUTH_HEADERS_VALID_1)
     response_status_code = response.status_code
@@ -543,7 +543,7 @@ def test_get_job_results_exc_no_such_job(dev_env_proc_api_url: str) -> None:
 def test_get_job_results_exc_job_results_failed(dev_env_proc_api_url: str) -> None:
     process_id = EXISTING_PROCESS_ID
     response = requests.post(
-        urllib.parse.urljoin(dev_env_proc_api_url, f"processes/{process_id}/execute"),
+        urllib.parse.urljoin(dev_env_proc_api_url, f"processes/{process_id}/execution"),
         json=POST_PROCESS_REQUEST_BODY_FAIL,
         headers=AUTH_HEADERS_VALID_1,
     )
@@ -577,7 +577,7 @@ def test_get_job_results_exc_results_not_ready(dev_env_proc_api_url: str) -> Non
 
     process_id = EXISTING_PROCESS_ID
     response = requests.post(
-        urllib.parse.urljoin(dev_env_proc_api_url, f"processes/{process_id}/execute"),
+        urllib.parse.urljoin(dev_env_proc_api_url, f"processes/{process_id}/execution"),
         json=POST_PROCESS_REQUEST_BODY_SLOW,
         headers=AUTH_HEADERS_VALID_1,
     )
