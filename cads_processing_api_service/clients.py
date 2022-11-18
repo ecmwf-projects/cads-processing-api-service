@@ -397,7 +397,7 @@ def validate_pat(
         settings = config.ensure_settings()
         request_url = urllib.parse.urljoin(
             settings.internal_proxy_url,
-            f"{settings.profiles_base_url}account/verification/pat",
+            f"{settings.profiles_base_url}/account/verification/pat",
         )
         response = requests.post(request_url, headers={"Authorization": authorization})
         if response.status_code in (
