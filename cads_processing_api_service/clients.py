@@ -70,6 +70,36 @@ def lookup_resource_by_id(
     return row
 
 
+def apply_metadata_filters(
+    statement: sqlalchemy.sql.selectable.Select,
+    resource: cads_broker.database.SystemRequest,
+    filters: dict[str, Optional[list[str]]],
+) -> sqlalchemy.sql.selectable.Select:
+    """Apply search filters to the running query.
+
+    Parameters
+    ----------
+        statement: sqlalchemy.sql.selectable.Select
+            select statement
+        resource: cads_broker.database.SystemRequest
+            sqlalchemy declarative base
+        filters: dict[str, Optional[list[str]]],
+            filters as key-value pairs
+
+
+    Returns
+    -------
+        sqlalchemy.sql.selectable.Select
+            updated select statement
+    """
+    for filter_key, filter_values in filters.items():
+        if filter_values:
+            statement = statement.where(
+                (resource.request_metadata[filter_key].astext).in_(filter_values)
+            )
+    return statement
+
+
 def apply_job_filters(
     statement: sqlalchemy.sql.selectable.Select,
     resource: cads_broker.database.SystemRequest,
@@ -231,13 +261,15 @@ def make_jobs_query_statement(
     job_table: Type[
         cads_broker.database.SystemRequest,
     ],
-    filters: dict[str, Optional[list[str]]],
+    metadata_filters: dict[str, Optional[list[str]]],
+    job_filters: dict[str, Optional[list[str]]],
     sorting: dict[str, Optional[str]],
     bookmark: dict[str, Optional[str]],
     limit: Optional[int],
 ) -> sqlalchemy.sql.selectable.Select:
     statement = sqlalchemy.select(job_table)
-    statement = apply_job_filters(statement, job_table, filters)
+    statement = apply_metadata_filters(statement, job_table, metadata_filters)
+    statement = apply_job_filters(statement, job_table, job_filters)
     if bookmark["cursor"]:
         statement = apply_bookmark(statement, job_table, bookmark, sorting)
     statement = apply_sorting(statement, job_table, bookmark, sorting)
@@ -304,6 +336,7 @@ def validate_request(
 
 
 def submit_job(
+    user_id: int,
     process_id: str,
     execution_content: dict[str, Any],
     resource: cads_catalogue.database.Resource,
@@ -312,12 +345,14 @@ def submit_job(
 
     Parameters
     ----------
+    user_id: int,
+        User identifier.
     process_id: str
         Process ID.
     execution_content: ogc_api_processes_fastapi.models.Execute
         Body of the process execution request.
     resource: cads_catalogue.database.Resource,
-        Catalogue resource corresponding to the requested retrieve process
+        Catalogue resource corresponding to the requested retrieve process.
 
 
     Returns
@@ -329,6 +364,7 @@ def submit_job(
         process_id, execution_content, resource
     )
     job = cads_broker.database.create_request(
+        user_id=user_id,
         process_id=process_id,
         **job_kwargs,
     )
@@ -361,20 +397,28 @@ def validate_pat(
         settings = config.ensure_settings()
         request_url = urllib.parse.urljoin(
             settings.internal_proxy_url,
-            f"{settings.profiles_base_url}account/verification/pat",
+            f"{settings.profiles_base_url}/account/verification/pat",
         )
         response = requests.post(request_url, headers={"Authorization": authorization})
         if response.status_code in (
             fastapi.status.HTTP_401_UNAUTHORIZED,
             fastapi.status.HTTP_403_FORBIDDEN,
         ):
-            raise exceptions.AuthenticationError(
+            raise exceptions.PermissionDenied(
                 status_code=response.status_code, detail=response.json()["detail"]
             )
         user = response.json()
     else:
-        user = {"id": "test-user"}
+        user = {}
     return user
+
+
+def verify_permission(
+    user: dict[str, str], job: cads_broker.database.SystemRequest
+) -> None:
+    user_id = user.get("id", None)
+    if job.request_metadata["user_id"] != user_id:
+        raise exceptions.PermissionDenied(detail="Operation not permitted")
 
 
 @attrs.define
@@ -532,10 +576,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
+        user_id = user.get("id", None)
         logger.info(
             "post_process_execution",
             {
                 "structured_data": {
+                    "user_id": user_id,
                     "process_id": process_id,
                     **execution_content,
                 }
@@ -543,7 +589,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         with self.reader.context_session() as session:
             resource = validate_request(process_id, session, self.process_table)
-            status_info = submit_job(process_id, execution_content, resource)
+            status_info = submit_job(user_id, process_id, execution_content, resource)
         return status_info
 
     def get_jobs(
@@ -575,9 +621,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             The response shall not contain more jobs than specified by the optional ``limit``
             parameter.
         cursor: Optional[str] = fastapi.Query(None)
-            Hash string used for pagination
+            Hash string used for pagination.
         back: Optional[bool] = fastapi.Query(None),
-            Boolean parameter used for pagination
+            Boolean parameter used for pagination.
         user: dict[str, str]
             Authenticated user credentials.
 
@@ -587,12 +633,18 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Information on the status of the job.
         """
         session_obj = cads_broker.database.ensure_session_obj(None)
+        user_id = user.get("id", None)
+        metadata_filters = {"user_id": [str(user_id)] if user_id else []}
+        job_filters = {"process_id": processID, "status": status}
+        sorting = {"sort_key": sort, "sort_dir": dir}
+        bookmark = {"cursor": cursor, "back": back}
         with session_obj() as session:
             statement = make_jobs_query_statement(
                 self.job_table,
-                filters={"process_id": processID, "status": status},
-                sorting={"sort_key": sort, "sort_dir": dir},
-                bookmark={"cursor": cursor, "back": back},
+                metadata_filters=metadata_filters,
+                job_filters=job_filters,
+                sorting=sorting,
+                bookmark=bookmark,
                 limit=limit,
             )
             job_entries = session.scalars(statement).all()
@@ -652,6 +704,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 f"Can't find the job {job_id}."
             )
+        verify_permission(user, job)
         status_info = ogc_api_processes_fastapi.responses.StatusInfo(
             processID=job.process_id,
             type="process",
@@ -703,6 +756,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 f"Can't find the job {job_id}."
             )
+        verify_permission(user, job)
         if job.status == "successful":
             asset_value = cads_broker.database.get_request_result(
                 request_uid=job.request_uid
@@ -746,7 +800,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the job `job_id` is not found.
         """
         try:
-            job = cads_broker.database.delete_request(request_uid=job_id)
+            job = cads_broker.database.get_request(request_uid=job_id)
         except (
             sqlalchemy.exc.StatementError,
             sqlalchemy.orm.exc.NoResultFound,
@@ -754,6 +808,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 f"Can't find the job {job_id}."
             )
+        verify_permission(user, job)
+        job = cads_broker.database.delete_request(request_uid=job_id)
         status_info = ogc_api_processes_fastapi.responses.StatusInfo(
             processID=job.process_id,
             type="process",
