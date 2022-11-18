@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import pytest
 
 
 @pytest.fixture
 def dev_env_proc_api_url() -> str:
-    return "http://localhost:8080/api/retrieve/v1/"
+    api_root_url = os.environ.get("CADS_API_ROOT_URL", "http://localhost:8080/api")
+    proc_api_url = f"{api_root_url}/retrieve/v1/"
+    return proc_api_url
