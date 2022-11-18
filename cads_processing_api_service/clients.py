@@ -417,7 +417,7 @@ def verify_permission(
     user: dict[str, str], job: cads_broker.database.SystemRequest
 ) -> None:
     user_id = user.get("id", None)
-    if not job.request_metadata["user_id"] == user_id:
+    if job.request_metadata["user_id"] != user_id:
         raise exceptions.PermissionDenied(detail="Operation not permitted")
 
 
