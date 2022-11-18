@@ -413,6 +413,19 @@ def validate_pat(
     return user
 
 
+def get_job_from_broker_db(job_id: str) -> cads_broker.database.SystemRequest:
+    try:
+        job = cads_broker.database.get_request(request_uid=job_id)
+    except (
+        sqlalchemy.exc.StatementError,
+        sqlalchemy.orm.exc.NoResultFound,
+    ):
+        raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
+            f"Can't find the job {job_id}."
+        )
+    return job
+
+
 def verify_permission(
     user: dict[str, str], job: cads_broker.database.SystemRequest
 ) -> None:
@@ -695,15 +708,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
-        try:
-            job = cads_broker.database.get_request(request_uid=job_id)
-        except (
-            sqlalchemy.exc.StatementError,
-            sqlalchemy.orm.exc.NoResultFound,
-        ):
-            raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
-                f"Can't find the job {job_id}."
-            )
+        job = get_job_from_broker_db(job_id=job_id)
         verify_permission(user, job)
         status_info = ogc_api_processes_fastapi.responses.StatusInfo(
             processID=job.process_id,
@@ -747,15 +752,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.JobResultsFailed
             If job `job_id` results preparation failed.
         """
-        try:
-            job = cads_broker.database.get_request(request_uid=job_id)
-        except (
-            sqlalchemy.exc.StatementError,
-            sqlalchemy.orm.exc.NoResultFound,
-        ):
-            raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
-                f"Can't find the job {job_id}."
-            )
+        job = get_job_from_broker_db(job_id=job_id)
         verify_permission(user, job)
         if job.status == "successful":
             asset_value = cads_broker.database.get_request_result(
@@ -799,15 +796,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
-        try:
-            job = cads_broker.database.get_request(request_uid=job_id)
-        except (
-            sqlalchemy.exc.StatementError,
-            sqlalchemy.orm.exc.NoResultFound,
-        ):
-            raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
-                f"Can't find the job {job_id}."
-            )
+        job = get_job_from_broker_db(job_id=job_id)
         verify_permission(user, job)
         job = cads_broker.database.delete_request(request_uid=job_id)
         status_info = ogc_api_processes_fastapi.responses.StatusInfo(
