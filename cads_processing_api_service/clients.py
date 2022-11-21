@@ -383,27 +383,51 @@ def submit_job(
     return status_info
 
 
-def validate_pat(
-    authorization: Optional[str] = fastapi.Header(
-        None, description="Personal Access Token", alias="Authorization"
+def validate_token(
+    pat: Optional[str] = fastapi.Header(
+        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
+    ),
+    jwt: Optional[str] = fastapi.Header(
+        None, description="JSON Web Token", alias="Authorization"
     ),
     enable_auth: Optional[bool] = fastapi.Header(
-        False,
-        description="Temporary flag for authentication enabling",
+        True,
+        description="Temporary flag for enabling authentication",
         alias="Enable-Authorization",
     ),
 ) -> dict[str, str]:
     if enable_auth:
+        if pat:
+            verification_endpoint = "/account/verification/pat"
+            auth_header = {"PRIVATE-TOKEN": pat}
+        elif jwt:
+            verification_endpoint = "/account/verification/oidc"
+            auth_header = {"Authorization": jwt}
+        else:
+            raise exceptions.PermissionDenied(
+                status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required",
+            )
         settings = config.ensure_settings()
         request_url = urllib.parse.urljoin(
             settings.internal_proxy_url,
-            f"{settings.profiles_base_url}/account/verification/pat",
+            f"{settings.profiles_base_url}{verification_endpoint}",
         )
-        response = requests.post(request_url, headers={"Authorization": authorization})
-        if response.status_code in (
-            fastapi.status.HTTP_401_UNAUTHORIZED,
-            fastapi.status.HTTP_403_FORBIDDEN,
-        ):
+        logger.info(
+            "validate_token",
+            {"structured_data": {"request_url": request_url, "headers": auth_header}},
+        )
+        response = requests.post(request_url, headers=auth_header)
+        logger.info(
+            "validate_token",
+            {
+                "structured_data": {
+                    "response_body": response.json(),
+                    "response_status": response.status_code,
+                }
+            },
+        )
+        if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
             raise exceptions.PermissionDenied(
                 status_code=response.status_code, detail=response.json()["detail"]
             )
@@ -564,7 +588,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         process_id: str = fastapi.Path(...),
         execution_content: dict[str, Any] = fastapi.Body(...),
-        user: dict[str, str] = fastapi.Depends(validate_pat),
+        user: dict[str, str] = fastapi.Depends(validate_token),
     ) -> ogc_api_processes_fastapi.responses.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
 
@@ -614,7 +638,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         dir: Optional[SortDirection] = fastapi.Query("desc"),
         cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
         back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
-        user: dict[str, str] = fastapi.Depends(validate_pat),
+        user: dict[str, str] = fastapi.Depends(validate_token),
     ) -> ogc_api_processes_fastapi.responses.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
 
@@ -685,7 +709,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_job(
         self,
         job_id: str = fastapi.Path(...),
-        user: dict[str, str] = fastapi.Depends(validate_pat),
+        user: dict[str, str] = fastapi.Depends(validate_token),
     ) -> ogc_api_processes_fastapi.responses.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -725,7 +749,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_job_results(
         self,
         job_id: str = fastapi.Path(...),
-        user: dict[str, str] = fastapi.Depends(validate_pat),
+        user: dict[str, str] = fastapi.Depends(validate_token),
     ) -> ogc_api_processes_fastapi.responses.Results:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
 
@@ -773,7 +797,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def delete_job(
         self,
         job_id: str = fastapi.Path(...),
-        user: dict[str, str] = fastapi.Depends(validate_pat),
+        user: dict[str, str] = fastapi.Depends(validate_token),
     ) -> ogc_api_processes_fastapi.responses.StatusInfo:
         """Implement OGC API - Processes `DELETE /jobs/{job_id}` endpoint.
 
