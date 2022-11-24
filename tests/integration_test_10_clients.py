@@ -60,21 +60,10 @@ POST_PROCESS_REQUEST_BODY_SLOW = {
 TEST_PAT_1 = "mysecretpat"
 TEST_PAT_2 = "anewsecretpat"
 INVALID_PAT = "0123"
-AUTH_HEADERS_VALID_1 = {
-    "PRIVATE-TOKEN": TEST_PAT_1,
-    "Enable-Authorization": "True",
-}
-AUTH_HEADERS_VALID_2 = {
-    "PRIVATE-TOKEN": TEST_PAT_2,
-    "Enable-Authorization": "True",
-}
-AUTH_HEADERS_INVALID = {
-    "PRIVATE-TOKEN": INVALID_PAT,
-    "Enable-Authorization": "True",
-}
-AUTH_HEADERS_MISSING = {
-    "Enable-Authorization": "True",
-}
+AUTH_HEADERS_VALID_1 = {"PRIVATE-TOKEN": TEST_PAT_1}
+AUTH_HEADERS_VALID_2 = {"PRIVATE-TOKEN": TEST_PAT_2}
+AUTH_HEADERS_INVALID = {"PRIVATE-TOKEN": INVALID_PAT}
+AUTH_HEADERS_MISSING: dict[str, str] = {}
 
 
 def test_get_processes(dev_env_proc_api_url: str) -> None:
