@@ -390,50 +390,42 @@ def validate_token(
     jwt: Optional[str] = fastapi.Header(
         None, description="JSON Web Token", alias="Authorization"
     ),
-    enable_auth: Optional[bool] = fastapi.Header(
-        True,
-        description="Temporary flag for enabling authentication",
-        alias="Enable-Authorization",
-    ),
 ) -> dict[str, str]:
-    if enable_auth:
-        if pat:
-            verification_endpoint = "/account/verification/pat"
-            auth_header = {"PRIVATE-TOKEN": pat}
-        elif jwt:
-            verification_endpoint = "/account/verification/oidc"
-            auth_header = {"Authorization": jwt}
-        else:
-            raise exceptions.PermissionDenied(
-                status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required",
-            )
-        settings = config.ensure_settings()
-        request_url = urllib.parse.urljoin(
-            settings.internal_proxy_url,
-            f"{settings.profiles_base_url}{verification_endpoint}",
-        )
-        logger.info(
-            "validate_token",
-            {"structured_data": {"request_url": request_url, "headers": auth_header}},
-        )
-        response = requests.post(request_url, headers=auth_header)
-        logger.info(
-            "validate_token",
-            {
-                "structured_data": {
-                    "response_body": response.json(),
-                    "response_status": response.status_code,
-                }
-            },
-        )
-        if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
-            raise exceptions.PermissionDenied(
-                status_code=response.status_code, detail=response.json()["detail"]
-            )
-        user = response.json()
+    if pat:
+        verification_endpoint = "/account/verification/pat"
+        auth_header = {"PRIVATE-TOKEN": pat}
+    elif jwt:
+        verification_endpoint = "/account/verification/oidc"
+        auth_header = {"Authorization": jwt}
     else:
-        user = {}
+        raise exceptions.PermissionDenied(
+            status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+    settings = config.ensure_settings()
+    request_url = urllib.parse.urljoin(
+        settings.internal_proxy_url,
+        f"{settings.profiles_base_url}{verification_endpoint}",
+    )
+    logger.info(
+        "validate_token",
+        {"structured_data": {"request_url": request_url, "headers": auth_header}},
+    )
+    response = requests.post(request_url, headers=auth_header)
+    logger.info(
+        "validate_token",
+        {
+            "structured_data": {
+                "response_body": response.json(),
+                "response_status": response.status_code,
+            }
+        },
+    )
+    if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
+        raise exceptions.PermissionDenied(
+            status_code=response.status_code, detail=response.json()["detail"]
+        )
+    user = response.json()
     return user
 
 
