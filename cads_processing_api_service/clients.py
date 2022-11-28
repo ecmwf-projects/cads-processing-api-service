@@ -19,6 +19,7 @@
 import base64
 import enum
 import logging
+import urllib.parse
 from typing import Any, Callable, Optional, Type
 
 import attrs
@@ -31,6 +32,7 @@ import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.responses
+import requests
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.orm.attributes
@@ -38,7 +40,7 @@ import sqlalchemy.orm.decl_api
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
-from . import adaptors, serializers
+from . import adaptors, config, exceptions, serializers
 
 logger = logging.getLogger(__name__)
 
@@ -68,12 +70,42 @@ def lookup_resource_by_id(
     return row
 
 
-def apply_jobs_filters(
+def apply_metadata_filters(
     statement: sqlalchemy.sql.selectable.Select,
     resource: cads_broker.database.SystemRequest,
     filters: dict[str, Optional[list[str]]],
 ) -> sqlalchemy.sql.selectable.Select:
     """Apply search filters to the running query.
+
+    Parameters
+    ----------
+        statement: sqlalchemy.sql.selectable.Select
+            select statement
+        resource: cads_broker.database.SystemRequest
+            sqlalchemy declarative base
+        filters: dict[str, Optional[list[str]]],
+            filters as key-value pairs
+
+
+    Returns
+    -------
+        sqlalchemy.sql.selectable.Select
+            updated select statement
+    """
+    for filter_key, filter_values in filters.items():
+        if filter_values:
+            statement = statement.where(
+                (resource.request_metadata[filter_key].astext).in_(filter_values)
+            )
+    return statement
+
+
+def apply_job_filters(
+    statement: sqlalchemy.sql.selectable.Select,
+    resource: cads_broker.database.SystemRequest,
+    filters: dict[str, Optional[list[str]]],
+) -> sqlalchemy.sql.selectable.Select:
+    """Apply search filters related to the job status to the running query.
 
     Parameters
     ----------
@@ -90,9 +122,11 @@ def apply_jobs_filters(
         sqlalchemy.sql.selectable.Select
             updated select statement
     """
-    for filter_key, filter_value in filters.items():
-        if filter_value:
-            statement = statement.where(getattr(resource, filter_key).in_(filter_value))
+    for filter_key, filter_values in filters.items():
+        if filter_values:
+            statement = statement.where(
+                getattr(resource, filter_key).in_(filter_values)
+            )
     return statement
 
 
@@ -227,13 +261,15 @@ def make_jobs_query_statement(
     job_table: Type[
         cads_broker.database.SystemRequest,
     ],
-    filters: dict[str, Optional[list[str]]],
+    metadata_filters: dict[str, Optional[list[str]]],
+    job_filters: dict[str, Optional[list[str]]],
     sorting: dict[str, Optional[str]],
     bookmark: dict[str, Optional[str]],
     limit: Optional[int],
 ) -> sqlalchemy.sql.selectable.Select:
     statement = sqlalchemy.select(job_table)
-    statement = apply_jobs_filters(statement, job_table, filters)
+    statement = apply_metadata_filters(statement, job_table, metadata_filters)
+    statement = apply_job_filters(statement, job_table, job_filters)
     if bookmark["cursor"]:
         statement = apply_bookmark(statement, job_table, bookmark, sorting)
     statement = apply_sorting(statement, job_table, bookmark, sorting)
@@ -300,6 +336,7 @@ def validate_request(
 
 
 def submit_job(
+    user_id: int,
     process_id: str,
     execution_content: dict[str, Any],
     resource: cads_catalogue.database.Resource,
@@ -308,12 +345,14 @@ def submit_job(
 
     Parameters
     ----------
+    user_id: int,
+        User identifier.
     process_id: str
         Process ID.
     execution_content: ogc_api_processes_fastapi.models.Execute
         Body of the process execution request.
     resource: cads_catalogue.database.Resource,
-        Catalogue resource corresponding to the requested retrieve process
+        Catalogue resource corresponding to the requested retrieve process.
 
 
     Returns
@@ -325,9 +364,11 @@ def submit_job(
         process_id, execution_content, resource
     )
     job = cads_broker.database.create_request(
+        user_id=user_id,
         process_id=process_id,
         **job_kwargs,
     )
+
     status_info = ogc_api_processes_fastapi.responses.StatusInfo(
         processID=job["process_id"],
         type="process",
@@ -340,6 +381,73 @@ def submit_job(
     )
 
     return status_info
+
+
+def validate_token(
+    pat: Optional[str] = fastapi.Header(
+        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
+    ),
+    jwt: Optional[str] = fastapi.Header(
+        None, description="JSON Web Token", alias="Authorization"
+    ),
+) -> dict[str, str]:
+    if pat:
+        verification_endpoint = "/account/verification/pat"
+        auth_header = {"PRIVATE-TOKEN": pat}
+    elif jwt:
+        verification_endpoint = "/account/verification/oidc"
+        auth_header = {"Authorization": jwt}
+    else:
+        raise exceptions.PermissionDenied(
+            status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+    settings = config.ensure_settings()
+    request_url = urllib.parse.urljoin(
+        settings.internal_proxy_url,
+        f"{settings.profiles_base_url}{verification_endpoint}",
+    )
+    logger.info(
+        "validate_token",
+        {"structured_data": {"request_url": request_url, "headers": auth_header}},
+    )
+    response = requests.post(request_url, headers=auth_header)
+    logger.info(
+        "validate_token",
+        {
+            "structured_data": {
+                "response_body": response.json(),
+                "response_status": response.status_code,
+            }
+        },
+    )
+    if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
+        raise exceptions.PermissionDenied(
+            status_code=response.status_code, detail=response.json()["detail"]
+        )
+    user = response.json()
+    return user
+
+
+def get_job_from_broker_db(job_id: str) -> cads_broker.database.SystemRequest:
+    try:
+        job = cads_broker.database.get_request(request_uid=job_id)
+    except (
+        sqlalchemy.exc.StatementError,
+        sqlalchemy.orm.exc.NoResultFound,
+    ):
+        raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
+            f"Can't find the job {job_id}."
+        )
+    return job
+
+
+def verify_permission(
+    user: dict[str, str], job: cads_broker.database.SystemRequest
+) -> None:
+    user_id = user.get("id", None)
+    if job.request_metadata["user_id"] != user_id:
+        raise exceptions.PermissionDenied(detail="Operation not permitted")
 
 
 @attrs.define
@@ -401,7 +509,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         return process_list
 
     def get_process(
-        self, process_id: str = fastapi.Path(...)
+        self,
+        process_id: str = fastapi.Path(...),
     ) -> ogc_api_processes_fastapi.responses.ProcessDescription:
         """Implement OGC API - Processes `GET /processes/{process_id}` endpoint.
 
@@ -467,12 +576,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return process_description
 
-    def post_process_execute(
+    def post_process_execution(
         self,
         process_id: str = fastapi.Path(...),
         execution_content: dict[str, Any] = fastapi.Body(...),
+        user: dict[str, str] = fastapi.Depends(validate_token),
     ) -> ogc_api_processes_fastapi.responses.StatusInfo:
-        """Implement OGC API - Processes `POST /processes/{process_id}/execute` endpoint.
+        """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
 
         Request execution of the process identified by `process_id`.
 
@@ -482,6 +592,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Process identifier.
         execution_content : ogc_api_processes_fastapi.models.Execute
             Process execution details (e.g. inputs).
+        user: dict[str, str]
+            Authenticated user credentials.
 
         Returns
         -------
@@ -493,9 +605,20 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
+        user_id = user.get("id", None)
+        logger.info(
+            "post_process_execution",
+            {
+                "structured_data": {
+                    "user_id": user_id,
+                    "process_id": process_id,
+                    **execution_content,
+                }
+            },
+        )
         with self.reader.context_session() as session:
             resource = validate_request(process_id, session, self.process_table)
-            status_info = submit_job(process_id, execution_content, resource)
+            status_info = submit_job(user_id, process_id, execution_content, resource)
         return status_info
 
     def get_jobs(
@@ -507,6 +630,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         dir: Optional[SortDirection] = fastapi.Query("desc"),
         cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
         back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
+        user: dict[str, str] = fastapi.Depends(validate_token),
     ) -> ogc_api_processes_fastapi.responses.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
 
@@ -526,23 +650,30 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             The response shall not contain more jobs than specified by the optional ``limit``
             parameter.
         cursor: Optional[str] = fastapi.Query(None)
-            Hash string used for pagination
+            Hash string used for pagination.
         back: Optional[bool] = fastapi.Query(None),
-            Boolean parameter used for pagination
+            Boolean parameter used for pagination.
+        user: dict[str, str]
+            Authenticated user credentials.
 
         Returns
         -------
         ogc_api_processes_fastapi.responses.JobList
             Information on the status of the job.
         """
-        print(cursor)
         session_obj = cads_broker.database.ensure_session_obj(None)
+        user_id = user.get("id", None)
+        metadata_filters = {"user_id": [str(user_id)] if user_id else []}
+        job_filters = {"process_id": processID, "status": status}
+        sorting = {"sort_key": sort, "sort_dir": dir}
+        bookmark = {"cursor": cursor, "back": back}
         with session_obj() as session:
             statement = make_jobs_query_statement(
                 self.job_table,
-                filters={"process_id": processID, "status": status},
-                sorting={"sort_key": sort, "sort_dir": dir},
-                bookmark={"cursor": cursor, "back": back},
+                metadata_filters=metadata_filters,
+                job_filters=job_filters,
+                sorting=sorting,
+                bookmark=bookmark,
                 limit=limit,
             )
             job_entries = session.scalars(statement).all()
@@ -568,7 +699,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         return job_list
 
     def get_job(
-        self, job_id: str = fastapi.Path(...)
+        self,
+        job_id: str = fastapi.Path(...),
+        user: dict[str, str] = fastapi.Depends(validate_token),
     ) -> ogc_api_processes_fastapi.responses.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -578,6 +711,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         job_id : str
             Identifier of the job.
+        user: dict[str, str]
+            Authenticated user credentials.
 
         Returns
         -------
@@ -589,15 +724,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
-        try:
-            job = cads_broker.database.get_request(request_uid=job_id)
-        except (
-            sqlalchemy.exc.StatementError,
-            sqlalchemy.orm.exc.NoResultFound,
-        ):
-            raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
-                f"Can't find the job {job_id}."
-            )
+        job = get_job_from_broker_db(job_id=job_id)
+        verify_permission(user, job)
         status_info = ogc_api_processes_fastapi.responses.StatusInfo(
             processID=job.process_id,
             type="process",
@@ -611,7 +739,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         return status_info
 
     def get_job_results(
-        self, job_id: str = fastapi.Path(...)
+        self,
+        job_id: str = fastapi.Path(...),
+        user: dict[str, str] = fastapi.Depends(validate_token),
     ) -> ogc_api_processes_fastapi.responses.Results:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
 
@@ -621,6 +751,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         job_id : str
             Identifier of the job.
+        user: dict[str, str]
+            Authenticated user credentials.
 
         Returns
         -------
@@ -636,15 +768,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.JobResultsFailed
             If job `job_id` results preparation failed.
         """
-        try:
-            job = cads_broker.database.get_request(request_uid=job_id)
-        except (
-            sqlalchemy.exc.StatementError,
-            sqlalchemy.orm.exc.NoResultFound,
-        ):
-            raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
-                f"Can't find the job {job_id}."
-            )
+        job = get_job_from_broker_db(job_id=job_id)
+        verify_permission(user, job)
         if job.status == "successful":
             asset_value = cads_broker.database.get_request_result(
                 request_uid=job.request_uid
@@ -660,3 +785,44 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
                 f"Status of {job_id} is {job.status}."
             )
+
+    def delete_job(
+        self,
+        job_id: str = fastapi.Path(...),
+        user: dict[str, str] = fastapi.Depends(validate_token),
+    ) -> ogc_api_processes_fastapi.responses.StatusInfo:
+        """Implement OGC API - Processes `DELETE /jobs/{job_id}` endpoint.
+
+        Dismiss the job identifed by `job_id`.
+
+        Parameters
+        ----------
+        job_id : str
+            Identifier of the job.
+        user: dict[str, str]
+            Authenticated user credentials.
+
+        Returns
+        -------
+        ogc_api_processes_fastapi.responses.StatusInfo
+            Information on the status of the job.
+
+        Raises
+        ------
+        ogc_api_processes_fastapi.exceptions.NoSuchJob
+            If the job `job_id` is not found.
+        """
+        job = get_job_from_broker_db(job_id=job_id)
+        verify_permission(user, job)
+        job = cads_broker.database.delete_request(request_uid=job_id)
+        status_info = ogc_api_processes_fastapi.responses.StatusInfo(
+            processID=job.process_id,
+            type="process",
+            jobID=job.request_uid,
+            status=job.status,
+            created=job.created_at,
+            started=job.started_at,
+            finished=job.finished_at,
+            updated=job.updated_at,
+        )
+        return status_info

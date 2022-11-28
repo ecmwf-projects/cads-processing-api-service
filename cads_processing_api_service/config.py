@@ -17,7 +17,11 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+import logging.handlers
+
 import pydantic
+from syslog_rfc5424_formatter import RFC5424Formatter
 
 general_settings = None
 
@@ -29,7 +33,8 @@ class Settings(pydantic.BaseSettings):
     """
 
     document_storage_url: str = "/document-storage/"
-    compute_api_url: str = "http://compute-api-service:8000/"
+    internal_proxy_url: str = "http://proxy"
+    profiles_base_url: str = "/api/profiles/"
 
 
 def ensure_settings(
@@ -52,3 +57,18 @@ def ensure_settings(
     else:
         general_settings = Settings()
     return general_settings
+
+
+def configure_logger():
+    """
+    Configure the logging module.
+
+    This function configures the logging module to log in rfc5424 format.
+    """
+    fmt = RFC5424Formatter(
+        sd_id="cads_processing_api_service",
+    )
+    logger = logging.getLogger()
+    handler = logging.StreamHandler()
+    handler.setFormatter(fmt)
+    logger.addHandler(handler)

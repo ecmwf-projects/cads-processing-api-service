@@ -18,8 +18,9 @@ import fastapi
 import ogc_api_processes_fastapi
 import starlette_exporter  # type: ignore
 
-from . import clients, metrics
+from . import clients, config, exceptions, metrics
 
+config.configure_logger()
 app = fastapi.FastAPI()
 app.add_middleware(starlette_exporter.PrometheusMiddleware)
 metrics.add_metrics_middleware(app)  # type: ignore
@@ -27,4 +28,5 @@ app = ogc_api_processes_fastapi.instantiate_app(
     clients.DatabaseClient()  # type: ignore
 )
 app = ogc_api_processes_fastapi.include_exception_handlers(app=app)
+app = exceptions.include_exception_handlers(app=app)
 app.add_route("/metrics", starlette_exporter.handle_metrics)
