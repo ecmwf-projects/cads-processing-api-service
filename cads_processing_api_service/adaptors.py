@@ -14,9 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import requests
 from typing import Any, Dict
+import urllib
 
 import cads_catalogue.database
+from . import clients, config
+
+
+def retrieve_from_storage(relative_path):
+    settings = config.ensure_settings()
+    storage_url = settings.document_storage_url
+    url = urllib.parse.urljoin(storage_url, relative_path)
+    return requests.get(url).json()
+
 
 FALLBACK_SETUP_CODE = """
 import cacholote
@@ -37,9 +48,9 @@ def cds_adaptor(request, config, metadata):
     return open(result_path, "rb")
 """
 
-FALLBACK_ENTRY_POINT = "cds_adaptor"
 
 FALLBACK_CONFIG: dict[str, str] = {
+    "entry_point": "cds_adaptor",
     "url": "https://cds.climate.copernicus.eu/api/v2",
     "key": "155265:cd60cf87-5f89-4ef4-8350-3817254b3884",
 }
@@ -51,24 +62,21 @@ def make_system_job_kwargs(
     resource: cads_catalogue.database.Resource,
 ) -> dict[str, Any]:
 
-    try:
-        setup_code = resource.adaptor_code
-    except AttributeError:
+    setup_code = resource.adaptor
+    if setup_code is None:
         setup_code = FALLBACK_SETUP_CODE
 
-    try:
-        entry_point = resource.entry_point
-    except AttributeError:
-        entry_point = FALLBACK_ENTRY_POINT
-
-    config = getattr(resource, "adaptor_configuration", None)
+    config = resource.adaptor_configuration
     if config is None:
         config = FALLBACK_CONFIG.copy()
-        config["collection_id"] = process_id
 
-    inputs = execution_content["inputs"]
+    config["collection_id"] = process_id
+    config["mapping"] = retrieve_from_storage(resource.mapping)
+
+    entry_point = config.pop("entry_point")
+
     kwargs = {
-        "request": inputs,
+        "request": execution_content["inputs"],
         "config": config,
     }
 

@@ -70,6 +70,24 @@ def lookup_resource_by_id(
     return row
 
 
+def retrieve_dataset(catalogue_id: str):
+    session_obj = cads_catalogue.database.ensure_session_obj(None)
+    with session_obj() as session:
+        resource = lookup_resource_by_id(
+            id=catalogue_id,
+            record=cads_catalogue.database.Resource,
+            session=session
+        )
+    return resource
+
+
+def retrieve_from_storage(relative_path):
+    settings = config.ensure_settings()
+    storage_url = settings.document_storage_url
+    url = urllib.parse.urljoin(storage_url, relative_path)
+    return requests.get(url).json()
+
+
 def apply_metadata_filters(
     statement: sqlalchemy.sql.selectable.Select,
     resource: cads_broker.database.SystemRequest,
