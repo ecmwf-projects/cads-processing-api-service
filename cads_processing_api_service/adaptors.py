@@ -37,47 +37,6 @@ def cds_adaptor(request, config, metadata):
     return open(result_path, "rb")
 """
 
-TEST_URL_SETUP_CODE = """
-import cacholote
-import requests
-
-from cads_processing_api_service import cads_common
-
-@cacholote.cacheable
-def url_adapter(request, config, metadata):
-
-    # parse input options
-    # request, format = cads_common.extract_format_options(request)
-    # request, reduce = cads_common.extract_reduce_options(request)
-    collection_id = config.pop('collection_id', None)
-    
-    dataset = cads_common.retrieve_from_db(catalogue_id)
-    mapping = cads_common.retrieve_from_storage(dataset.mapping)    
-    request_mapped = cads_common.apply_mapping(request, mapping)
-    
-    adaptor_url = dataset.adaptor["adaptor.url"]    
-    urls = requests_to_urls(request_mapped, adaptor_url['pattern'])
-    
-    data =  requests.get(urls[0]["url"])
-
-    # retrieve data
-    
-    # with cads.add_step_metrics("download data", metadata):
-    # data = (mars_request)
-
-    # post-process data
-    # if reduce is not None:
-    # with cads.add_step_metrics("reduce data", metadata):
-    #     data = cads.apply_reduce(data, reduce)
-
-    # if format is not None:
-    # with cads.add_step_metrics("reformat data", metadata):
-    #    data = cads.translate(data, format)
-
-    return data
-"""
-
-
 FALLBACK_ENTRY_POINT = "cds_adaptor"
 
 FALLBACK_CONFIG: dict[str, str] = {
@@ -92,12 +51,10 @@ def make_system_job_kwargs(
     resource: cads_catalogue.database.Resource,
 ) -> dict[str, Any]:
 
-    job_kwargs: dict[str, Any] = {}
-
     try:
         setup_code = resource.adaptor_code
     except AttributeError:
-        setup_code = TEST_URL_SETUP_CODE
+        setup_code = FALLBACK_SETUP_CODE
 
     try:
         entry_point = resource.entry_point
@@ -115,7 +72,7 @@ def make_system_job_kwargs(
         "config": config,
     }
 
-    job_kwargs = {
+    job_kwargs: dict[str, Any] = {
         "setup_code": setup_code,
         "entry_point": entry_point,
         "kwargs": kwargs,
