@@ -35,6 +35,7 @@ class Settings(pydantic.BaseSettings):
     document_storage_url: str = "/document-storage/"
     internal_proxy_url: str = "http://proxy"
     profiles_base_url: str = "/api/profiles/"
+    document_storage_access_timeout: int = 10
 
 
 def ensure_settings(
@@ -59,7 +60,7 @@ def ensure_settings(
     return general_settings
 
 
-def configure_logger():
+def configure_logger() -> None:
     """
     Configure the logging module.
 

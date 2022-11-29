@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-from typing import Any, Dict, List, Union
-
 import fastapi
 import ogc_api_processes_fastapi
 import starlette_exporter  # type: ignore
@@ -31,13 +29,9 @@ app = ogc_api_processes_fastapi.instantiate_app(
 )
 app = ogc_api_processes_fastapi.include_exception_handlers(app=app)
 app = exceptions.include_exception_handlers(app=app)
+app.add_route(
+    "/processes/{process_id}/constraints",
+    constraints.validate_constraints,
+    methods=["POST"],
+)
 app.add_route("/metrics", starlette_exporter.handle_metrics)
-
-
-@app.exception_handler(requests.exceptions.ReadTimeout)
-async def request_readtimeout_handler(
-    request: fastapi.Request, exc: requests.exceptions.ReadTimeout
-):
-    """Catch ReadTimeout exceptions to properly trigger an HTTP 504."""
-    out = fastapi.responses.JSONResponse(status_code=504, content={"message": str(exc)})
-    return out

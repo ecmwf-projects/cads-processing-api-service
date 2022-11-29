@@ -4,7 +4,7 @@ import urllib
 from typing import Any, Dict, List, Set
 
 import cads_catalogue.database
-import requests
+import requests  # type: ignore
 
 from . import clients, config
 
@@ -71,7 +71,6 @@ def apply_constraints(
     :return: a dictionary containing all values that should be left
     active for selection, in JSON format
     """
-
     always_valid = get_always_valid_params(form, constraints)
 
     form = copy.deepcopy(form)
@@ -293,9 +292,8 @@ def parse_form(form: List[Dict[str, Any]]) -> Dict[str, set]:
     return selections
 
 
-
 def validate_constraints(
-    collection_id: str, selection: Dict[str, List[str]]
+    process_id: str, body: Dict[str, List[str]]
 ) -> Dict[str, List[str]]:
 
     settings = config.Settings()
@@ -304,7 +302,7 @@ def validate_constraints(
 
     session_obj = cads_catalogue.database.ensure_session_obj(None)
     record = cads_catalogue.database.Resource
-    dataset = clients.lookup_resource_by_id(id, record, session_obj)
+    dataset = clients.lookup_resource_by_id(process_id, record, session_obj)
 
     form_url = urllib.parse.urljoin(storage_url, dataset.form)
     raw_form = requests.get(form_url, timeout=timeout).json()
@@ -314,7 +312,7 @@ def validate_constraints(
     raw_constraints = requests.get(constraints_url, timeout=timeout).json()
     constraints = parse_constraints(raw_constraints)
 
-    selection = parse_selection(selection)
+    selection = parse_selection(body["inputs"])
 
     return apply_constraints(form, selection, constraints)
 
@@ -324,16 +322,3 @@ def get_keys(constraints):
     for constraint in constraints:
         keys |= set(constraint.keys())
     return keys
-
-
-@app.post("")
-async def validate_constraints(
-    collection_id: str,
-    request: fastapi.Request,
-    body: Dict[str, Dict[str, Union[str, List[str]]]] = fastapi.Body(...),
-) -> Dict[str, List[Any]]:
-    form_status = constraints.validate_constraints(
-        collection_id,
-        body["inputs"],
-    )
-    return form_status
