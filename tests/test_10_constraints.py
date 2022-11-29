@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Set, Union
+from typing import Any
 
 from cads_processing_api_service import constraints
 
@@ -83,13 +83,13 @@ def test_apply_constraints() -> None:
 
 
 def test_parse_constraints() -> None:
-    raw_constraints: List[Dict[str, List[Any]]] = [
+    raw_constraints: list[dict[str, list[Any]]] = [
         {"level": ["500"], "param": ["Z", "T"], "step": ["24", "36", "48"]},
         {"level": ["1000"], "param": ["Z"], "step": ["24", "48"]},
         {"level": ["850"], "param": ["T"], "step": ["36", "48"]},
     ]
 
-    parsed_constraints: List[Dict[str, Set[Any]]] = [
+    parsed_constraints: list[dict[str, set[Any]]] = [
         {"level": {"500"}, "param": {"Z", "T"}, "step": {"24", "36", "48"}},
         {"level": {"1000"}, "param": {"Z"}, "step": {"24", "48"}},
         {"level": {"850"}, "param": {"T"}, "step": {"36", "48"}},
@@ -99,7 +99,7 @@ def test_parse_constraints() -> None:
 
 
 def test_parse_form() -> None:
-    form: List[Dict[str, Union[List[Any], str]]] = [
+    form: list[dict[str, Any]] = [
         {
             "details": {
                 "groups": [{"values": ["Z"]}, {"values": ["T"]}],
@@ -124,7 +124,7 @@ def test_parse_form() -> None:
         },
     ]
 
-    parsed_form: Dict[str, Set[Any]] = {
+    parsed_form: dict[str, set[Any]] = {
         "level": {"500", "850", "1000"},
         "param": {"Z", "T"},
         "step": {"24", "36", "48"},
@@ -136,13 +136,15 @@ def test_parse_form() -> None:
 
 
 def test_parse_selection() -> None:
-    selections: List[Dict[str, List[Any]]] = [
+    selections: list[dict[str, list[Any] | str]] = [
+        {"number": "1"},
         {},  # 0
         {"number": ["1", "2"]},  # 1
         {"level": ["850"], "param": ["Z"]},  # 2
     ]
 
-    parsed_selections: List[Dict[str, Set[Any]]] = [
+    parsed_selections: list[dict[str, set[Any]]] = [
+        {"number": {"1"}},
         {},  # 0
         {"number": {"1", "2"}},  # 1
         {"level": {"850"}, "param": {"Z"}},  # 2
@@ -157,7 +159,7 @@ def test_parse_selection() -> None:
             raise AssertionError
 
 
-def test_ensure_list() -> None:
-    assert constraints.ensure_list([]) == []
-    assert constraints.ensure_list(("1",)) == ("1",)
-    assert constraints.ensure_list("1") == ["1"]
+def test_ensure_sequence() -> None:
+    assert constraints.ensure_sequence([]) == []
+    assert constraints.ensure_sequence(("1",)) == ("1",)
+    assert constraints.ensure_sequence("1") == ["1"]
