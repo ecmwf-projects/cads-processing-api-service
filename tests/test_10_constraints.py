@@ -1,8 +1,9 @@
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Set, Union
 
-from cads_catalogue_api_service import constrictor
+from cads_processing_api_service import constraints
 
-form: List[Dict[str, List[Any] | str]] = [
+
+form: List[Dict[str, Union[List[Any], str]]] = [
     {
         "details": {
             "groups": [{"values": ["Z"]}, {"values": ["T"]}],
@@ -73,28 +74,28 @@ def test_get_possible_values() -> None:
         {"level": {"500"}, "param": {"Z", "T"}, "stat": {"mean"}},
     ]
 
-    assert constrictor.get_possible_values(form, {"stat": {"mean"}}, constraints) == {
+    assert constraints.get_possible_values(form, {"stat": {"mean"}}, constraints) == {
         "level": {"500"},
         "time": set(),
         "param": {"Z", "T"},
         "stat": {"mean"},
     }
-    assert constrictor.get_possible_values(form, {"time": {"12:00"}}, constraints) == {
+    assert constraints.get_possible_values(form, {"time": {"12:00"}}, constraints) == {
         "level": {"850", "500"},
         "time": {"12:00", "00:00"},
         "param": {"Z", "T"},
         "stat": set(),
     }
-    assert constrictor.get_possible_values(
+    assert constraints.get_possible_values(
         form, {"stat": {"mean"}, "time": {"12:00"}}, constraints
     ) == {"level": set(), "time": set(), "param": set(), "stat": set()}
-    assert constrictor.get_possible_values(form, {"param": {"Z"}}, constraints) == {
+    assert constraints.get_possible_values(form, {"param": {"Z"}}, constraints) == {
         "level": {"500"},
         "time": {"12:00", "00:00"},
         "param": {"Z", "T"},
         "stat": {"mean"},
     }
-    assert constrictor.get_possible_values(
+    assert constraints.get_possible_values(
         form, {"level": {"500", "850"}}, constraints
     ) == {
         "level": {"500", "850"},
@@ -115,7 +116,7 @@ def test_get_form_state() -> None:
         {"level": {"850"}, "param": {"T"}},
     ]
 
-    assert constrictor.get_form_state(form, {"level": {"500"}}, constraints) == {
+    assert constraints.get_form_state(form, {"level": {"500"}}, constraints) == {
         "level": {"500", "850"},
         "param": {"Z"},
     }
@@ -129,32 +130,33 @@ def test_apply_constraints() -> None:
         {"level": {"850"}, "param": {"T"}},
     ]
 
-    assert constrictor.apply_constraints(form, {"level": {"500"}}, constraints)[
+    assert constraints.apply_constraints(form, {"level": {"500"}}, constraints)[
         "number"
     ] == ["1"]
 
 
 def test_parse_constraints() -> None:
-    assert parsed_constraints == constrictor.parse_constraints(constraints)
-    assert [{}] == constrictor.parse_constraints([{}])
+    assert parsed_constraints == constraints.parse_constraints(constraints)
+    assert [{}] == constraints.parse_constraints([{}])
 
 
 def test_parse_form() -> None:
-    assert parsed_form == constrictor.parse_form(form)
-    assert {} == constrictor.parse_form([])
+    assert parsed_form == constraints.parse_form(form)
+    assert {} == constraints.parse_form([])
 
 
 def test_parse_selection() -> None:
     for i in range(len(selections)):
         try:
-            assert parsed_selections[i] == constrictor.parse_selection(selections[i])
+            assert parsed_selections[i] == constraints.parse_selection(selections[i])
         except AssertionError:
             print(
                 f"Iteration number {i} of " f"{test_parse_selection.__name__}() failed!"
             )
             raise AssertionError
 
+
 def test_ensure_list() -> None:
-    assert constrictor.ensure_list([]) == []
-    assert constrictor.ensure_list(("1",)) == ("1",)
-    assert constrictor.ensure_list("1") == ["1"]
+    assert constraints.ensure_list([]) == []
+    assert constraints.ensure_list(("1",)) == ("1",)
+    assert constraints.ensure_list("1") == ["1"]

@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Set
 import cads_catalogue.database
 import requests
 
-from . import config, constraints
+from . import clients, config
 
 
 def ensure_list(v):
@@ -293,16 +293,6 @@ def parse_form(form: List[Dict[str, Any]]) -> Dict[str, set]:
     return selections
 
 
-def lookup_dataset_by_id(
-    id: str,
-) -> List[str]:
-    session_obj = cads_catalogue.database.ensure_session_obj(None)
-    resource = cads_catalogue.database.Resource
-    with session_obj() as session:
-        query = session.query(resource)
-        out = query.filter(resource.resource_uid == id).one()
-    return out
-
 
 def validate_constraints(
     collection_id: str, selection: Dict[str, List[str]]
@@ -312,7 +302,9 @@ def validate_constraints(
     storage_url = settings.document_storage_url
     timeout = settings.document_storage_access_timeout
 
-    dataset = lookup_dataset_by_id(collection_id)
+    session_obj = cads_catalogue.database.ensure_session_obj(None)
+    record = cads_catalogue.database.Resource
+    dataset = clients.lookup_resource_by_id(id, record, session_obj)
 
     form_url = urllib.parse.urljoin(storage_url, dataset.form)
     raw_form = requests.get(form_url, timeout=timeout).json()
