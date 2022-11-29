@@ -14,12 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import requests
-from typing import Any, Dict
 import urllib
+from typing import Any, Dict
 
 import cads_catalogue.database
-from . import clients, config
+import requests
+
+from . import config
 
 
 def retrieve_from_storage(relative_path):
