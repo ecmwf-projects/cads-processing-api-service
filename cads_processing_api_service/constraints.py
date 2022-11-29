@@ -324,3 +324,16 @@ def get_keys(constraints):
     for constraint in constraints:
         keys |= set(constraint.keys())
     return keys
+
+
+@app.post("")
+async def validate_constraints(
+    collection_id: str,
+    request: fastapi.Request,
+    body: Dict[str, Dict[str, Union[str, List[str]]]] = fastapi.Body(...),
+) -> Dict[str, List[Any]]:
+    form_status = constraints.validate_constraints(
+        collection_id,
+        body["inputs"],
+    )
+    return form_status
