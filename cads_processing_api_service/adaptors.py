@@ -71,8 +71,12 @@ def make_system_job_kwargs(
     if config is None:
         config = FALLBACK_CONFIG.copy()
 
+    mapping = resource.mapping
+    if resource.mapping is None:
+        mapping = {}
+
     config["collection_id"] = process_id
-    config["mapping"] = retrieve_from_storage(resource.mapping)
+    config["mapping"] = mapping
 
     entry_point = config.pop("entry_point")
 

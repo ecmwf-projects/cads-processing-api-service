@@ -28,7 +28,7 @@ def test_make_system_job_kwargs_default() -> None:
     exp_entry_point = config.pop("entry_point")
     exp_kwargs = {
         "request": inputs,
-        "config": config | {"collection_id": process_id},
+        "config": config | {"collection_id": process_id} | {"mapping": {}}
     }
 
     job_kwargs = adaptors.make_system_job_kwargs(
