@@ -3,63 +3,6 @@ from typing import Any, Dict, List, Set, Union
 from cads_processing_api_service import constraints
 
 
-form: List[Dict[str, Union[List[Any], str]]] = [
-    {
-        "details": {
-            "groups": [{"values": ["Z"]}, {"values": ["T"]}],
-        },
-        "name": "param",
-        "type": "StringListArrayWidget",
-    },
-    {
-        "details": {"values": ["500", "850", "1000"]},
-        "name": "level",
-        "type": "StringListWidget",
-    },
-    {
-        "details": {"values": ["24", "36", "48"]},
-        "name": "step",
-        "type": "StringListWidget",
-    },
-    {
-        "details": {"values": ["1", "2", "3"]},
-        "name": "number",
-        "type": "StringChoiceWidget",
-    },
-]
-
-parsed_form: Dict[str, Set[Any]] = {
-    "level": {"500", "850", "1000"},
-    "param": {"Z", "T"},
-    "step": {"24", "36", "48"},
-    "number": {"1", "2", "3"},
-}
-
-constraints: List[Dict[str, List[Any]]] = [
-    {"level": ["500"], "param": ["Z", "T"], "step": ["24", "36", "48"]},
-    {"level": ["1000"], "param": ["Z"], "step": ["24", "48"]},
-    {"level": ["850"], "param": ["T"], "step": ["36", "48"]},
-]
-
-parsed_constraints: List[Dict[str, Set[Any]]] = [
-    {"level": {"500"}, "param": {"Z", "T"}, "step": {"24", "36", "48"}},
-    {"level": {"1000"}, "param": {"Z"}, "step": {"24", "48"}},
-    {"level": {"850"}, "param": {"T"}, "step": {"36", "48"}},
-]
-
-selections: List[Dict[str, List[Any]]] = [
-    {},  # 0
-    {"number": ["1", "2"]},  # 1
-    {"level": ["850"], "param": ["Z"]},  # 2
-]
-
-parsed_selections: List[Dict[str, Set[Any]]] = [
-    {},  # 0
-    {"number": {"1", "2"}},  # 1
-    {"level": {"850"}, "param": {"Z"}},  # 2
-]
-
-
 def test_get_possible_values() -> None:
     form = {
         "level": {"500", "850"},
@@ -68,35 +11,39 @@ def test_get_possible_values() -> None:
         "stat": {"mean"},
     }
 
-    constraints = [
+    raw_constraints = [
         {"level": {"500"}, "param": {"Z", "T"}, "time": {"12:00", "00:00"}},
         {"level": {"850"}, "param": {"T"}, "time": {"12:00", "00:00"}},
         {"level": {"500"}, "param": {"Z", "T"}, "stat": {"mean"}},
     ]
 
-    assert constraints.get_possible_values(form, {"stat": {"mean"}}, constraints) == {
+    assert constraints.get_possible_values(
+        form, {"stat": {"mean"}}, raw_constraints
+    ) == {
         "level": {"500"},
         "time": set(),
         "param": {"Z", "T"},
         "stat": {"mean"},
     }
-    assert constraints.get_possible_values(form, {"time": {"12:00"}}, constraints) == {
+    assert constraints.get_possible_values(
+        form, {"time": {"12:00"}}, raw_constraints
+    ) == {
         "level": {"850", "500"},
         "time": {"12:00", "00:00"},
         "param": {"Z", "T"},
         "stat": set(),
     }
     assert constraints.get_possible_values(
-        form, {"stat": {"mean"}, "time": {"12:00"}}, constraints
+        form, {"stat": {"mean"}, "time": {"12:00"}}, raw_constraints
     ) == {"level": set(), "time": set(), "param": set(), "stat": set()}
-    assert constraints.get_possible_values(form, {"param": {"Z"}}, constraints) == {
+    assert constraints.get_possible_values(form, {"param": {"Z"}}, raw_constraints) == {
         "level": {"500"},
         "time": {"12:00", "00:00"},
         "param": {"Z", "T"},
         "stat": {"mean"},
     }
     assert constraints.get_possible_values(
-        form, {"level": {"500", "850"}}, constraints
+        form, {"level": {"500", "850"}}, raw_constraints
     ) == {
         "level": {"500", "850"},
         "time": {"12:00", "00:00"},
@@ -111,12 +58,12 @@ def test_get_form_state() -> None:
         "param": {"Z", "T"},
     }
 
-    constraints = [
+    raw_constraints = [
         {"level": {"500"}, "param": {"Z"}},
         {"level": {"850"}, "param": {"T"}},
     ]
 
-    assert constraints.get_form_state(form, {"level": {"500"}}, constraints) == {
+    assert constraints.get_form_state(form, {"level": {"500"}}, raw_constraints) == {
         "level": {"500", "850"},
         "param": {"Z"},
     }
@@ -125,27 +72,81 @@ def test_get_form_state() -> None:
 def test_apply_constraints() -> None:
     form = {"level": {"500", "850"}, "param": {"Z", "T"}, "number": {"1"}}
 
-    constraints = [
+    raw_constraints = [
         {"level": {"500"}, "param": {"Z"}},
         {"level": {"850"}, "param": {"T"}},
     ]
 
-    assert constraints.apply_constraints(form, {"level": {"500"}}, constraints)[
+    assert constraints.apply_constraints(form, {"level": {"500"}}, raw_constraints)[
         "number"
     ] == ["1"]
 
 
 def test_parse_constraints() -> None:
-    assert parsed_constraints == constraints.parse_constraints(constraints)
+    raw_constraints: List[Dict[str, List[Any]]] = [
+        {"level": ["500"], "param": ["Z", "T"], "step": ["24", "36", "48"]},
+        {"level": ["1000"], "param": ["Z"], "step": ["24", "48"]},
+        {"level": ["850"], "param": ["T"], "step": ["36", "48"]},
+    ]
+
+    parsed_constraints: List[Dict[str, Set[Any]]] = [
+        {"level": {"500"}, "param": {"Z", "T"}, "step": {"24", "36", "48"}},
+        {"level": {"1000"}, "param": {"Z"}, "step": {"24", "48"}},
+        {"level": {"850"}, "param": {"T"}, "step": {"36", "48"}},
+    ]
+    assert parsed_constraints == constraints.parse_constraints(raw_constraints)
     assert [{}] == constraints.parse_constraints([{}])
 
 
 def test_parse_form() -> None:
+    form: List[Dict[str, Union[List[Any], str]]] = [
+        {
+            "details": {
+                "groups": [{"values": ["Z"]}, {"values": ["T"]}],
+            },
+            "name": "param",
+            "type": "StringListArrayWidget",
+        },
+        {
+            "details": {"values": ["500", "850", "1000"]},
+            "name": "level",
+            "type": "StringListWidget",
+        },
+        {
+            "details": {"values": ["24", "36", "48"]},
+            "name": "step",
+            "type": "StringListWidget",
+        },
+        {
+            "details": {"values": ["1", "2", "3"]},
+            "name": "number",
+            "type": "StringChoiceWidget",
+        },
+    ]
+
+    parsed_form: Dict[str, Set[Any]] = {
+        "level": {"500", "850", "1000"},
+        "param": {"Z", "T"},
+        "step": {"24", "36", "48"},
+        "number": {"1", "2", "3"},
+    }
+
     assert parsed_form == constraints.parse_form(form)
     assert {} == constraints.parse_form([])
 
 
 def test_parse_selection() -> None:
+    selections: List[Dict[str, List[Any]]] = [
+        {},  # 0
+        {"number": ["1", "2"]},  # 1
+        {"level": ["850"], "param": ["Z"]},  # 2
+    ]
+
+    parsed_selections: List[Dict[str, Set[Any]]] = [
+        {},  # 0
+        {"number": {"1", "2"}},  # 1
+        {"level": {"850"}, "param": {"Z"}},  # 2
+    ]
     for i in range(len(selections)):
         try:
             assert parsed_selections[i] == constraints.parse_selection(selections[i])
