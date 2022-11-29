@@ -290,7 +290,7 @@ def parse_form(form: list[dict[str, Any]]) -> dict[str, set[Any]]:
 
 
 def validate_constraints(
-    process_id: str, body: dict[str, dict[str, str | list[str]]]
+    process_id: str, body: dict[str, dict[str, Any]]
 ) -> dict[str, list[str]]:
 
     settings = config.Settings()
