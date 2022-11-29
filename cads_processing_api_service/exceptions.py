@@ -16,6 +16,7 @@
 
 import attrs
 import fastapi
+import requests
 
 
 @attrs.define
@@ -30,7 +31,7 @@ class PermissionDenied(Exception):
 def permission_denied_exception_handler(
     request: fastapi.Request, exc: PermissionDenied
 ) -> fastapi.responses.JSONResponse:
-    return fastapi.responses.JSONResponse(
+    out = fastapi.responses.JSONResponse(
         status_code=exc.status_code,
         content={
             "type": exc.type,
@@ -39,6 +40,15 @@ def permission_denied_exception_handler(
             "instance": str(request.url),
         },
     )
+    return out
+
+
+def request_readtimeout_handler(
+    request: fastapi.Request, exc: requests.exceptions.ReadTimeout
+) -> fastapi.responses.JSONResponse:
+    """Catch ReadTimeout exceptions to properly trigger an HTTP 504."""
+    out = fastapi.responses.JSONResponse(status_code=504, content={"message": str(exc)})
+    return out
 
 
 def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
@@ -56,4 +66,7 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
         FastAPI application including CADS Processes API exceptions handlers.
     """
     app.add_exception_handler(PermissionDenied, permission_denied_exception_handler)
+    app.add_exception_handler(
+        requests.exceptions.ReadTimeout, request_readtimeout_handler
+    )
     return app

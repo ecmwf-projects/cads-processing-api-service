@@ -18,7 +18,7 @@ import fastapi
 import ogc_api_processes_fastapi
 import starlette_exporter  # type: ignore
 
-from . import clients, config, exceptions, metrics
+from . import clients, config, constraints, exceptions, metrics
 
 config.configure_logger()
 app = fastapi.FastAPI()
@@ -29,4 +29,9 @@ app = ogc_api_processes_fastapi.instantiate_app(
 )
 app = ogc_api_processes_fastapi.include_exception_handlers(app=app)
 app = exceptions.include_exception_handlers(app=app)
+app.add_api_route(
+    "/processes/{process_id}/constraints",
+    constraints.validate_constraints,
+    methods=["POST"],
+)
 app.add_route("/metrics", starlette_exporter.handle_metrics)
