@@ -34,14 +34,10 @@ app = exceptions.include_exception_handlers(app=app)
 app.add_route("/metrics", starlette_exporter.handle_metrics)
 
 
-@app.post("/collections/{collection_id}/validate_constraints")
-async def validate_constraints(
-    collection_id: str,
-    request: fastapi.Request,
-    body: Dict[str, Dict[str, Union[str, List[str]]]] = fastapi.Body(...),
-) -> Dict[str, List[Any]]:
-    form_status = constraints.validate_constraints(
-        collection_id,
-        body["inputs"],
-    )
-    return form_status
+@app.exception_handler(requests.exceptions.ReadTimeout)
+async def request_readtimeout_handler(
+    request: fastapi.Request, exc: requests.exceptions.ReadTimeout
+):
+    """Catch ReadTimeout exceptions to properly trigger an HTTP 504."""
+    out = fastapi.responses.JSONResponse(status_code=504, content={"message": str(exc)})
+    return out
