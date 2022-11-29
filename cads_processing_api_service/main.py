@@ -30,3 +30,16 @@ app = ogc_api_processes_fastapi.instantiate_app(
 app = ogc_api_processes_fastapi.include_exception_handlers(app=app)
 app = exceptions.include_exception_handlers(app=app)
 app.add_route("/metrics", starlette_exporter.handle_metrics)
+
+
+@app.post("/collections/{collection_id}/validate_constraints")
+async def validate_constraints(
+    collection_id: str,
+    request: fastapi.Request,
+    body: Dict[str, Dict[str, Union[str, List[str]]]] = fastapi.Body(...),
+) -> Dict[str, List[Any]]:
+    form_status = constraints.validate_constraints(
+        collection_id,
+        body["inputs"],
+    )
+    return form_status
