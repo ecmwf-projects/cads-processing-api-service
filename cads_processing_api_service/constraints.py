@@ -3,8 +3,8 @@ import copy
 import urllib.parse
 from typing import Any
 
-import cads_catalogue.database  # type: ignore
-import requests
+import cads_catalogue.database
+import requests  # type: ignore
 
 from . import clients, config
 
