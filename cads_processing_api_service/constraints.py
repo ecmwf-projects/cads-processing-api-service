@@ -299,7 +299,8 @@ def validate_constraints(
 
     session_obj = cads_catalogue.database.ensure_session_obj(None)
     record = cads_catalogue.database.Resource
-    dataset = clients.lookup_resource_by_id(process_id, record, session_obj)
+    with session_obj() as session:
+        dataset = clients.lookup_resource_by_id(process_id, record, session)
 
     form_url = urllib.parse.urljoin(storage_url, dataset.form)
     raw_form = requests.get(form_url, timeout=timeout).json()
