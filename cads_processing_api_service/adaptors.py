@@ -14,21 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import urllib
 from typing import Any, Dict
 
 import cads_catalogue.database
-import requests
-
-from . import config
-
-
-def retrieve_from_storage(relative_path):
-    settings = config.ensure_settings()
-    storage_url = settings.document_storage_url
-    url = urllib.parse.urljoin(storage_url, relative_path)
-    return requests.get(url).json()
-
 
 FALLBACK_SETUP_CODE = """
 import cacholote
