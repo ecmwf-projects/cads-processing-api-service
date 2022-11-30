@@ -24,10 +24,11 @@ def test_make_system_job_kwargs_default() -> None:
     resource = cads_catalogue.database.Resource()
 
     exp_setup_code = adaptors.FALLBACK_SETUP_CODE
-    exp_entry_point = adaptors.FALLBACK_ENTRY_POINT
+    config = adaptors.FALLBACK_CONFIG.copy()
+    exp_entry_point = config.pop("entry_point")
     exp_kwargs = {
         "request": inputs,
-        "config": adaptors.FALLBACK_CONFIG | {"collection_id": process_id},
+        "config": config | {"collection_id": process_id} | {"mapping": {}},
     }
 
     job_kwargs = adaptors.make_system_job_kwargs(
