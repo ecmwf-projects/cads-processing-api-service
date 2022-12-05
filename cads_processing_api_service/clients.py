@@ -45,7 +45,7 @@ from . import adaptors, config, exceptions, serializers
 logger = logging.getLogger(__name__)
 
 
-SYSTEM_REQUEST_KEYS = {"created": "created_at"}
+SORT_KEYS = {"created": "created_at", "id": "resource_uid"}
 
 
 class ProcessSortCriterion(str, enum.Enum):
@@ -191,7 +191,7 @@ def apply_bookmark(
             updated select statement
     """
     resource_attribute: sqlalchemy.orm.attributes.InstrumentedAttribute = getattr(
-        resource, SYSTEM_REQUEST_KEYS[sorting["sort_key"]]
+        resource, SORT_KEYS[sorting["sort_key"]]
     )
     compare_method_name: str = get_compare_and_sort_method_name(
         sorting["sort_dir"], bookmark["back"]
@@ -228,7 +228,7 @@ def apply_sorting(
             updated select statement
     """
     resource_attribute: sqlalchemy.orm.attributes.InstrumentedAttribute = getattr(
-        resource, SYSTEM_REQUEST_KEYS[sorting["sort_key"]]
+        resource, SORT_KEYS[sorting["sort_key"]]
     )
     sort_method_name: str = get_compare_and_sort_method_name(
         sorting["sort_dir"], bookmark["back"]
