@@ -48,6 +48,10 @@ logger = logging.getLogger(__name__)
 SYSTEM_REQUEST_KEYS = {"created": "created_at"}
 
 
+class ProcessSortCriterion(str, enum.Enum):
+    id: str = "id"
+
+
 class JobSortCriterion(str, enum.Enum):
     created: str = "created"
 
@@ -278,6 +282,23 @@ def make_jobs_query_statement(
     return statement
 
 
+def make_processes_query_statement(
+    processes_table: Type[
+        cads_catalogue.database.Resource,
+    ],
+    sorting: dict[str, Optional[str]],
+    bookmark: dict[str, Optional[str]],
+    limit: Optional[int],
+) -> sqlalchemy.sql.selectable.Select:
+    statement = sqlalchemy.select(processes_table)
+    if bookmark["cursor"]:
+        statement = apply_bookmark(statement, processes_table, bookmark, sorting)
+    statement = apply_sorting(statement, processes_table, bookmark, sorting)
+    statement = apply_limit(statement, limit)
+
+    return statement
+
+
 def make_cursor(
     jobs: list[ogc_api_processes_fastapi.responses.StatusInfo], sort_key: str, page: str
 ) -> str:
@@ -477,7 +498,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         return sql_session_reader
 
     def get_processes(
-        self, limit: int | None = fastapi.Query(None)
+        self,
+        limit: int | None = fastapi.Query(None),
+        sort: Optional[ProcessSortCriterion] = fastapi.Query("id"),
+        dir: Optional[SortDirection] = fastapi.Query("desc"),
+        cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
+        back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
     ) -> ogc_api_processes_fastapi.responses.ProcessList:
         """Implement OGC API - Processes `GET /processes` endpoint.
 
@@ -487,24 +513,41 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         limit : int | None, optional
             Number of processes summaries to be returned.
+        sort: Optional[ProcessSortCriterion] = fastapi.Query("id")
+            Sorting criterion for request's results.
+        dir: Optional[SortDirection] = fastapi.Query("desc")
+            Sorting direction for request's results.
+        cursor: Optional[str] = fastapi.Query(None)
+            Hash string used for pagination.
+        back: Optional[bool] = fastapi.Query(None),
+            Boolean parameter used for pagination.
 
         Returns
         -------
         ogc_api_processes_fastapi.responses.ProcessList
             List of available processes.
         """
+        sorting = {"sort_key": sort, "sort_dir": dir}
+        bookmark = {"cursor": cursor, "back": back}
         with self.reader.context_session() as session:
-            if limit:
-                processes_entries = session.query(self.process_table).limit(limit).all()
-            else:
-                processes_entries = session.query(self.process_table).all()
-            processes = [
-                serializers.serialize_process_summary(process)
-                for process in processes_entries
-            ]
+            statement = make_processes_query_statement(
+                self.process_table,
+                sorting=sorting,
+                bookmark=bookmark,
+                limit=limit,
+            )
+            processes_entries = session.scalars(statement).all()
+        if back:
+            processes_entries = reversed(processes_entries)
+        processes = [
+            serializers.serialize_process_summary(process)
+            for process in processes_entries
+        ]
         process_list = ogc_api_processes_fastapi.responses.ProcessList(
             processes=processes
         )
+        pagination_qs = make_pagination_qs(processes, sort_key=sort)
+        process_list._pagination_qs = pagination_qs
 
         return process_list
 
@@ -649,6 +692,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         limit: Optional[int] = fastapi.Query(10, ge=1, le=10000)
             The response shall not contain more jobs than specified by the optional ``limit``
             parameter.
+        sort: Optional[JobSortCriterion] = fastapi.Query("created")
+            Sorting criterion for request's results.
+        dir: Optional[SortDirection] = fastapi.Query("desc")
+            Sorting direction for request's results.
         cursor: Optional[str] = fastapi.Query(None)
             Hash string used for pagination.
         back: Optional[bool] = fastapi.Query(None),
