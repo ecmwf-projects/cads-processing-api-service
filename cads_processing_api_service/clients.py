@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 SYSTEM_REQUEST_KEYS = {"created": "created_at"}
 
 
-class SortCriterion(str, enum.Enum):
+class JobSortCriterion(str, enum.Enum):
     created: str = "created"
 
 
@@ -626,7 +626,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         processID: Optional[list[str]] = fastapi.Query(None),
         status: Optional[list[str]] = fastapi.Query(None),
         limit: Optional[int] = fastapi.Query(10, ge=1, le=10000),
-        sort: Optional[SortCriterion] = fastapi.Query("created"),
+        sort: Optional[JobSortCriterion] = fastapi.Query("created"),
         dir: Optional[SortDirection] = fastapi.Query("desc"),
         cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
         back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
