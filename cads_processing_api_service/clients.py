@@ -261,6 +261,23 @@ def apply_limit(
     return statement
 
 
+def make_processes_query_statement(
+    processes_table: Type[
+        cads_catalogue.database.Resource,
+    ],
+    sorting: dict[str, Optional[str]],
+    bookmark: dict[str, Optional[str]],
+    limit: Optional[int],
+) -> sqlalchemy.sql.selectable.Select:
+    statement = sqlalchemy.select(processes_table)
+    if bookmark["cursor"]:
+        statement = apply_bookmark(statement, processes_table, bookmark, sorting)
+    statement = apply_sorting(statement, processes_table, bookmark, sorting)
+    statement = apply_limit(statement, limit)
+
+    return statement
+
+
 def make_jobs_query_statement(
     job_table: Type[
         cads_broker.database.SystemRequest,
@@ -277,23 +294,6 @@ def make_jobs_query_statement(
     if bookmark["cursor"]:
         statement = apply_bookmark(statement, job_table, bookmark, sorting)
     statement = apply_sorting(statement, job_table, bookmark, sorting)
-    statement = apply_limit(statement, limit)
-
-    return statement
-
-
-def make_processes_query_statement(
-    processes_table: Type[
-        cads_catalogue.database.Resource,
-    ],
-    sorting: dict[str, Optional[str]],
-    bookmark: dict[str, Optional[str]],
-    limit: Optional[int],
-) -> sqlalchemy.sql.selectable.Select:
-    statement = sqlalchemy.select(processes_table)
-    if bookmark["cursor"]:
-        statement = apply_bookmark(statement, processes_table, bookmark, sorting)
-    statement = apply_sorting(statement, processes_table, bookmark, sorting)
     statement = apply_limit(statement, limit)
 
     return statement
@@ -499,7 +499,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def get_processes(
         self,
-        limit: int | None = fastapi.Query(None),
+        limit: Optional[int] = fastapi.Query(10, ge=1, le=10000),
         sort: Optional[ProcessSortCriterion] = fastapi.Query("id"),
         dir: Optional[SortDirection] = fastapi.Query("desc"),
         cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
@@ -511,7 +511,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Parameters
         ----------
-        limit : int | None, optional
+        limit : Optional[int] = fastapi.Query(10, ge=1, le=10000)
             Number of processes summaries to be returned.
         sort: Optional[ProcessSortCriterion] = fastapi.Query("id")
             Sorting criterion for request's results.
@@ -537,12 +537,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 limit=limit,
             )
             processes_entries = session.scalars(statement).all()
+            processes = [
+                serializers.serialize_process_summary(process)
+                for process in processes_entries
+            ]
         if back:
-            processes_entries = reversed(processes_entries)
-        processes = [
-            serializers.serialize_process_summary(process)
-            for process in processes_entries
-        ]
+            processes = reversed(processes)
         process_list = ogc_api_processes_fastapi.responses.ProcessList(
             processes=processes
         )

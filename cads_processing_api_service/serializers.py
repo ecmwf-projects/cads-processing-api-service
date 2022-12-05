@@ -63,7 +63,7 @@ def serialize_process_summary(
         Process summary representation.
     """
     retval = ogc_api_processes_fastapi.responses.ProcessSummary(
-        title=f"{db_model.title}",
+        title=db_model.title,
         description=db_model.abstract,
         keywords=db_model.keywords,
         id=db_model.resource_uid,
