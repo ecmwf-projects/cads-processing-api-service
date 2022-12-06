@@ -80,9 +80,13 @@ def test_apply_job_filters() -> None:
 def test_apply_bookmark() -> None:
     job_table = cads_broker.database.SystemRequest
     statement = sqlalchemy.select(job_table)
-    bookmark = {"cursor": "MjAyMi0xMC0yNCAxMzozMjowMy4xNzgzOTc=", "back": False}
-    sorting = {"sort_key": "created", "sort_dir": "desc"}
-    statement = clients.apply_bookmark(statement, job_table, bookmark, sorting)
+    cursor = "MjAyMi0xMC0yNCAxMzozMjowMy4xNzgzOTc="
+    back = False
+    sort_key = clients.JobSortCriterion.created_at
+    sort_dir = clients.SortDirection.desc
+    statement = clients.apply_bookmark(
+        statement, job_table, cursor, back, sort_key.name, sort_dir.name
+    )
     compiled_statement = statement.compile()
     exp_params = {"created_at_1": "2022-10-24 13:32:03.178397"}
     exp_substatement = "WHERE system_requests.created_at < :created_at_1"
@@ -93,35 +97,15 @@ def test_apply_bookmark() -> None:
 def test_apply_sorting() -> None:
     job_table = cads_broker.database.SystemRequest
     statement = sqlalchemy.select(job_table)
-    bookmark = {"cursor": "MjAyMi0xMC0yNCAxMzozMjowMy4xNzgzOTc=", "back": False}
-    sorting = {"sort_key": "created", "sort_dir": "desc"}
-    statement = clients.apply_sorting(statement, job_table, bookmark, sorting)
+    back = False
+    sort_key = clients.JobSortCriterion.created_at
+    sort_dir = clients.SortDirection.desc
+    statement = clients.apply_sorting(
+        statement, job_table, back, sort_key.name, sort_dir.name
+    )
     compiled_statement = statement.compile()
     exp_substatement = "ORDER BY system_requests.created_at DESC"
     assert exp_substatement in compiled_statement.string
-
-
-def test_make_jobs_query_statement() -> None:
-    job_table = cads_broker.database.SystemRequest
-    metadata_filters = {"user_id": [0]}
-    job_filters = {"process_id": ["process"], "status": ["successful", "failed"]}
-    sorting = {"sort_key": "created", "sort_dir": "desc"}
-    bookmark = {"cursor": "MjAyMi0xMC0yNCAxMzozMjowMy4xNzgzOTc=", "back": False}
-    limit = 10
-    statement = clients.make_jobs_query_statement(
-        job_table, metadata_filters, job_filters, sorting, bookmark, limit
-    )
-    compiled_statement = statement.compile()
-    exp_substatement = "system_requests.created_at < :created_at_1"
-    assert exp_substatement in compiled_statement.string
-
-    bookmark = {"cursor": None, "back": None}
-    statement = clients.make_jobs_query_statement(
-        job_table, metadata_filters, job_filters, sorting, bookmark, limit
-    )
-    compiled_statement = statement.compile()
-    exp_substatement = "WHERE system_requests.created_at < :created_at_1"
-    assert exp_substatement not in compiled_statement.string
 
 
 def test_make_cursor() -> None:
