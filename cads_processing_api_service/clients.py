@@ -45,15 +45,12 @@ from . import adaptors, config, exceptions, serializers
 logger = logging.getLogger(__name__)
 
 
-SORT_KEYS = {"created": "created_at", "id": "resource_uid"}
-
-
 class ProcessSortCriterion(str, enum.Enum):
-    id: str = "id"
+    resource_uid: str = "id"
 
 
 class JobSortCriterion(str, enum.Enum):
-    created: str = "created"
+    created_at: str = "created"
 
 
 class SortDirection(str, enum.Enum):
@@ -169,8 +166,10 @@ def encode_base64(decoded: str) -> str:
 def apply_bookmark(
     statement: sqlalchemy.sql.selectable.Select,
     resource: sqlalchemy.orm.decl_api.DeclarativeMeta,
-    bookmark: dict[str, Optional[str]],
-    sorting: dict[str, Optional[str]],
+    cursor: Optional[str],
+    back: Optional[str],
+    sort_key: Optional[str],
+    sort_dir: Optional[str],
 ) -> sqlalchemy.sql.selectable.Select:
     """Apply pagination bookmark to the running query.
 
@@ -180,10 +179,14 @@ def apply_bookmark(
             select statement
         resource: sqlalchemy.orm.decl_api.DeclarativeMeta
             sqlalchemy declarative base
-        bookmark: dict[str, Optional[str]]
-            page bookmark as key-value pairs
-        sorting: dict[str, Optional[str]]
-            sorting instructions as key-value pairs
+        cursor: Optional[str]
+            bookmark cursor
+        back: Optional[str]
+            if True set bookmark for previous page, else set bookmark for next page
+        sort_key: Optional[str]
+            key for sorting results
+        sort_dir: Optional[str]
+            sorting direction
 
     Returns
     -------
@@ -191,13 +194,13 @@ def apply_bookmark(
             updated select statement
     """
     resource_attribute: sqlalchemy.orm.attributes.InstrumentedAttribute = getattr(
-        resource, SORT_KEYS[sorting["sort_key"]]
+        resource, sort_key
     )
-    compare_method_name: str = get_compare_and_sort_method_name(
-        sorting["sort_dir"], bookmark["back"]
-    )["compare_method_name"]
+    compare_method_name: str = get_compare_and_sort_method_name(sort_dir, back)[
+        "compare_method_name"
+    ]
     compare_method: Callable = getattr(resource_attribute, compare_method_name)
-    bookmark_value: str = decode_base64(bookmark["cursor"])
+    bookmark_value: str = decode_base64(cursor)
     statement = statement.where(compare_method(bookmark_value))
 
     return statement
@@ -206,8 +209,9 @@ def apply_bookmark(
 def apply_sorting(
     statement: sqlalchemy.sql.selectable.Select,
     resource: sqlalchemy.orm.decl_api.DeclarativeMeta,
-    bookmark: dict[str, Optional[str]],
-    sorting: dict[str, Optional[str]],
+    back: Optional[str],
+    sort_key: Optional[str],
+    sort_dir: Optional[str],
 ) -> sqlalchemy.sql.selectable.Select:
     """Apply sorting to the running query.
 
@@ -217,10 +221,12 @@ def apply_sorting(
             select statement
         resource: sqlalchemy.orm.decl_api.DeclarativeMeta
             sqlalchemy declarative base
-        bookmark: dict[str, Optional[str]]
-            page bookmark as key-value pairs
-        sorting: dict[str, Optional[str]]
-            sorting instructions as key-value pairs
+        back: Optional[str]
+            if True set bookmark for previous page, else set bookmark for next page
+        sort_key: Optional[str]
+            key for sorting results
+        sort_dir: Optional[str]
+            sorting direction
 
     Returns
     -------
@@ -228,11 +234,11 @@ def apply_sorting(
             updated select statement
     """
     resource_attribute: sqlalchemy.orm.attributes.InstrumentedAttribute = getattr(
-        resource, SORT_KEYS[sorting["sort_key"]]
+        resource, sort_key
     )
-    sort_method_name: str = get_compare_and_sort_method_name(
-        sorting["sort_dir"], bookmark["back"]
-    )["sort_method_name"]
+    sort_method_name: str = get_compare_and_sort_method_name(sort_dir, back)[
+        "sort_method_name"
+    ]
     sort_method: Callable = getattr(resource_attribute, sort_method_name)
     statement = statement.order_by(sort_method())
 
@@ -258,44 +264,6 @@ def apply_limit(
             updated select statement
     """
     statement = statement.limit(limit)
-    return statement
-
-
-def make_processes_query_statement(
-    processes_table: Type[
-        cads_catalogue.database.Resource,
-    ],
-    sorting: dict[str, Optional[str]],
-    bookmark: dict[str, Optional[str]],
-    limit: Optional[int],
-) -> sqlalchemy.sql.selectable.Select:
-    statement = sqlalchemy.select(processes_table)
-    if bookmark["cursor"]:
-        statement = apply_bookmark(statement, processes_table, bookmark, sorting)
-    statement = apply_sorting(statement, processes_table, bookmark, sorting)
-    statement = apply_limit(statement, limit)
-
-    return statement
-
-
-def make_jobs_query_statement(
-    job_table: Type[
-        cads_broker.database.SystemRequest,
-    ],
-    metadata_filters: dict[str, Optional[list[str]]],
-    job_filters: dict[str, Optional[list[str]]],
-    sorting: dict[str, Optional[str]],
-    bookmark: dict[str, Optional[str]],
-    limit: Optional[int],
-) -> sqlalchemy.sql.selectable.Select:
-    statement = sqlalchemy.select(job_table)
-    statement = apply_metadata_filters(statement, job_table, metadata_filters)
-    statement = apply_job_filters(statement, job_table, job_filters)
-    if bookmark["cursor"]:
-        statement = apply_bookmark(statement, job_table, bookmark, sorting)
-    statement = apply_sorting(statement, job_table, bookmark, sorting)
-    statement = apply_limit(statement, limit)
-
     return statement
 
 
@@ -500,8 +468,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_processes(
         self,
         limit: Optional[int] = fastapi.Query(10, ge=1, le=10000),
-        sort: Optional[ProcessSortCriterion] = fastapi.Query("id"),
-        dir: Optional[SortDirection] = fastapi.Query("desc"),
+        sort_key: Optional[ProcessSortCriterion] = fastapi.Query(
+            ProcessSortCriterion.resource_uid, alias="sort"
+        ),
+        sort_dir: Optional[SortDirection] = fastapi.Query(
+            SortDirection.desc, alias="dir"
+        ),
         cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
         back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
     ) -> ogc_api_processes_fastapi.responses.ProcessList:
@@ -511,15 +483,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Parameters
         ----------
-        limit : Optional[int] = fastapi.Query(10, ge=1, le=10000)
+        limit : Optional[int]
             Number of processes summaries to be returned.
-        sort: Optional[ProcessSortCriterion] = fastapi.Query("id")
+        sort_key: Optional[ProcessSortCriterion]
             Sorting criterion for request's results.
-        dir: Optional[SortDirection] = fastapi.Query("desc")
+        sort_dir: Optional[SortDirection]
             Sorting direction for request's results.
-        cursor: Optional[str] = fastapi.Query(None)
+        cursor: Optional[str]
             Hash string used for pagination.
-        back: Optional[bool] = fastapi.Query(None),
+        back: Optional[bool]
             Boolean parameter used for pagination.
 
         Returns
@@ -527,15 +499,25 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.responses.ProcessList
             List of available processes.
         """
-        sorting = {"sort_key": sort, "sort_dir": dir}
-        bookmark = {"cursor": cursor, "back": back}
         with self.reader.context_session() as session:
-            statement = make_processes_query_statement(
+            statement = sqlalchemy.select(self.process_table)
+            if cursor:
+                statement = apply_bookmark(
+                    statement,
+                    self.process_table,
+                    cursor,
+                    back,
+                    sort_key.name,
+                    sort_dir.name,
+                )
+            statement = apply_sorting(
+                statement,
                 self.process_table,
-                sorting=sorting,
-                bookmark=bookmark,
-                limit=limit,
+                back,
+                sort_key.name,
+                sort_dir.name,
             )
+            statement = apply_limit(statement, limit)
             processes_entries = session.scalars(statement).all()
             processes = [
                 serializers.serialize_process_summary(process)
@@ -546,7 +528,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_list = ogc_api_processes_fastapi.responses.ProcessList(
             processes=processes
         )
-        pagination_qs = make_pagination_qs(processes, sort_key=sort)
+        pagination_qs = make_pagination_qs(processes, sort_key=sort_key)
         process_list._pagination_qs = pagination_qs
 
         return process_list
@@ -669,8 +651,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         processID: Optional[list[str]] = fastapi.Query(None),
         status: Optional[list[str]] = fastapi.Query(None),
         limit: Optional[int] = fastapi.Query(10, ge=1, le=10000),
-        sort: Optional[JobSortCriterion] = fastapi.Query("created"),
-        dir: Optional[SortDirection] = fastapi.Query("desc"),
+        sort_key: Optional[JobSortCriterion] = fastapi.Query(
+            JobSortCriterion.created_at, alias="sort"
+        ),
+        sort_dir: Optional[SortDirection] = fastapi.Query(
+            SortDirection.desc, alias="dir"
+        ),
         cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
         back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
         user: dict[str, str] = fastapi.Depends(validate_token),
@@ -681,20 +667,20 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Parameters
         ----------
-        processID: Optional[List[str]] = fastapi.Query(None)
+        processID: Optional[List[str]]
             If the parameter is specified with the operation, only jobs that have a value for
             the processID property that matches one of the values specified for the processID
             parameter shall be included in the response.
-        status: Optional[List[str]] = fastapi.Query(None)
+        status: Optional[List[str]]
             If the parameter is specified with the operation, only jobs that have a value for
             the status property that matches one of the specified values of the status parameter
             shall be included in the response.
-        limit: Optional[int] = fastapi.Query(10, ge=1, le=10000)
+        limit: Optional[int]
             The response shall not contain more jobs than specified by the optional ``limit``
             parameter.
-        sort: Optional[JobSortCriterion] = fastapi.Query("created")
+        sort_key: Optional[JobSortCriterion]
             Sorting criterion for request's results.
-        dir: Optional[SortDirection] = fastapi.Query("desc")
+        sort_dir: Optional[SortDirection]
             Sorting direction for request's results.
         cursor: Optional[str] = fastapi.Query(None)
             Hash string used for pagination.
@@ -712,17 +698,25 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         user_id = user.get("id", None)
         metadata_filters = {"user_id": [str(user_id)] if user_id else []}
         job_filters = {"process_id": processID, "status": status}
-        sorting = {"sort_key": sort, "sort_dir": dir}
-        bookmark = {"cursor": cursor, "back": back}
         with session_obj() as session:
-            statement = make_jobs_query_statement(
-                self.job_table,
-                metadata_filters=metadata_filters,
-                job_filters=job_filters,
-                sorting=sorting,
-                bookmark=bookmark,
-                limit=limit,
+            statement = sqlalchemy.select(self.job_table)
+            statement = apply_metadata_filters(
+                statement, self.job_table, metadata_filters
             )
+            statement = apply_job_filters(statement, self.job_table, job_filters)
+            if cursor:
+                statement = apply_bookmark(
+                    statement,
+                    self.job_table,
+                    cursor,
+                    back,
+                    sort_key.name,
+                    sort_dir.name,
+                )
+            statement = apply_sorting(
+                statement, self.job_table, back, sort_key.name, sort_dir.name
+            )
+            statement = apply_limit(statement, limit)
             job_entries = session.scalars(statement).all()
         if back:
             job_entries = reversed(job_entries)
@@ -740,7 +734,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             for job in job_entries
         ]
         job_list = ogc_api_processes_fastapi.responses.JobList(jobs=jobs)
-        pagination_qs = make_pagination_qs(jobs, sort_key=sort)
+        pagination_qs = make_pagination_qs(jobs, sort_key=sort_key)
         job_list._pagination_qs = pagination_qs
 
         return job_list
