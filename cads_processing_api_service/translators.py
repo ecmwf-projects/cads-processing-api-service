@@ -17,14 +17,10 @@
 import itertools
 from typing import Any
 
-ACCEPTED_INPUTS = [
-    "product_type",
-    "variable",
-    "year",
-    "month",
-    "time",
-    "area",
-    "format",
+EXCLUDED_WIDGETS = [
+    "LabelWidget",
+    "FreeEditionWidget",
+    "ExclusiveFrameWidget",
 ]
 
 
@@ -99,7 +95,7 @@ def translate_cds_into_ogc_inputs(
     """
     inputs_ogc = {}
     for input_cds_schema in cds_form:
-        if input_cds_schema["name"] in ACCEPTED_INPUTS:
+        if input_cds_schema["type"] not in EXCLUDED_WIDGETS:
             inputs_ogc[input_cds_schema["name"]] = {
                 "title": input_cds_schema["label"],
                 "schema_": {**build_input_ogc_schema(input_cds_schema)},
