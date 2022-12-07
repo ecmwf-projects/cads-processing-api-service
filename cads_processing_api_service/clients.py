@@ -268,28 +268,37 @@ def apply_limit(
 
 
 def make_cursor(
-    jobs: list[ogc_api_processes_fastapi.responses.StatusInfo], sort_key: str, page: str
+    entries: list[
+        ogc_api_processes_fastapi.responses.StatusInfo
+        | ogc_api_processes_fastapi.responses.ProcessSummary
+    ],
+    sort_key: str,
+    page: str,
 ) -> str:
     if page not in ("next", "prev"):
         raise ValueError(f"page: {page} not valid")
     if page == "next":
-        bookmark_element = jobs[-1]
+        bookmark_element = entries[-1]
     else:
-        bookmark_element = jobs[0]
+        bookmark_element = entries[0]
     cursor = encode_base64(str(getattr(bookmark_element, sort_key)))
     return cursor
 
 
 def make_pagination_qs(
-    jobs: list[ogc_api_processes_fastapi.responses.StatusInfo], sort_key: str
+    entries: list[
+        ogc_api_processes_fastapi.responses.StatusInfo
+        | ogc_api_processes_fastapi.responses.ProcessSummary
+    ],
+    sort_key: str,
 ) -> ogc_api_processes_fastapi.responses.PaginationQueryParameters:
     pagination_qs = ogc_api_processes_fastapi.responses.PaginationQueryParameters(
         next={}, prev={}
     )
-    if len(jobs) != 0:
-        cursor_next = make_cursor(jobs, sort_key, "next")
+    if len(entries) != 0:
+        cursor_next = make_cursor(entries, sort_key, "next")
         pagination_qs.next = {"cursor": cursor_next, "back": "False"}
-        cursor_prev = make_cursor(jobs, sort_key, "prev")
+        cursor_prev = make_cursor(entries, sort_key, "prev")
         pagination_qs.prev = {"cursor": cursor_prev, "back": "True"}
     return pagination_qs
 
@@ -396,20 +405,7 @@ def validate_token(
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}{verification_endpoint}",
     )
-    logger.info(
-        "validate_token",
-        {"structured_data": {"request_url": request_url, "headers": auth_header}},
-    )
     response = requests.post(request_url, headers=auth_header)
-    logger.info(
-        "validate_token",
-        {
-            "structured_data": {
-                "response_body": response.json(),
-                "response_status": response.status_code,
-            }
-        },
-    )
     if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
         raise exceptions.PermissionDenied(
             status_code=response.status_code, detail=response.json()["detail"]
@@ -472,7 +468,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             ProcessSortCriterion.resource_uid, alias="sort"
         ),
         sort_dir: Optional[SortDirection] = fastapi.Query(
-            SortDirection.desc, alias="dir"
+            SortDirection.asc, alias="dir"
         ),
         cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
         back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
@@ -524,7 +520,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 for process in processes_entries
             ]
         if back:
-            processes = reversed(processes)
+            processes = list(reversed(processes))
         process_list = ogc_api_processes_fastapi.responses.ProcessList(
             processes=processes
         )
