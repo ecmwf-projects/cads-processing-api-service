@@ -275,8 +275,12 @@ def parse_form(raw_form: list[dict[str, Any]]) -> dict[str, set[Any]]:
     ocg_form = translators.translate_cds_into_ogc_inputs(raw_form)
     form = {}
     for field_name in ocg_form:
+        print(ocg_form[field_name])
         try:
-            form[field_name] = set(ocg_form[field_name]["schema_"]["items"]["enum"])
+            if ocg_form[field_name]["schema_"]["type"] == "array":
+                form[field_name] = set(ocg_form[field_name]["schema_"]["items"]["enum"])
+            else:
+                form[field_name] = set(ocg_form[field_name]["schema_"]["enum"])
         except KeyError:
             pass
     return form
