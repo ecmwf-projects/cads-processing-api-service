@@ -174,10 +174,39 @@ def test_make_pagination_qs() -> None:
     assert pagination_qs == exp_qs
 
 
+def test_check_licences() -> None:
+    required_licences = {("licence_1", 1), ("licence_2", 2)}
+    accepted_licences = {("licence_1", 1), ("licence_2", 2), ("licence_3", 3)}
+    missing_licences = clients.check_licences(required_licences, accepted_licences)
+    assert len(missing_licences) == 0
+
+    required_licences = {("licence_1", 1), ("licence_2", 2)}
+    accepted_licences = {("licence_1", 1), ("licence_2", 1)}
+    with pytest.raises(exceptions.PermissionDenied):
+        missing_licences = clients.check_licences(required_licences, accepted_licences)
+
+
+def test_check_token() -> None:
+    token = "token"
+
+    verification_endpoint, auth_header = clients.check_token(pat=token)
+    exp_verification_endpoint = "/account/verification/pat"
+    exp_auth_header = {"PRIVATE-TOKEN": token}
+    assert verification_endpoint == exp_verification_endpoint
+    assert auth_header == exp_auth_header
+
+    verification_endpoint, auth_header = clients.check_token(jwt=token)
+    exp_verification_endpoint = "/account/verification/oidc"
+    exp_auth_header = {"Authorization": token}
+    assert verification_endpoint == exp_verification_endpoint
+    assert auth_header == exp_auth_header
+
+    with pytest.raises(exceptions.PermissionDenied):
+        verification_endpoint, auth_header = clients.check_token()
+
+
 def test_verify_permission() -> None:
-
     job = cads_broker.database.SystemRequest(request_metadata={"user_id": 0})
-
     user = {"id": 0}
     try:
         clients.verify_permission(user, job)
