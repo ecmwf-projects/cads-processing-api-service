@@ -18,7 +18,7 @@ import urllib.parse
 from typing import Any, Dict
 
 import cads_catalogue.database
-import ogc_api_processes_fastapi.responses
+import ogc_api_processes_fastapi.models
 import requests
 
 from . import config, translators
@@ -49,7 +49,7 @@ def get_cds_form(cds_form_url: str) -> list[Any]:
 
 def serialize_process_summary(
     db_model: cads_catalogue.database.Resource,
-) -> ogc_api_processes_fastapi.responses.ProcessSummary:
+) -> ogc_api_processes_fastapi.models.ProcessSummary:
     """Convert provided database entry into a representation of a process summary.
 
     Parameters
@@ -62,7 +62,7 @@ def serialize_process_summary(
     ogc_api_processes_fastapi.models.ProcessSummary
         Process summary representation.
     """
-    retval = ogc_api_processes_fastapi.responses.ProcessSummary(
+    retval = ogc_api_processes_fastapi.models.ProcessSummary(
         title=db_model.title,
         description=db_model.abstract,
         keywords=db_model.keywords,
@@ -97,7 +97,7 @@ def serialize_process_inputs(
 
 def serialize_process_description(
     db_model: cads_catalogue.database.Resource,
-) -> ogc_api_processes_fastapi.responses.ProcessDescription:
+) -> ogc_api_processes_fastapi.models.ProcessDescription:
     """Convert provided database entry into a representation of a process description.
 
     Parameters
@@ -107,11 +107,11 @@ def serialize_process_description(
 
     Returns
     -------
-    ogc_api_processes_fastapi.responses.schema["ProcessDescription"]
+    ogc_api_processes_fastapi.models.ProcessDescription
         Process description representation.
     """
     process_summary = serialize_process_summary(db_model)
-    retval = ogc_api_processes_fastapi.responses.ProcessDescription(
+    retval = ogc_api_processes_fastapi.models.ProcessDescription(
         **process_summary.dict(),
         inputs=serialize_process_inputs(db_model),
     )
