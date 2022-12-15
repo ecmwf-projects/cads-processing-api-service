@@ -62,7 +62,7 @@ def lookup_resource_by_id(
     id: str,
     record: Type[cads_catalogue.database.BaseModel],
     session: sqlalchemy.orm.Session,
-) -> cads_catalogue.database.BaseModel:
+) -> cads_catalogue.database.Resource:
 
     try:
         row = session.query(record).filter(record.resource_uid == id).one()
@@ -303,11 +303,44 @@ def make_pagination_qs(
     return pagination_qs
 
 
+def get_accepted_licences(auth_header: dict[str, str]) -> set[tuple[str, int]]:
+    settings = config.ensure_settings()
+    request_url = urllib.parse.urljoin(
+        settings.internal_proxy_url,
+        f"{settings.profiles_base_url}/account/licences",
+    )
+    response = requests.get(request_url, headers=auth_header)
+    licences = response.json()["licences"]
+    accepted_licences = set(
+        [(licence["id"], licence["revision"]) for licence in licences]
+    )
+    return accepted_licences
+
+
+def check_licences(
+    required_licences: set[tuple[str, int]], accepted_licences: set[tuple[str, int]]
+) -> set[tuple[str, int]]:
+    missing_licences = required_licences - accepted_licences
+    if not len(missing_licences) == 0:
+        missing_licences_detail = [
+            {"id": licence[0], "revision": licence[1]} for licence in missing_licences
+        ]
+        raise exceptions.PermissionDenied(
+            title="required licences not accepted",
+            detail=(
+                "please accept the following licences to proceed: "
+                f"{missing_licences_detail}"
+            ),
+        )
+    return missing_licences
+
+
 def validate_request(
     process_id: str,
+    auth_header: dict[str, str],
     session: sqlalchemy.orm.Session,
     process_table: Type[cads_catalogue.database.Resource],
-) -> cads_catalogue.database.BaseModel:
+) -> cads_catalogue.database.Resource:
     """Validate retrieve process execution request.
 
     Check if requested dataset exists and if execution content is valid.
@@ -318,18 +351,27 @@ def validate_request(
     ----------
     process_id : str
         Process ID.
+    auth_header: dict[str, str]
+        Authorization header sent with the request
     session : sqlalchemy.orm.Session
         SQLAlchemy ORM session
+    process_table: Type[cads_catalogue.database.Resource]
+        Resources table
 
     Returns
     -------
     cads_catalogue.database.BaseModel
         Resource (dataset) associated to the process request.
     """
-    # TODO: implement inputs validation
     resource = lookup_resource_by_id(
         id=process_id, record=process_table, session=session
     )
+    required_licences = set(
+        (licence.licence_uid, licence.revision) for licence in resource.licences
+    )
+    accepted_licences = get_accepted_licences(auth_header)
+    check_licences(required_licences, accepted_licences)
+
     return resource
 
 
@@ -381,14 +423,10 @@ def submit_job(
     return status_info
 
 
-def validate_token(
-    pat: Optional[str] = fastapi.Header(
-        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
-    ),
-    jwt: Optional[str] = fastapi.Header(
-        None, description="JSON Web Token", alias="Authorization"
-    ),
-) -> dict[str, str]:
+def check_token(
+    pat: Optional[str] = None, jwt: Optional[str] = None
+) -> tuple[str, dict[str, str]]:
+    print(pat)
     if pat:
         verification_endpoint = "/account/verification/pat"
         auth_header = {"PRIVATE-TOKEN": pat}
@@ -400,6 +438,18 @@ def validate_token(
             status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
         )
+    return (verification_endpoint, auth_header)
+
+
+def validate_token(
+    pat: Optional[str] = fastapi.Header(
+        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
+    ),
+    jwt: Optional[str] = fastapi.Header(
+        None, description="JSON Web Token", alias="Authorization"
+    ),
+) -> dict[str, str]:
+    verification_endpoint, auth_header = check_token(pat=pat, jwt=jwt)
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
         settings.internal_proxy_url,
@@ -411,6 +461,7 @@ def validate_token(
             status_code=response.status_code, detail=response.json()["detail"]
         )
     user = response.json()
+    user["auth_header"] = auth_header
     return user
 
 
@@ -638,7 +689,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             },
         )
         with self.reader.context_session() as session:
-            resource = validate_request(process_id, session, self.process_table)
+            resource = validate_request(
+                process_id, user.get("auth_header", None), session, self.process_table
+            )
             status_info = submit_job(user_id, process_id, execution_content, resource)
         return status_info
 

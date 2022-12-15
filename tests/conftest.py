@@ -22,3 +22,10 @@ def dev_env_proc_api_url() -> str:
     api_root_url = os.environ.get("CADS_API_ROOT_URL", "http://localhost:8080/api")
     proc_api_url = f"{api_root_url}/retrieve/v1/"
     return proc_api_url
+
+
+@pytest.fixture
+def dev_env_prof_api_url() -> str:
+    api_root_url = os.environ.get("CADS_API_ROOT_URL", "http://localhost:8080/api")
+    prof_api_url = f"{api_root_url}/profiles/v1/"
+    return prof_api_url
