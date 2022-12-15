@@ -143,8 +143,12 @@ def get_possible_values(
                 if len(selected_values & combination[field_name]) == 0:
                     ok = False
                     break
-            else:
+            elif field_name in form.keys():
                 ok = False
+                break
+            else:
+                print(f'Error: invalid param "{field_name}"')
+                raise KeyError
         if ok:
             for field_name, valid_values in combination.items():
                 result[field_name] |= set(valid_values)
