@@ -31,7 +31,7 @@ import fastapi_utils.session
 import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
 import ogc_api_processes_fastapi.exceptions
-import ogc_api_processes_fastapi.responses
+import ogc_api_processes_fastapi.models
 import requests
 import sqlalchemy
 import sqlalchemy.orm
@@ -40,7 +40,7 @@ import sqlalchemy.orm.decl_api
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
-from . import adaptors, config, exceptions, serializers
+from . import adaptors, config, exceptions, models, serializers
 
 logger = logging.getLogger(__name__)
 
@@ -269,8 +269,8 @@ def apply_limit(
 
 def make_cursor(
     entries: list[
-        ogc_api_processes_fastapi.responses.StatusInfo
-        | ogc_api_processes_fastapi.responses.ProcessSummary
+        ogc_api_processes_fastapi.models.StatusInfo
+        | ogc_api_processes_fastapi.models.ProcessSummary
     ],
     sort_key: str,
     page: str,
@@ -287,12 +287,12 @@ def make_cursor(
 
 def make_pagination_qs(
     entries: list[
-        ogc_api_processes_fastapi.responses.StatusInfo
-        | ogc_api_processes_fastapi.responses.ProcessSummary
+        ogc_api_processes_fastapi.models.StatusInfo
+        | ogc_api_processes_fastapi.models.ProcessSummary
     ],
     sort_key: str,
-) -> ogc_api_processes_fastapi.responses.PaginationQueryParameters:
-    pagination_qs = ogc_api_processes_fastapi.responses.PaginationQueryParameters(
+) -> ogc_api_processes_fastapi.models.PaginationQueryParameters:
+    pagination_qs = ogc_api_processes_fastapi.models.PaginationQueryParameters(
         next={}, prev={}
     )
     if len(entries) != 0:
@@ -303,7 +303,19 @@ def make_pagination_qs(
     return pagination_qs
 
 
-def get_accepted_licences(auth_header: dict[str, str]) -> set[tuple[str, int]]:
+def get_contextual_accepted_licences(
+    execution_content: dict[str, Any]
+) -> set[tuple[str, int]]:
+    licences = execution_content.get("acceptedLicences")
+    if not licences:
+        licences = []
+    accepted_licences = set(
+        [(licence["id"], licence["revision"]) for licence in licences]
+    )
+    return accepted_licences
+
+
+def get_stored_accepted_licences(auth_header: dict[str, str]) -> set[tuple[str, int]]:
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
         settings.internal_proxy_url,
@@ -337,6 +349,7 @@ def check_licences(
 
 def validate_request(
     process_id: str,
+    execution_content: dict[str, Any],
     auth_header: dict[str, str],
     session: sqlalchemy.orm.Session,
     process_table: Type[cads_catalogue.database.Resource],
@@ -350,7 +363,9 @@ def validate_request(
     Parameters
     ----------
     process_id : str
-        Process ID.
+        Process ID
+    execution_content: dict[str, Any]
+        Content of the process execution request
     auth_header: dict[str, str]
         Authorization header sent with the request
     session : sqlalchemy.orm.Session
@@ -369,7 +384,9 @@ def validate_request(
     required_licences = set(
         (licence.licence_uid, licence.revision) for licence in resource.licences
     )
-    accepted_licences = get_accepted_licences(auth_header)
+    contextual_accepted_licences = get_contextual_accepted_licences(execution_content)
+    stored_accepted_licences = get_stored_accepted_licences(auth_header)
+    accepted_licences = contextual_accepted_licences.union(stored_accepted_licences)
     check_licences(required_licences, accepted_licences)
 
     return resource
@@ -380,7 +397,7 @@ def submit_job(
     process_id: str,
     execution_content: dict[str, Any],
     resource: cads_catalogue.database.Resource,
-) -> ogc_api_processes_fastapi.responses.StatusInfo:
+) -> ogc_api_processes_fastapi.models.StatusInfo:
     """Submit new job.
 
     Parameters
@@ -397,7 +414,7 @@ def submit_job(
 
     Returns
     -------
-    ogc_api_processes_fastapi.responses.schema["StatusInfo"]
+    ogc_api_processes_fastapi.models.StatusInfo
         Sumbitted job status info.
     """
     job_kwargs = adaptors.make_system_job_kwargs(
@@ -409,7 +426,7 @@ def submit_job(
         **job_kwargs,
     )
 
-    status_info = ogc_api_processes_fastapi.responses.StatusInfo(
+    status_info = ogc_api_processes_fastapi.models.StatusInfo(
         processID=job["process_id"],
         type="process",
         jobID=job["request_uid"],
@@ -523,7 +540,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ),
         cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
         back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
-    ) -> ogc_api_processes_fastapi.responses.ProcessList:
+    ) -> ogc_api_processes_fastapi.models.ProcessList:
         """Implement OGC API - Processes `GET /processes` endpoint.
 
         Get the list of available processes.
@@ -543,7 +560,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.responses.ProcessList
+        ogc_api_processes_fastapi.models.ProcessList
             List of available processes.
         """
         with self.reader.context_session() as session:
@@ -572,9 +589,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             ]
         if back:
             processes = list(reversed(processes))
-        process_list = ogc_api_processes_fastapi.responses.ProcessList(
-            processes=processes
-        )
+        process_list = ogc_api_processes_fastapi.models.ProcessList(processes=processes)
         pagination_qs = make_pagination_qs(processes, sort_key=sort_key)
         process_list._pagination_qs = pagination_qs
 
@@ -583,7 +598,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_process(
         self,
         process_id: str = fastapi.Path(...),
-    ) -> ogc_api_processes_fastapi.responses.ProcessDescription:
+    ) -> ogc_api_processes_fastapi.models.ProcessDescription:
         """Implement OGC API - Processes `GET /processes/{process_id}` endpoint.
 
         Get the description of the process identified by `process_id`.
@@ -595,7 +610,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.responses.ProcessDescription
+        ogc_api_processes_fastapi.models.ProcessDescription
             Process description.
 
         Raises
@@ -609,34 +624,34 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             )
             process_description = serializers.serialize_process_description(resource)
             process_description.outputs = {
-                "asset": ogc_api_processes_fastapi.responses.OutputDescription(
+                "asset": ogc_api_processes_fastapi.models.OutputDescription(
                     title="Asset",
                     description="Downloadable asset description",
-                    schema_=ogc_api_processes_fastapi.responses.SchemaItem(
+                    schema_=ogc_api_processes_fastapi.models.SchemaItem(
                         type="object",
                         properties={
-                            "value": ogc_api_processes_fastapi.responses.SchemaItem(
+                            "value": ogc_api_processes_fastapi.models.SchemaItem(
                                 type="object",
                                 properties={
-                                    "type": ogc_api_processes_fastapi.responses.SchemaItem(
+                                    "type": ogc_api_processes_fastapi.models.SchemaItem(
                                         type="string"
                                     ),
-                                    "href": ogc_api_processes_fastapi.responses.SchemaItem(
+                                    "href": ogc_api_processes_fastapi.models.SchemaItem(
                                         type="string"
                                     ),
-                                    "file:checksum": ogc_api_processes_fastapi.responses.SchemaItem(
+                                    "file:checksum": ogc_api_processes_fastapi.models.SchemaItem(
                                         type="integer"
                                     ),
-                                    "file:size": ogc_api_processes_fastapi.responses.SchemaItem(
+                                    "file:size": ogc_api_processes_fastapi.models.SchemaItem(
                                         type="integer"
                                     ),
-                                    "file:local_path": ogc_api_processes_fastapi.responses.SchemaItem(
+                                    "file:local_path": ogc_api_processes_fastapi.models.SchemaItem(
                                         type="string"
                                     ),
-                                    "tmp:storage_option": ogc_api_processes_fastapi.responses.SchemaItem(
+                                    "tmp:storage_option": ogc_api_processes_fastapi.models.SchemaItem(
                                         type="object"
                                     ),
-                                    "tmp:open_kwargs": ogc_api_processes_fastapi.responses.SchemaItem(
+                                    "tmp:open_kwargs": ogc_api_processes_fastapi.models.SchemaItem(
                                         type="object"
                                     ),
                                 },
@@ -651,9 +666,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def post_process_execution(
         self,
         process_id: str = fastapi.Path(...),
-        execution_content: dict[str, Any] = fastapi.Body(...),
+        execution_content: models.Execute = fastapi.Body(...),
         user: dict[str, str] = fastapi.Depends(validate_token),
-    ) -> ogc_api_processes_fastapi.responses.StatusInfo:
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
 
         Request execution of the process identified by `process_id`.
@@ -662,14 +677,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         process_id : str
             Process identifier.
-        execution_content : ogc_api_processes_fastapi.models.Execute
+        execution_content : models.Execute
             Process execution details (e.g. inputs).
         user: dict[str, str]
             Authenticated user credentials.
 
         Returns
         -------
-        ogc_api_processes_fastapi.responses.StatusInfo
+        ogc_api_processes_fastapi.models.StatusInfo
             Information on the status of the job.
 
         Raises
@@ -678,6 +693,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the process `process_id` is not found.
         """
         user_id = user.get("id", None)
+        execution_content = execution_content.dict()
         logger.info(
             "post_process_execution",
             {
@@ -690,7 +706,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         with self.reader.context_session() as session:
             resource = validate_request(
-                process_id, user.get("auth_header", None), session, self.process_table
+                process_id,
+                execution_content,
+                user.get("auth_header", None),
+                session,
+                self.process_table,
             )
             status_info = submit_job(user_id, process_id, execution_content, resource)
         return status_info
@@ -709,7 +729,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
         back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
         user: dict[str, str] = fastapi.Depends(validate_token),
-    ) -> ogc_api_processes_fastapi.responses.JobList:
+    ) -> ogc_api_processes_fastapi.models.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
 
         Get jobs' status information list.
@@ -740,7 +760,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.responses.JobList
+        ogc_api_processes_fastapi.models.JobList
             Information on the status of the job.
         """
         session_obj = cads_broker.database.ensure_session_obj(None)
@@ -770,7 +790,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         if back:
             job_entries = reversed(job_entries)
         jobs = [
-            ogc_api_processes_fastapi.responses.StatusInfo(
+            ogc_api_processes_fastapi.models.StatusInfo(
                 type="process",
                 jobID=job.request_uid,
                 processID=job.process_id,
@@ -782,7 +802,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             )
             for job in job_entries
         ]
-        job_list = ogc_api_processes_fastapi.responses.JobList(jobs=jobs)
+        job_list = ogc_api_processes_fastapi.models.JobList(jobs=jobs)
         pagination_qs = make_pagination_qs(jobs, sort_key=sort_key)
         job_list._pagination_qs = pagination_qs
 
@@ -792,7 +812,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         user: dict[str, str] = fastapi.Depends(validate_token),
-    ) -> ogc_api_processes_fastapi.responses.StatusInfo:
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
         Get status information for the job identifed by `job_id`.
@@ -806,7 +826,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.responses.StatusInfo
+        ogc_api_processes_fastapi.models.StatusInfo
             Information on the status of the job.
 
         Raises
@@ -816,7 +836,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         job = get_job_from_broker_db(job_id=job_id)
         verify_permission(user, job)
-        status_info = ogc_api_processes_fastapi.responses.StatusInfo(
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(
             processID=job.process_id,
             type="process",
             jobID=job.request_uid,
@@ -832,7 +852,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         user: dict[str, str] = fastapi.Depends(validate_token),
-    ) -> ogc_api_processes_fastapi.responses.Results:
+    ) -> ogc_api_processes_fastapi.models.Results:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
 
         Get results for the job identifed by `job_id`.
@@ -846,7 +866,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.responses.Results
+        ogc_api_processes_fastapi.models.Results
             Job results.
 
         Raises
@@ -880,7 +900,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         user: dict[str, str] = fastapi.Depends(validate_token),
-    ) -> ogc_api_processes_fastapi.responses.StatusInfo:
+    ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `DELETE /jobs/{job_id}` endpoint.
 
         Dismiss the job identifed by `job_id`.
@@ -894,7 +914,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.responses.StatusInfo
+        ogc_api_processes_fastapi.models.StatusInfo
             Information on the status of the job.
 
         Raises
@@ -905,7 +925,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job = get_job_from_broker_db(job_id=job_id)
         verify_permission(user, job)
         job = cads_broker.database.delete_request(request_uid=job_id)
-        status_info = ogc_api_processes_fastapi.responses.StatusInfo(
+        status_info = ogc_api_processes_fastapi.models.StatusInfo(
             processID=job.process_id,
             type="process",
             jobID=job.request_uid,
