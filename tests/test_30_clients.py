@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import cads_broker  # type: ignore
-import ogc_api_processes_fastapi.responses
+import ogc_api_processes_fastapi.models
 import pytest
 import sqlalchemy
 
@@ -110,19 +110,19 @@ def test_apply_sorting() -> None:
 
 def test_make_cursor() -> None:
     jobs = [
-        ogc_api_processes_fastapi.responses.StatusInfo(
+        ogc_api_processes_fastapi.models.StatusInfo(
             jobID="a0",
             status="successful",
             type="process",
             created="2022-10-24T13:34:02.321682",
         ),
-        ogc_api_processes_fastapi.responses.StatusInfo(
+        ogc_api_processes_fastapi.models.StatusInfo(
             jobID="a1",
             status="successful",
             type="process",
             created="2022-10-24T13:32:02.321682",
         ),
-        ogc_api_processes_fastapi.responses.StatusInfo(
+        ogc_api_processes_fastapi.models.StatusInfo(
             jobID="a1",
             status="successful",
             type="process",
@@ -146,19 +146,19 @@ def test_make_cursor() -> None:
 
 def test_make_pagination_qs() -> None:
     jobs = [
-        ogc_api_processes_fastapi.responses.StatusInfo(
+        ogc_api_processes_fastapi.models.StatusInfo(
             jobID="a0",
             status="successful",
             type="process",
             created="2022-10-24T13:34:02.321682",
         ),
-        ogc_api_processes_fastapi.responses.StatusInfo(
+        ogc_api_processes_fastapi.models.StatusInfo(
             jobID="a1",
             status="successful",
             type="process",
             created="2022-10-24T13:32:02.321682",
         ),
-        ogc_api_processes_fastapi.responses.StatusInfo(
+        ogc_api_processes_fastapi.models.StatusInfo(
             jobID="a1",
             status="successful",
             type="process",
@@ -167,11 +167,28 @@ def test_make_pagination_qs() -> None:
     ]
 
     pagination_qs = clients.make_pagination_qs(jobs, "created")
-    exp_qs = ogc_api_processes_fastapi.responses.PaginationQueryParameters(
+    exp_qs = ogc_api_processes_fastapi.models.PaginationQueryParameters(
         next={"cursor": clients.encode_base64(str(jobs[-1].created)), "back": False},
         prev={"cursor": clients.encode_base64(str(jobs[0].created)), "back": True},
     )
     assert pagination_qs == exp_qs
+
+
+def test_get_contextual_accepted_licences() -> None:
+    execution_content = {
+        "acceptedLicences": [
+            {"id": "licence", "revision": 0},
+            {"id": "licence", "revision": 0},
+        ]
+    }
+    licences = clients.get_contextual_accepted_licences(execution_content)
+    exp_licences = {("licence", 0)}
+    assert licences == exp_licences
+
+    execution_content = {"acceptedLicences": None}
+    licences = clients.get_contextual_accepted_licences(execution_content)
+    exp_licences = set()
+    assert licences == exp_licences
 
 
 def test_check_licences() -> None:
