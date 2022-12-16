@@ -20,8 +20,19 @@ import sqlalchemy
 from cads_processing_api_service import clients, exceptions
 
 
-def test_get_compare_and_sort_method_name() -> None:
+def test_parse_sortby() -> None:
+    sortby = "my_custom_id_asc"
+    sort_params = clients.parse_sortby(sortby)
+    exp_sort_params = ("my_custom_id", "asc")
+    assert sort_params == exp_sort_params
 
+    sortby = "my_custom_id_desc"
+    sort_params = clients.parse_sortby(sortby)
+    exp_sort_params = ("my_custom_id", "desc")
+    assert sort_params == exp_sort_params
+
+
+def test_get_compare_and_sort_method_name() -> None:
     for sort_dir, back in zip(("asc", "desc", "desc"), (True, False, None)):
         methods = clients.get_compare_and_sort_method_name(sort_dir, back)
         exp_compare_method_name = "__lt__"
@@ -82,14 +93,15 @@ def test_apply_bookmark() -> None:
     statement = sqlalchemy.select(job_table)
     cursor = "MjAyMi0xMC0yNCAxMzozMjowMy4xNzgzOTc="
     back = False
-    sort_key = clients.JobSortCriterion.created_at
-    sort_dir = clients.SortDirection.desc
+    sort_key, sort_dir = clients.parse_sortby(
+        clients.JobSortCriterion.created_at_asc.name
+    )
     statement = clients.apply_bookmark(
-        statement, job_table, cursor, back, sort_key.name, sort_dir.name
+        statement, job_table, cursor, back, sort_key, sort_dir
     )
     compiled_statement = statement.compile()
     exp_params = {"created_at_1": "2022-10-24 13:32:03.178397"}
-    exp_substatement = "WHERE system_requests.created_at < :created_at_1"
+    exp_substatement = "WHERE system_requests.created_at > :created_at_1"
     assert compiled_statement.params == exp_params
     assert exp_substatement in compiled_statement.string
 
@@ -98,13 +110,12 @@ def test_apply_sorting() -> None:
     job_table = cads_broker.database.SystemRequest
     statement = sqlalchemy.select(job_table)
     back = False
-    sort_key = clients.JobSortCriterion.created_at
-    sort_dir = clients.SortDirection.desc
-    statement = clients.apply_sorting(
-        statement, job_table, back, sort_key.name, sort_dir.name
+    sort_key, sort_dir = clients.parse_sortby(
+        clients.JobSortCriterion.created_at_asc.name
     )
+    statement = clients.apply_sorting(statement, job_table, back, sort_key, sort_dir)
     compiled_statement = statement.compile()
-    exp_substatement = "ORDER BY system_requests.created_at DESC"
+    exp_substatement = "ORDER BY system_requests.created_at ASC"
     assert exp_substatement in compiled_statement.string
 
 
