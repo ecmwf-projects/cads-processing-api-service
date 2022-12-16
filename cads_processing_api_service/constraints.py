@@ -276,7 +276,7 @@ def parse_form(raw_form: list[dict[str, Any]]) -> dict[str, set[Any]]:
     :rtype: dict[str, set[Any]]:
     :return: a dict[str, set[Any]] containing all possible selections.
     """
-    ocg_form = translators.translate_cds_into_ogc_inputs(raw_form)
+    ocg_form = translators.translate_cds_form(raw_form)
     form = {}
     for field_name in ocg_form:
         print(ocg_form[field_name])

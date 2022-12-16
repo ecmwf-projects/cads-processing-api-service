@@ -71,6 +71,6 @@ def serialize_process_description(
     cds_form = db_model.form_data
     retval = ogc_api_processes_fastapi.responses.ProcessDescription(
         **process_summary.dict(),
-        inputs=translators.translate_cds_into_ogc_inputs(cds_form),
+        inputs=translators.translate_cds_form(cds_form),
     )
     return retval
