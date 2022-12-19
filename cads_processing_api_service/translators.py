@@ -46,7 +46,7 @@ def translate_string_choice(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
     input_ogc_schema = {
         "type": "string",
         "enum": input_cds_schema["details"]["values"],
-        "default": input_cds_schema["details"]["default"],
+        "default": input_cds_schema["details"].get("default", None),
     }
     return input_ogc_schema
 
@@ -57,7 +57,7 @@ def translate_geographic_extent_map(input_cds_schema: dict[str, Any]) -> dict[st
         "minItems": 4,
         "maxItems": 4,
         "items": {"type": "number"},
-        "default": input_cds_schema["details"]["default"],
+        "default": input_cds_schema["details"].get("default", None),
     }
     return input_ogc_schema
 
