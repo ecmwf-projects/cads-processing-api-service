@@ -21,6 +21,7 @@ EXCLUDED_WIDGETS = [
     "LabelWidget",
     "FreeEditionWidget",
     "ExclusiveFrameWidget",
+    "LicenceWidget",
 ]
 
 
