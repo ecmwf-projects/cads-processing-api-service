@@ -84,7 +84,7 @@ def test_get_processes(dev_env_proc_api_url: str) -> None:
 
 def test_get_processes_limit_sorting(dev_env_proc_api_url: str) -> None:
     request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, "processes?limit=4&dir=desc"
+        dev_env_proc_api_url, "processes?limit=4&sortby=-id"
     )
     response = requests.get(request_url)
     response_body = response.json()
@@ -423,7 +423,9 @@ def test_get_jobs_limit_sorting(dev_env_proc_api_url: str) -> None:
             json=POST_PROCESS_REQUEST_BODY_SUCCESS,
             headers=AUTH_HEADERS_VALID_1,
         )
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=4&dir=asc")
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, "jobs?limit=4&sortby=created"
+    )
     response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
     response_body = response.json()
     assert len(response_body["jobs"]) == 4

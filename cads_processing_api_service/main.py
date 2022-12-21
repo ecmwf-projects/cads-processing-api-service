@@ -16,7 +16,7 @@
 
 import fastapi
 import ogc_api_processes_fastapi
-import starlette_exporter  # type: ignore
+import starlette_exporter
 
 from . import clients, config, constraints, exceptions, metrics
 

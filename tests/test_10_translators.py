@@ -15,11 +15,11 @@
 import cads_processing_api_service.translators
 
 TEST_INPUT = {
-    "string_array": {
+    "string_list": {
         "details": {"values": ["val1", "val2", "val3"]},
         "type": "StringListWidget",
     },
-    "string_list": {
+    "string_list_array": {
         "details": {
             "groups": [{"values": ["val1", "val2"]}, {"values": ["val2", "val3"]}]
         },
@@ -29,51 +29,51 @@ TEST_INPUT = {
         "details": {"values": ["val1", "val2", "val3"], "default": "val1"},
         "type": "StringChoiceWidget",
     },
-    "extent": {
+    "geographic_extent_map": {
         "details": {"default": [1, 2, 3, 4]},
         "type": "GeographicExtentMapWidget",
     },
 }
 
 
-def test_string_array_to_string_array() -> None:
-    test_input = TEST_INPUT["string_array"]
-    exp_ouput = {
-        "type": "array",
-        "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
-    }
-    res_output = cads_processing_api_service.translators.string_array_to_string_array(
-        test_input
-    )
-
-    assert res_output == exp_ouput
-
-
-def test_string_list_to_string_array() -> None:
+def test_translate_string_list() -> None:
     test_input = TEST_INPUT["string_list"]
     exp_ouput = {
         "type": "array",
         "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
     }
-    res_output = cads_processing_api_service.translators.string_list_to_string_array(
+    res_output = cads_processing_api_service.translators.translate_string_list(
         test_input
     )
 
     assert res_output == exp_ouput
 
 
-def test_string_choice_to_string_value() -> None:
+def test_translate_string_list_array() -> None:
+    test_input = TEST_INPUT["string_list_array"]
+    exp_ouput = {
+        "type": "array",
+        "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
+    }
+    res_output = cads_processing_api_service.translators.translate_string_list_array(
+        test_input
+    )
+
+    assert res_output == exp_ouput
+
+
+def test_translate_string_choice() -> None:
     test_input = TEST_INPUT["string_choice"]
     exp_ouput = {"type": "string", "enum": ["val1", "val2", "val3"], "default": "val1"}
-    res_output = cads_processing_api_service.translators.string_choice_to_string_value(
+    res_output = cads_processing_api_service.translators.translate_string_choice(
         test_input
     )
 
     assert res_output == exp_ouput
 
 
-def test_extent_to_area() -> None:
-    test_input = TEST_INPUT["extent"]
+def test_translate_geographic_extent_map() -> None:
+    test_input = TEST_INPUT["geographic_extent_map"]
     exp_ouput = {
         "type": "array",
         "minItems": 4,
@@ -81,6 +81,10 @@ def test_extent_to_area() -> None:
         "items": {"type": "number"},
         "default": [1, 2, 3, 4],
     }
-    res_output = cads_processing_api_service.translators.extent_to_area(test_input)
+    res_output = (
+        cads_processing_api_service.translators.translate_geographic_extent_map(
+            test_input
+        )
+    )
 
     assert res_output == exp_ouput
