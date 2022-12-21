@@ -23,6 +23,7 @@ import urllib.parse
 from typing import Any, Callable, Optional, Type
 
 import attrs
+import cacholote.extra_encoders
 import cads_broker.database
 import cads_catalogue.config
 import cads_catalogue.database
@@ -618,32 +619,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     schema_=ogc_api_processes_fastapi.responses.SchemaItem(
                         type="object",
                         properties={
-                            "value": ogc_api_processes_fastapi.responses.SchemaItem(
-                                type="object",
-                                properties={
-                                    "type": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="string"
-                                    ),
-                                    "href": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="string"
-                                    ),
-                                    "file:checksum": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="integer"
-                                    ),
-                                    "file:size": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="integer"
-                                    ),
-                                    "file:local_path": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="string"
-                                    ),
-                                    "tmp:storage_option": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="object"
-                                    ),
-                                    "tmp:open_kwargs": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="object"
-                                    ),
-                                },
-                            ),
+                            "value": cacholote.extra_encoders.FileInfoModel.schema()
                         },
                     ),
                 ),
