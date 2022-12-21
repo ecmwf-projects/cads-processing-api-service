@@ -386,8 +386,6 @@ def validate_request(
     resource = lookup_resource_by_id(
         id=process_id, record=process_table, session=session
     )
-    # TODO: reaneble this when issue regarding anonymous user is fixed
-    """
     required_licences = set(
         (licence.licence_uid, licence.revision) for licence in resource.licences
     )
@@ -395,7 +393,6 @@ def validate_request(
     stored_accepted_licences = get_stored_accepted_licences(auth_header)
     accepted_licences = contextual_accepted_licences.union(stored_accepted_licences)
     check_licences(required_licences, accepted_licences)
-    """
 
     return resource
 
