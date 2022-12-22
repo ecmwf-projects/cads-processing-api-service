@@ -303,9 +303,7 @@ def validate_constraints(
     with session_obj() as session:
         dataset = clients.lookup_resource_by_id(process_id, record, session)
 
-    form_url = urllib.parse.urljoin(storage_url, dataset.form)
-    raw_form = requests.get(form_url, timeout=timeout).json()
-    form = parse_form(raw_form)
+    form = parse_form(dataset.form_data)
 
     constraints_url = urllib.parse.urljoin(storage_url, dataset.constraints)
     raw_constraints = requests.get(constraints_url, timeout=timeout).json()
