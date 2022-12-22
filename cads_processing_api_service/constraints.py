@@ -1,7 +1,7 @@
 """Main module of the request-constraints API."""
 import copy
-import urllib
-from typing import Any, Dict, List, Set
+import urllib.parse
+from typing import Any
 
 import cads_catalogue.database
 import requests  # type: ignore
@@ -9,23 +9,23 @@ import requests  # type: ignore
 from . import clients, config
 
 
-def ensure_list(v):
+def ensure_sequence(v: Any) -> list[Any] | tuple[Any]:
     if not isinstance(v, list | tuple):
         v = [v]
-    return v
+    return v  # type: ignore
 
 
 def parse_constraints(
-    constraints: List[Dict[str, List[Any]]]
-) -> List[Dict[str, Set[Any]]]:
+    constraints: list[dict[str, list[Any]]]
+) -> list[dict[str, set[Any]]]:
     """
-    Parse constraints for a given dataset. Convert Dict[str, List[Any]] into Dict[str, Set[Any]].
+    Parse constraints for a given dataset. Convert dict[str, list[Any]] into dict[str, Set[Any]].
 
     :param constraints: constraints in JSON format
-    :type: List[Dict[str, List[Any]]]
+    :type: list[dict[str, list[Any]]]
 
-    :rtype: list[Dict[str, Set[Any]]]:
-    :return: list of Dict[str, Set[Any]] containing all constraints
+    :rtype: list[dict[str, set[Any]]]:
+    :return: list of dict[str, set[Any]] containing all constraints
     for a given dataset.
 
     """
@@ -33,34 +33,32 @@ def parse_constraints(
     for combination in constraints:
         parsed_combination = {}
         for field_name, field_values in combination.items():
-            field_values = ensure_list(field_values)
-            parsed_combination[field_name] = set(field_values)
+            parsed_combination[field_name] = set(ensure_sequence(field_values))
         result.append(parsed_combination)
     return result
 
 
-def parse_selection(selection: Dict[str, List[Any]]) -> Dict[str, Set[Any]]:
+def parse_selection(selection: dict[str, list[Any] | str]) -> dict[str, set[Any]]:
     """
-    Parse current selection and convert Dict[str, List[Any]] into Dict[str, Set[Any]].
+    Parse current selection and convert dict[str, list[Any]] into dict[str, set[Any]].
 
     :param selection: a dictionary containing the current selection
-    :type: Dict[str, List[Any]]
+    :type: dict[str, list[Any]]
 
-    :rtype: Dict[str, Set[Any]]:
-    :return: a Dict[str, Set[Any]] containing the current selection.
+    :rtype: dict[str, set[Any]]:
+    :return: a dict[str, set[Any]] containing the current selection.
     """
     result = {}
     for field_name, field_values in selection.items():
-        field_values = ensure_list(field_values)
-        result[field_name] = set(field_values)
+        result[field_name] = set(ensure_sequence(field_values))
     return result
 
 
 def apply_constraints(
-    form: Dict[str, Set[Any]],
-    selection: Dict[str, Set[Any]],
-    constraints: List[Dict[str, Set[Any]]],
-) -> Dict[str, List[Any]]:
+    form: dict[str, set[Any]],
+    selection: dict[str, set[Any]],
+    constraints: list[dict[str, set[Any]]],
+) -> dict[str, list[Any]]:
     """
     Apply dataset constraints to the current selection.
 
@@ -87,10 +85,10 @@ def apply_constraints(
 
 
 def get_possible_values(
-    form: Dict[str, Set[Any]],
-    selection: Dict[str, Set[Any]],
-    constraints: List[Dict[str, Set[Any]]],
-) -> Dict[str, Set[Any]]:
+    form: dict[str, set[Any]],
+    selection: dict[str, set[Any]],
+    constraints: list[dict[str, set[Any]]],
+) -> dict[str, set[Any]]:
     """
     Get possible values given the current selection.
 
@@ -110,7 +108,7 @@ def get_possible_values(
         "step": {"24", "36", "48"},
         "number": {"1", "2", "3"}
     }
-    :type: dict[str, Set[Any]]:
+    :type: dict[str, set[Any]]:
 
     :param constraints: a list of dictionaries representing
     all constraints for a specific dataset
@@ -119,7 +117,7 @@ def get_possible_values(
         {"level": {"1000"}, "param": {"Z"}, "step": {"24", "48"}},
         {"level": {"850"}, "param": {"T"}, "step": {"36", "48"}},
     ]
-    :type: list[dict[str, Set[Any]]]:
+    :type: list[dict[str, set[Any]]]:
 
     :param selection: a dictionary containing the current selection
     e.g. selection = {
@@ -127,15 +125,15 @@ def get_possible_values(
         "level": {"850", "500"},
         "step": {"36"}
     }
-    :type: dict[str, Set[Any]]:
+    :type: dict[str, set[Any]]:
 
-    :rtype: Dict[str, Set[Any]]
+    :rtype: dict[str, set[Any]]
     :return: a dictionary containing all possible values given the current selection
     e.g.
     {'level': {'500', '850'}, 'param': {'T', 'Z'}, 'step': {'24', '36', '48'}}
 
     """
-    result: Dict[str, Set[Any]] = {key: set() for key in form}
+    result: dict[str, set[Any]] = {key: set() for key in form}
     for combination in constraints:
         ok = True
         for field_name, selected_values in selection.items():
@@ -156,25 +154,25 @@ def get_possible_values(
     return result
 
 
-def format_to_json(result: Dict[str, Set[Any]]) -> Dict[str, List[Any]]:
+def format_to_json(result: dict[str, set[Any]]) -> dict[str, list[Any]]:
     """
-    Convert Dict[str, Set[Any]] into Dict[str, List[Any]].
+    Convert dict[str, set[Any]] into dict[str, list[Any]].
 
-    :param result: Dict[str, Set[Any]] containing a possible form state
-    :type: dict[str, Set[Any]]:
+    :param result: dict[str, set[Any]] containing a possible form state
+    :type: dict[str, set[Any]]:
 
-    :rtype: Dict[str, List[Any]]
-    :return: the same values in Dict[str, List[Any]] format
+    :rtype: dict[str, list[Any]]
+    :return: the same values in dict[str, list[Any]] format
 
     """
     return {k: sorted(v) for (k, v) in result.items()}
 
 
 def get_form_state(
-    form: Dict[str, Set[Any]],
-    selection: Dict[str, Set[Any]],
-    constraints: List[Dict[str, Set[Any]]],
-) -> Dict[str, Set[Any]]:
+    form: dict[str, set[Any]],
+    selection: dict[str, set[Any]],
+    constraints: list[dict[str, set[Any]]],
+) -> dict[str, set[Any]]:
     """
     Calls get_possible_values() once for each key in form.
 
@@ -185,7 +183,7 @@ def get_form_state(
         "step": {"24", "36", "48"},
         "number": {"1", "2", "3"}
     }
-    :type: dict[str, Set[Any]]:
+    :type: dict[str, set[Any]]:
 
     :param constraints: a list of dictionaries representing
     all constraints for a specific dataset
@@ -194,7 +192,7 @@ def get_form_state(
         {"level": {"1000"}, "param": {"Z"}, "step": {"24", "48"}},
         {"level": {"850"}, "param": {"T"}, "step": {"36", "48"}},
     ]
-    :type: list[dict[str, Set[Any]]]:
+    :type: list[dict[str, set[Any]]]:
 
     :param selection: a dictionary containing the current selection
     e.g. selection = {
@@ -202,16 +200,16 @@ def get_form_state(
         "level": {"850", "500"},
         "step": {"36"}
     }
-    :type: dict[str, Set[Any]]:
+    :type: dict[str, set[Any]]:
 
-    :rtype: Dict[str, Set[Any]]
+    :rtype: dict[str, set[Any]]
     :return: a dictionary containing all form values to be left active given the current selection
 
     e.g.
     {'level': {'500', '850'}, 'param': {'T', 'Z'}, 'step': {'24', '36', '48'}}
 
     """
-    result: Dict[str, Set[Any]] = {key: set() for key in form}
+    result: dict[str, set[Any]] = {key: set() for key in form}
 
     for key in form:
         sub_selection = selection.copy()
@@ -223,9 +221,9 @@ def get_form_state(
 
 
 def get_always_valid_params(
-    form: Dict[str, Set[Any]],
-    constraints: List[Dict[str, Set[Any]]],
-) -> Dict[str, Set[Any]]:
+    form: dict[str, set[Any]],
+    constraints: list[dict[str, set[Any]]],
+) -> dict[str, set[Any]]:
     """
     Get always valid field and values.
 
@@ -236,7 +234,7 @@ def get_always_valid_params(
         "step": {"24", "36", "48"},
         "number": {"1", "2", "3"}
     }
-    :type: dict[str, Set[Any]]:
+    :type: dict[str, set[Any]]:
 
     :param constraints: a list of dictionaries representing
     all constraints for a specific dataset
@@ -245,41 +243,40 @@ def get_always_valid_params(
         {"level": {"1000"}, "param": {"Z"}, "step": {"24", "48"}},
         {"level": {"850"}, "param": {"T"}, "step": {"36", "48"}},
     ]
-    :type: list[dict[str, Set[Any]]]:
+    :type: list[dict[str, set[Any]]]:
 
-    :rtype: Dict[str, Set[Any]]
+    :rtype: dict[str, set[Any]]
     :return: A dictionary containing fields and values that are not constrained (i.e. they are always valid)
 
     """
-    result: Dict[str, Set[Any]] = {}
+    result: dict[str, set[Any]] = {}
     for field_name, field_values in form.items():
         if field_name not in get_keys(constraints):
             result.setdefault(field_name, field_values)
     return result
 
 
-def parse_form(form: List[Dict[str, Any]]) -> Dict[str, set]:
+def parse_form(form: list[dict[str, Any]]) -> dict[str, set[Any]]:
     """
     Parse the form for a given dataset extracting the information on the possible selections.
 
     :param form: a dictionary containing
     all possible selections in JSON format
-    :type: Dict[str, List[Any]]
+    :type: dict[str, list[Any]]
 
-    :rtype: Dict[str, Set[Any]]:
-    :return: a Dict[str, Set[Any]] containing all possible selections.
+    :rtype: dict[str, set[Any]]:
+    :return: a dict[str, set[Any]] containing all possible selections.
     """
-    selections = {}
+    selections: dict[str, set[Any]] = {}
     for parameter in form:
         if parameter["type"] in ("StringListWidget", "StringChoiceWidget"):
             values = parameter["details"]["values"]
-            values = ensure_list(values)
+            values = ensure_sequence(values)
             selections[parameter["name"]] = set(values)
         elif parameter["type"] == "StringListArrayWidget":
-            selections[parameter["name"]] = {}
-            selections_p: Set[str] = set([])
+            selections_p: set[str] = set([])
             for sub_parameter in parameter["details"]["groups"]:
-                values = ensure_list(sub_parameter["values"])
+                values = ensure_sequence(sub_parameter["values"])
                 selections_p = selections_p | set(values)
             selections[parameter["name"]] = selections_p
         else:
@@ -288,8 +285,8 @@ def parse_form(form: List[Dict[str, Any]]) -> Dict[str, set]:
 
 
 def validate_constraints(
-    process_id: str, body: Dict[str, List[str]]
-) -> Dict[str, List[str]]:
+    process_id: str, body: dict[str, dict[str, Any]]
+) -> dict[str, list[str]]:
 
     settings = config.Settings()
     storage_url = settings.document_storage_url
@@ -297,7 +294,8 @@ def validate_constraints(
 
     session_obj = cads_catalogue.database.ensure_session_obj(None)
     record = cads_catalogue.database.Resource
-    dataset = clients.lookup_resource_by_id(process_id, record, session_obj)
+    with session_obj() as session:
+        dataset = clients.lookup_resource_by_id(process_id, record, session)
 
     form_url = urllib.parse.urljoin(storage_url, dataset.form)
     raw_form = requests.get(form_url, timeout=timeout).json()
@@ -312,7 +310,7 @@ def validate_constraints(
     return apply_constraints(form, selection, constraints)
 
 
-def get_keys(constraints):
+def get_keys(constraints: list[dict[str, Any]]) -> set[str]:
     keys = set()
     for constraint in constraints:
         keys |= set(constraint.keys())

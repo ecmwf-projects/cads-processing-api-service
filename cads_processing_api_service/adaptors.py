@@ -24,7 +24,7 @@ import cdsapi
 
 
 @cacholote.cacheable
-def cds_adaptor(request, config, metadata):
+def adaptor(request, config, metadata):
 
     # parse input options
     collection_id = config.pop('collection_id', None)
@@ -37,7 +37,7 @@ def cds_adaptor(request, config, metadata):
     return open(result_path, "rb")
 """
 
-FALLBACK_ENTRY_POINT = "cds_adaptor"
+FALLBACK_ENTRY_POINT = "adaptor"
 
 FALLBACK_CONFIG: dict[str, str] = {
     "url": "https://cds.climate.copernicus.eu/api/v2",
@@ -51,30 +51,27 @@ def make_system_job_kwargs(
     resource: cads_catalogue.database.Resource,
 ) -> dict[str, Any]:
 
-    job_kwargs: dict[str, Any] = {}
-
-    try:
-        setup_code = resource.adaptor_code
-    except AttributeError:
-        setup_code = FALLBACK_SETUP_CODE
-
-    try:
-        entry_point = resource.entry_point
-    except AttributeError:
-        entry_point = FALLBACK_ENTRY_POINT
-
     config = resource.adaptor_configuration
     if config is None:
         config = FALLBACK_CONFIG.copy()
+
+    entry_point = config.pop("entry_point", FALLBACK_ENTRY_POINT)
+
+    setup_code = resource.adaptor
+    if setup_code is None:
+        setup_code = FALLBACK_SETUP_CODE
         config["collection_id"] = process_id
 
-    inputs = execution_content["inputs"]
+    mapping = resource.mapping
+    if resource.mapping is not None:
+        config["mapping"] = mapping
+
     kwargs = {
-        "request": inputs,
+        "request": execution_content["inputs"],
         "config": config,
     }
 
-    job_kwargs = {
+    job_kwargs: dict[str, Any] = {
         "setup_code": setup_code,
         "entry_point": entry_point,
         "kwargs": kwargs,

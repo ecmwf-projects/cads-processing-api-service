@@ -41,7 +41,9 @@ def get_cds_form(cds_form_url: str) -> list[Any]:
     cds_form_complete_url = urllib.parse.urljoin(
         settings.document_storage_url, cds_form_url
     )
-    cds_form: list[Any] = requests.get(cds_form_complete_url).json()
+    response = requests.get(cds_form_complete_url)
+    response.raise_for_status()
+    cds_form: list[Any] = response.json()
     return cds_form
 
 
@@ -61,7 +63,7 @@ def serialize_process_summary(
         Process summary representation.
     """
     retval = ogc_api_processes_fastapi.responses.ProcessSummary(
-        title=f"{db_model.title}",
+        title=db_model.title,
         description=db_model.abstract,
         keywords=db_model.keywords,
         id=db_model.resource_uid,

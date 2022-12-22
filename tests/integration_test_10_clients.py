@@ -80,23 +80,53 @@ def test_get_processes(dev_env_proc_api_url: str) -> None:
     exp_number_of_processes = 6
     assert number_of_processes == exp_number_of_processes
 
-    limit = 2
-    response_limit = requests.get(
-        urllib.parse.urljoin(dev_env_proc_api_url, f"processes?limit={limit}")
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, "processes?limit=4&dir=desc"
     )
-    response_status_code = response.status_code
+    response = requests.get(request_url)
+    response_body = response.json()
+    assert len(response_body["processes"]) == 4
+    ids = [process["id"] for process in response_body["processes"]]
+    sorted_ids = sorted(ids)
+    assert ids == list(reversed(sorted_ids))
 
-    exp_status_code = 200
-    assert response_status_code == exp_status_code
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "processes?limit=4")
+    response = requests.get(request_url)
+    response_body = response.json()
+    assert len(response_body["processes"]) == 4
+    ids = [process["id"] for process in response_body["processes"]]
+    sorted_ids = sorted(ids)
+    assert ids == sorted_ids
 
-    response_limit_body = response_limit.json()
-    processes = response_limit_body["processes"]
-    number_of_processes = len(processes)
-    exp_number_of_processes = 2
-    assert number_of_processes == exp_number_of_processes
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "processes?limit=2")
+    response = requests.get(request_url)
+    response_body = response.json()
+    assert len(response_body["processes"]) == 2
+    links = response_body["links"]
+    exp_rels = ["next", "prev"]
+    all_rels = [link["rel"] for link in links]
+    assert all(rel in all_rels for rel in exp_rels)
+    first_page_ids = [process["id"] for process in response_body["processes"]]
+    assert first_page_ids == ids[:2]
 
-    exp_processes = response_body["processes"][:2]
-    assert processes == exp_processes
+    for link in links:
+        if link["rel"] == "next":
+            request_url = link["href"]
+    response = requests.get(request_url)
+    response_body = response.json()
+    assert len(response_body["processes"]) == 2
+    second_page_created_ids = [process["id"] for process in response_body["processes"]]
+    assert second_page_created_ids == ids[2:4]
+    links = response_body["links"]
+
+    for link in links:
+        if link["rel"] == "prev":
+            request_url = link["href"]
+    response = requests.get(request_url)
+    response_body = response.json()
+    assert len(response_body["processes"]) == 2
+    third_page_created_ids = [process["id"] for process in response_body["processes"]]
+    assert third_page_created_ids == first_page_ids
 
 
 def test_get_process(dev_env_proc_api_url: str) -> None:
@@ -463,7 +493,10 @@ def test_get_process_exc_no_such_process(dev_env_proc_api_url: str) -> None:
 
     response_body = response.json()
     exp_response_body = {
-        "type": "http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-process",
+        "type": (
+            "http://www.opengis.net/def/exceptions/"
+            "ogcapi-processes-1/1.0/no-such-process"
+        ),
         "title": "process not found",
         "detail": f"process {process_id} has not been found",
         "instance": request_url,
@@ -483,7 +516,10 @@ def test_post_process_execution_exc_no_such_process(dev_env_proc_api_url: str) -
 
     response_body = response.json()
     exp_response_body = {
-        "type": "http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-process",
+        "type": (
+            "http://www.opengis.net/def/exceptions/"
+            "ogcapi-processes-1/1.0/no-such-process"
+        ),
         "title": "process not found",
         "detail": f"process {process_id} has not been found",
         "instance": request_url,
@@ -502,7 +538,10 @@ def test_get_job_exc_no_such_job(dev_env_proc_api_url: str) -> None:
 
     response_body = response.json()
     exp_response_body = {
-        "type": "http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-job",
+        "type": (
+            "http://www.opengis.net/def/exceptions/"
+            "ogcapi-processes-1/1.0/no-such-job"
+        ),
         "title": "job not found",
         "detail": f"job {job_id} has not been found",
         "instance": request_url,
@@ -521,7 +560,10 @@ def test_get_job_results_exc_no_such_job(dev_env_proc_api_url: str) -> None:
 
     response_body = response.json()
     exp_response_body = {
-        "type": "http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-job",
+        "type": (
+            "http://www.opengis.net/def/exceptions/"
+            "ogcapi-processes-1/1.0/no-such-job"
+        ),
         "title": "job not found",
         "detail": f"job {job_id} has not been found",
         "instance": request_url,
@@ -589,7 +631,10 @@ def test_get_job_results_exc_results_not_ready(dev_env_proc_api_url: str) -> Non
 
     response_body = response.json()
     exp_response_body = {
-        "type": "http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/result-not-ready",
+        "type": (
+            "http://www.opengis.net/def/exceptions/"
+            "ogcapi-processes-1/1.0/result-not-ready"
+        ),
         "title": "job results not ready",
         "detail": f"job {job_id} results are not yet ready",
         "instance": request_url,
