@@ -174,7 +174,7 @@ def get_form_state(
     constraints: list[dict[str, set[Any]]],
 ) -> dict[str, set[Any]]:
     """
-    Calls get_possible_values() once for each key in form.
+    Call get_possible_values() once for each key in form.
 
     :param form: a dict of all selectable fields and values
     e.g. form = {
