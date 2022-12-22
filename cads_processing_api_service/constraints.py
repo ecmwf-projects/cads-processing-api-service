@@ -167,7 +167,7 @@ def format_to_json(result: Dict[str, Set[Any]]) -> Dict[str, List[Any]]:
     :return: the same values in Dict[str, List[Any]] format
 
     """
-    return {k: list(v) for (k, v) in result.items()}
+    return {k: sorted(v) for (k, v) in result.items()}
 
 
 def get_form_state(
@@ -176,16 +176,7 @@ def get_form_state(
     constraints: List[Dict[str, Set[Any]]],
 ) -> Dict[str, Set[Any]]:
     """
-    Get possible values given the current selection.
-
-    Works only for enumerated fields, i.e. fields with values
-    that must be selected one by one (no ranges).
-    Checks the current selection against all constraints.
-    A combination is valid if every field contains
-    at least one value from the current selection.
-    If a combination is valid, its values are added to the pool
-    of valid values (i.e. those that can still be selected without
-    running into an invalid request).
+    Calls get_possible_values() once for each key in form.
 
     :param form: a dict of all selectable fields and values
     e.g. form = {
