@@ -315,6 +315,7 @@ def get_accepted_licences(auth_header: dict[str, str]) -> set[tuple[str, int]]:
         f"{settings.profiles_base_url}/account/licences",
     )
     response = requests.get(request_url, headers=auth_header)
+    response.raise_for_status()
     licences = response.json()["licences"]
     accepted_licences = set(
         [(licence["id"], licence["revision"]) for licence in licences]
@@ -468,6 +469,7 @@ def validate_token(
         raise exceptions.PermissionDenied(
             status_code=response.status_code, detail=response.json()["detail"]
         )
+    response.raise_for_status()
     user = response.json()
     user["auth_header"] = auth_header
     return user
