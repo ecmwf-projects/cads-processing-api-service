@@ -34,6 +34,19 @@ POST_PROCESS_REQUEST_BODY_SUCCESS = {
         "time": "06:00",
     }
 }
+POST_PROCESS_REQUEST_BODY_SUCCESS_W_LICENCES = {
+    "inputs": {
+        "product_type": "reanalysis",
+        "format": "grib",
+        "variable": "temperature",
+        "pressure_level": "1",
+        "year": "1971",
+        "month": "01",
+        "day": "25",
+        "time": "06:00",
+    },
+    "acceptedLicences": [{"id": "licence-to-use-copernicus-products", "revision": 12}],
+}
 POST_PROCESS_REQUEST_BODY_FAIL = {
     "inputs": {
         "product_type": "non-existing-product-type",
@@ -60,11 +73,21 @@ POST_PROCESS_REQUEST_BODY_SLOW = {
 }
 TEST_PAT_1 = "mysecretpat"
 TEST_PAT_2 = "anewsecretpat"
+TEST_PAT_ANON = "00112233-4455-6677-c899-aabbccddeeff"
 INVALID_PAT = "0123"
 AUTH_HEADERS_VALID_1 = {"PRIVATE-TOKEN": TEST_PAT_1}
 AUTH_HEADERS_VALID_2 = {"PRIVATE-TOKEN": TEST_PAT_2}
+AUTH_HEADERS_VALID_ANON = {"PRIVATE-TOKEN": TEST_PAT_ANON}
 AUTH_HEADERS_INVALID = {"PRIVATE-TOKEN": INVALID_PAT}
 AUTH_HEADERS_MISSING: dict[str, str] = {}
+
+
+def delete_job(dev_env_proc_api_url: str, job_id: str, headers) -> None:  # type: ignore
+    response = requests.delete(
+        urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}"),
+        headers=headers,
+    )
+    response.raise_for_status()
 
 
 def test_get_processes(dev_env_proc_api_url: str) -> None:
@@ -163,48 +186,28 @@ def test_get_process(dev_env_proc_api_url: str) -> None:
     assert all([key in response_body for key in exp_keys])
 
 
-def test_post_process_execution_not_authorized(
-    dev_env_proc_api_url: str,
-) -> None:
-    process_id = EXISTING_PROCESS_ID
-    request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/execution"
-    )
-    response = requests.post(
-        request_url,
-        json=POST_PROCESS_REQUEST_BODY_SUCCESS,
-        headers=AUTH_HEADERS_MISSING,
-    )
-    exp_status_code = 401
-    assert response.status_code == exp_status_code
-
-    response = requests.post(
-        request_url,
-        json=POST_PROCESS_REQUEST_BODY_SUCCESS,
-        headers=AUTH_HEADERS_INVALID,
-    )
-    exp_status_code = 401
-    assert response.status_code == exp_status_code
-
-
-def test_post_process_execution_missing_licences(
-    dev_env_proc_api_url: str,
-) -> None:
-    process_id = EXISTING_PROCESS_ID
-    request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/execution"
-    )
-    response = requests.post(
-        request_url,
-        json=POST_PROCESS_REQUEST_BODY_SUCCESS,
-        headers=AUTH_HEADERS_VALID_1,
-    )
+def test_get_process_exc_no_such_process(dev_env_proc_api_url: str) -> None:
+    process_id = NON_EXISTING_PROCESS_ID
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"processes/{process_id}")
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
     response_status_code = response.status_code
-    exp_status_code = 403
+    exp_status_code = 404
     assert response_status_code == exp_status_code
 
+    response_body = response.json()
+    exp_response_body = {
+        "type": (
+            "http://www.opengis.net/def/exceptions/"
+            "ogcapi-processes-1/1.0/no-such-process"
+        ),
+        "title": "process not found",
+        "detail": f"process {process_id} has not been found",
+        "instance": request_url,
+    }
+    assert response_body == exp_response_body
 
-def test_post_process_execution(  # type: ignore
+
+def test_post_process_execution_stored_accepted_licences(  # type: ignore
     request,
     dev_env_proc_api_url: str,
     dev_env_prof_api_url: str,
@@ -249,6 +252,140 @@ def test_post_process_execution(  # type: ignore
     request.config.cache.set("job_id", response_body["jobID"])
 
 
+def test_post_process_execution_context_accepted_licences(
+    dev_env_proc_api_url: str,
+) -> None:
+    process_id = EXISTING_PROCESS_ID
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
+    )
+    response = requests.post(
+        request_url,
+        json=POST_PROCESS_REQUEST_BODY_SUCCESS_W_LICENCES,
+        headers=AUTH_HEADERS_VALID_2,
+    )
+    response_status_code = response.status_code
+    exp_status_code = 201
+    assert response_status_code == exp_status_code
+
+    delete_job(
+        dev_env_proc_api_url, response.json()["jobID"], headers=AUTH_HEADERS_VALID_2
+    )
+
+
+def test_post_process_execution_anon_user(
+    dev_env_proc_api_url: str,
+) -> None:
+    process_id = EXISTING_PROCESS_ID
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
+    )
+
+    response = requests.post(
+        request_url,
+        json=POST_PROCESS_REQUEST_BODY_SUCCESS,
+        headers=AUTH_HEADERS_VALID_ANON,
+    )
+    response_status_code = response.status_code
+    exp_status_code = 403
+    assert response_status_code == exp_status_code
+
+    response = requests.post(
+        request_url,
+        json=POST_PROCESS_REQUEST_BODY_SUCCESS_W_LICENCES,
+        headers=AUTH_HEADERS_VALID_ANON,
+    )
+    response_status_code = response.status_code
+    exp_status_code = 201
+    assert response_status_code == exp_status_code
+
+    response_body = response.json()
+    exp_keys = (
+        "processID",
+        "type",
+        "jobID",
+        "status",
+        "created",
+        "updated",
+        "links",
+    )
+    assert all([key in response_body for key in exp_keys])
+
+    exp_process_id = process_id
+    assert response_body["processID"] == exp_process_id
+
+    exp_status = "accepted"
+    assert response_body["status"] == exp_status
+
+    delete_job(
+        dev_env_proc_api_url, response.json()["jobID"], headers=AUTH_HEADERS_VALID_ANON
+    )
+
+
+def test_post_process_execution_not_authorized(
+    dev_env_proc_api_url: str,
+) -> None:
+    process_id = EXISTING_PROCESS_ID
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
+    )
+    response = requests.post(
+        request_url,
+        json=POST_PROCESS_REQUEST_BODY_SUCCESS,
+        headers=AUTH_HEADERS_MISSING,
+    )
+    exp_status_code = 401
+    assert response.status_code == exp_status_code
+
+    response = requests.post(
+        request_url,
+        json=POST_PROCESS_REQUEST_BODY_SUCCESS,
+        headers=AUTH_HEADERS_INVALID,
+    )
+    exp_status_code = 401
+    assert response.status_code == exp_status_code
+
+
+def test_post_process_execution_missing_licences(
+    dev_env_proc_api_url: str,
+) -> None:
+    process_id = EXISTING_PROCESS_ID
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
+    )
+    response = requests.post(
+        request_url,
+        json=POST_PROCESS_REQUEST_BODY_SUCCESS,
+        headers=AUTH_HEADERS_VALID_2,
+    )
+    response_status_code = response.status_code
+    exp_status_code = 403
+    assert response_status_code == exp_status_code
+
+
+def test_post_process_execution_exc_no_such_process(dev_env_proc_api_url: str) -> None:
+    process_id = NON_EXISTING_PROCESS_ID
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
+    )
+    response = requests.post(request_url, json={}, headers=AUTH_HEADERS_VALID_1)
+    response_status_code = response.status_code
+    exp_status_code = 404
+    assert response_status_code == exp_status_code
+
+    response_body = response.json()
+    exp_response_body = {
+        "type": (
+            "http://www.opengis.net/def/exceptions/"
+            "ogcapi-processes-1/1.0/no-such-process"
+        ),
+        "title": "process not found",
+        "detail": f"process {process_id} has not been found",
+        "instance": request_url,
+    }
+    assert response_body == exp_response_body
+
+
 def test_get_job_not_authorized(  # type: ignore
     request, dev_env_proc_api_url: str
 ) -> None:
@@ -290,8 +427,8 @@ def test_get_job(request, dev_env_proc_api_url: str) -> None:  # type: ignore
         "links",
     )
     assert all([key in response_body for key in exp_keys])
-    exp_status = "accepted"
-    assert response_body["status"] == exp_status
+    exp_status = ("accepted", "running", "successful")
+    assert response_body["status"] in exp_status
 
 
 def test_get_job_successful(request, dev_env_proc_api_url: str) -> None:  # type: ignore
@@ -328,8 +465,29 @@ def test_get_job_successful(request, dev_env_proc_api_url: str) -> None:  # type
         pytest.skip("Job {job_id} unexpectedly failed")
 
 
-def test_get_job_successful_results(request) -> None:  # type: ignore
+def test_get_job_exc_no_such_job(dev_env_proc_api_url: str) -> None:
+    job_id = NON_EXISTING_JOB_ID
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
+    response_status_code = response.status_code
 
+    exp_status_code = 404
+    assert response_status_code == exp_status_code
+
+    response_body = response.json()
+    exp_response_body = {
+        "type": (
+            "http://www.opengis.net/def/exceptions/"
+            "ogcapi-processes-1/1.0/no-such-job"
+        ),
+        "title": "job not found",
+        "detail": f"job {job_id} has not been found",
+        "instance": request_url,
+    }
+    assert response_body == exp_response_body
+
+
+def test_get_job_results(request, dev_env_proc_api_url: str) -> None:  # type: ignore
     request_url = request.config.cache.get("results_url", None)
 
     response = requests.get(request_url, headers=AUTH_HEADERS_VALID_2)
@@ -358,282 +516,8 @@ def test_get_job_successful_results(request) -> None:  # type: ignore
     )
     assert all([key in response_body["asset"]["value"] for key in exp_value_keys])
 
-
-def test_get_jobs_not_authorized(dev_env_proc_api_url: str) -> None:
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs")
-    response = requests.get(request_url, headers=AUTH_HEADERS_MISSING)
-    exp_status_code = 401
-    assert response.status_code == exp_status_code
-
-    response = requests.get(request_url, headers=AUTH_HEADERS_INVALID)
-    exp_status_code = 401
-    assert response.status_code == exp_status_code
-
-
-def test_get_jobs(dev_env_proc_api_url: str) -> None:
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs")
-    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
-    exp_status_code = 200
-    assert response.status_code == exp_status_code
-
-    response_body = response.json()
-    exp_keys = ("jobs", "links")
-    assert all([key in response_body for key in exp_keys])
-
-
-def test_get_jobs_different_user(
-    dev_env_proc_api_url: str, dev_env_prof_api_url: str
-) -> None:
-    process_id = EXISTING_PROCESS_ID
-    licence_id = EXISTING_PROCESS_LICENCE_ID
-    request_url = urllib.parse.urljoin(
-        dev_env_prof_api_url, f"account/licences/{licence_id}"
-    )
-    response = requests.put(request_url, headers=AUTH_HEADERS_VALID_2)
-
-    number_of_new_jobs = 2
-    request_execution_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/execution"
-    )
-    for _ in range(number_of_new_jobs):
-        requests.post(
-            request_execution_url,
-            json=POST_PROCESS_REQUEST_BODY_SUCCESS,
-            headers=AUTH_HEADERS_VALID_2,
-        )
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs")
-    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_2)
-    response_status_code = response.status_code
-    exp_status_code = 200
-    assert response_status_code == exp_status_code
-    response_body = response.json()
-    exp_number_of_jobs = 2
-    assert len(response_body["jobs"]) == exp_number_of_jobs
-
-
-def test_get_jobs_limit_sorting(dev_env_proc_api_url: str) -> None:
-    process_id = EXISTING_PROCESS_ID
-    number_of_new_jobs = 3
-    request_execution_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/execution"
-    )
-    for _ in range(number_of_new_jobs):
-        requests.post(
-            request_execution_url,
-            json=POST_PROCESS_REQUEST_BODY_SUCCESS,
-            headers=AUTH_HEADERS_VALID_1,
-        )
-    request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, "jobs?limit=4&sortby=created"
-    )
-    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
-    response_body = response.json()
-    assert len(response_body["jobs"]) == 4
-    created_datetimes = [job["created"] for job in response_body["jobs"]]
-    sorted_datetimes = sorted(created_datetimes)
-    assert created_datetimes == sorted_datetimes
-
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=4")
-    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
-    response_body = response.json()
-    assert len(response_body["jobs"]) == 4
-    created_datetimes = [job["created"] for job in response_body["jobs"]]
-    sorted_datetimes = sorted(created_datetimes)
-    assert created_datetimes == list(reversed(sorted_datetimes))
-
-
-def test_get_jobs_pagination(dev_env_proc_api_url: str) -> None:
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=4")
-    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
-    response_body = response.json()
-    created_datetimes = [job["created"] for job in response_body["jobs"]]
-
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=2")
-    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
-    response_body = response.json()
-    assert len(response_body["jobs"]) == 2
-    links = response_body["links"]
-    exp_rels = ["next", "prev"]
-    all_rels = [link["rel"] for link in links]
-    assert all(rel in all_rels for rel in exp_rels)
-    first_page_created_datetimes = [job["created"] for job in response_body["jobs"]]
-    assert first_page_created_datetimes == created_datetimes[:2]
-
-    for link in links:
-        if link["rel"] == "next":
-            request_url = link["href"]
-    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
-    response_body = response.json()
-    assert len(response_body["jobs"]) == 2
-    second_page_created_datetimes = [job["created"] for job in response_body["jobs"]]
-    assert second_page_created_datetimes == created_datetimes[2:4]
-    links = response_body["links"]
-
-    for link in links:
-        if link["rel"] == "prev":
-            request_url = link["href"]
-    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
-    response_body = response.json()
-    assert len(response_body["jobs"]) == 2
-    third_page_created_datetimes = [job["created"] for job in response_body["jobs"]]
-    assert third_page_created_datetimes == first_page_created_datetimes
-
-
-def test_get_jobs_filters(dev_env_proc_api_url: str) -> None:
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?status=successful")
-    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
-    response_body = response.json()
-    assert [job["status"] == "successful" for job in response_body["jobs"]]
-
-    request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"jobs?processID={NON_EXISTING_PROCESS_ID}"
-    )
-    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
-    response_body = response.json()
-    assert len(response_body["jobs"]) == 0
-
-
-def test_delete_job_not_athorized(dev_env_proc_api_url: str) -> None:
-    process_id = EXISTING_PROCESS_ID
-    request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/execution"
-    )
-    response = requests.post(
-        request_url,
-        json=POST_PROCESS_REQUEST_BODY_SUCCESS,
-        headers=AUTH_HEADERS_VALID_1,
-    )
-    exp_status_code = 201
-    assert response.status_code == exp_status_code
-
-    response_body = response.json()
-    job_id = response_body["jobID"]
-
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
-    response = requests.delete(request_url, headers=AUTH_HEADERS_MISSING)
-    exp_status_code = 401
-    assert response.status_code == exp_status_code
-
-    response = requests.delete(
-        request_url,
-        headers=AUTH_HEADERS_INVALID,
-    )
-    exp_status_code = 401
-    assert response.status_code == exp_status_code
-
-    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_2)
-    response_status_code = response.status_code
-    exp_status_code = 403
-    assert response_status_code == exp_status_code
-
-
-def test_delete_job(dev_env_proc_api_url: str) -> None:
-    process_id = EXISTING_PROCESS_ID
-    request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/execution"
-    )
-    response = requests.post(
-        request_url,
-        json=POST_PROCESS_REQUEST_BODY_SUCCESS,
-        headers=AUTH_HEADERS_VALID_1,
-    )
-    exp_status_code = 201
-    assert response.status_code == exp_status_code
-
-    response_body = response.json()
-    job_id = response_body["jobID"]
-
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
-    response = requests.delete(request_url, headers=AUTH_HEADERS_VALID_1)
-    response_status_code = response.status_code
-    exp_status_code = 200
-    assert response_status_code == exp_status_code
-
-    exp_keys = (
-        "processID",
-        "type",
-        "jobID",
-        "status",
-        "created",
-        "updated",
-        "links",
-    )
-    assert all([key in response_body for key in exp_keys])
-
-    response_body = response.json()
-    exp_status = "dismissed"
-    assert response_body["status"] == exp_status
-
-    response = requests.delete(request_url, headers=AUTH_HEADERS_VALID_1)
-    response_status_code = response.status_code
-    exp_status_code = 404
-    assert response_status_code == exp_status_code
-
-
-def test_get_process_exc_no_such_process(dev_env_proc_api_url: str) -> None:
-    process_id = NON_EXISTING_PROCESS_ID
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"processes/{process_id}")
-    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
-    response_status_code = response.status_code
-    exp_status_code = 404
-    assert response_status_code == exp_status_code
-
-    response_body = response.json()
-    exp_response_body = {
-        "type": (
-            "http://www.opengis.net/def/exceptions/"
-            "ogcapi-processes-1/1.0/no-such-process"
-        ),
-        "title": "process not found",
-        "detail": f"process {process_id} has not been found",
-        "instance": request_url,
-    }
-    assert response_body == exp_response_body
-
-
-def test_post_process_execution_exc_no_such_process(dev_env_proc_api_url: str) -> None:
-    process_id = NON_EXISTING_PROCESS_ID
-    request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/execution"
-    )
-    response = requests.post(request_url, json={}, headers=AUTH_HEADERS_VALID_1)
-    response_status_code = response.status_code
-    exp_status_code = 404
-    assert response_status_code == exp_status_code
-
-    response_body = response.json()
-    exp_response_body = {
-        "type": (
-            "http://www.opengis.net/def/exceptions/"
-            "ogcapi-processes-1/1.0/no-such-process"
-        ),
-        "title": "process not found",
-        "detail": f"process {process_id} has not been found",
-        "instance": request_url,
-    }
-    assert response_body == exp_response_body
-
-
-def test_get_job_exc_no_such_job(dev_env_proc_api_url: str) -> None:
-    job_id = NON_EXISTING_JOB_ID
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
-    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
-    response_status_code = response.status_code
-
-    exp_status_code = 404
-    assert response_status_code == exp_status_code
-
-    response_body = response.json()
-    exp_response_body = {
-        "type": (
-            "http://www.opengis.net/def/exceptions/"
-            "ogcapi-processes-1/1.0/no-such-job"
-        ),
-        "title": "job not found",
-        "detail": f"job {job_id} has not been found",
-        "instance": request_url,
-    }
-    assert response_body == exp_response_body
+    job_id = request.config.cache.get("job_id", None)
+    delete_job(dev_env_proc_api_url, job_id, headers=AUTH_HEADERS_VALID_1)
 
 
 def test_get_job_results_exc_no_such_job(dev_env_proc_api_url: str) -> None:
@@ -690,6 +574,8 @@ def test_get_job_results_exc_job_results_failed(dev_env_proc_api_url: str) -> No
     }
     assert [(key, val) in response_body for key, val in exp_response_body.items()]
 
+    delete_job(dev_env_proc_api_url, job_id, headers=AUTH_HEADERS_VALID_1)
+
 
 def test_get_job_results_exc_results_not_ready(dev_env_proc_api_url: str) -> None:
     process_id = EXISTING_PROCESS_ID
@@ -726,3 +612,225 @@ def test_get_job_results_exc_results_not_ready(dev_env_proc_api_url: str) -> Non
         "instance": request_url,
     }
     assert [(key, val) in response_body for key, val in exp_response_body.items()]
+
+    delete_job(dev_env_proc_api_url, job_id, headers=AUTH_HEADERS_VALID_1)
+
+
+def test_get_jobs_not_authorized(dev_env_proc_api_url: str) -> None:
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs")
+    response = requests.get(request_url, headers=AUTH_HEADERS_MISSING)
+    exp_status_code = 401
+    assert response.status_code == exp_status_code
+
+    response = requests.get(request_url, headers=AUTH_HEADERS_INVALID)
+    exp_status_code = 401
+    assert response.status_code == exp_status_code
+
+
+def test_get_jobs(dev_env_proc_api_url: str) -> None:
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs")
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
+    exp_status_code = 200
+    assert response.status_code == exp_status_code
+
+    response_body = response.json()
+    exp_keys = ("jobs", "links")
+    assert all([key in response_body for key in exp_keys])
+
+
+def test_get_jobs_different_user(dev_env_proc_api_url: str) -> None:
+    process_id = EXISTING_PROCESS_ID
+    number_of_new_jobs = 2
+    request_execution_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
+    )
+    job_ids: list[str] = []
+    for _ in range(number_of_new_jobs):
+        response = requests.post(
+            request_execution_url,
+            json=POST_PROCESS_REQUEST_BODY_SUCCESS_W_LICENCES,
+            headers=AUTH_HEADERS_VALID_2,
+        )
+        job_ids.append(response.json()["jobID"])
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs")
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_2)
+    response_status_code = response.status_code
+    exp_status_code = 200
+    assert response_status_code == exp_status_code
+    response_body = response.json()
+    exp_number_of_jobs = 2
+    assert len(response_body["jobs"]) == exp_number_of_jobs
+
+    for job_id in job_ids:
+        delete_job(dev_env_proc_api_url, job_id, headers=AUTH_HEADERS_VALID_2)
+
+
+def test_get_jobs_limit_sorting(  # type: ignore
+    request, dev_env_proc_api_url: str
+) -> None:
+    process_id = EXISTING_PROCESS_ID
+    number_of_new_jobs = 5
+    request_execution_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
+    )
+    job_ids = []
+    for _ in range(number_of_new_jobs):
+        response = requests.post(
+            request_execution_url,
+            json=POST_PROCESS_REQUEST_BODY_SUCCESS,
+            headers=AUTH_HEADERS_VALID_1,
+        )
+        job_ids.append(response.json()["jobID"])
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, "jobs?limit=4&sortby=created"
+    )
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
+    response_body = response.json()
+    assert len(response_body["jobs"]) == 4
+    created_datetimes = [job["created"] for job in response_body["jobs"]]
+    sorted_datetimes = sorted(created_datetimes)
+    assert created_datetimes == sorted_datetimes
+
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=4")
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
+    response_body = response.json()
+    assert len(response_body["jobs"]) == 4
+    created_datetimes = [job["created"] for job in response_body["jobs"]]
+    sorted_datetimes = sorted(created_datetimes)
+    assert created_datetimes == list(reversed(sorted_datetimes))
+
+    request.config.cache.set("job_ids", job_ids)
+
+
+def test_get_jobs_pagination(dev_env_proc_api_url: str) -> None:
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=4")
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
+    response_body = response.json()
+    created_datetimes = [job["created"] for job in response_body["jobs"]]
+
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?limit=2")
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
+    response_body = response.json()
+    assert len(response_body["jobs"]) == 2
+    links = response_body["links"]
+    exp_rels = ["next", "prev"]
+    all_rels = [link["rel"] for link in links]
+    assert all(rel in all_rels for rel in exp_rels)
+    first_page_created_datetimes = [job["created"] for job in response_body["jobs"]]
+    assert first_page_created_datetimes == created_datetimes[:2]
+
+    for link in links:
+        if link["rel"] == "next":
+            request_url = link["href"]
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
+    response_body = response.json()
+    assert len(response_body["jobs"]) == 2
+    second_page_created_datetimes = [job["created"] for job in response_body["jobs"]]
+    assert second_page_created_datetimes == created_datetimes[2:4]
+    links = response_body["links"]
+
+    for link in links:
+        if link["rel"] == "prev":
+            request_url = link["href"]
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
+    response_body = response.json()
+    assert len(response_body["jobs"]) == 2
+    third_page_created_datetimes = [job["created"] for job in response_body["jobs"]]
+    assert third_page_created_datetimes == first_page_created_datetimes
+
+
+def test_get_jobs_filters(request, dev_env_proc_api_url: str) -> None:  # type: ignore
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, "jobs?status=successful")
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
+    response_body = response.json()
+    assert all([job["status"] == "successful" for job in response_body["jobs"]])
+
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"jobs?processID={NON_EXISTING_PROCESS_ID}"
+    )
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
+    response_body = response.json()
+    assert len(response_body["jobs"]) == 0
+
+    job_ids = request.config.cache.get("job_ids", None)
+    for job_id in job_ids:
+        delete_job(dev_env_proc_api_url, job_id, headers=AUTH_HEADERS_VALID_1)
+
+
+def test_delete_job(dev_env_proc_api_url: str) -> None:
+    process_id = EXISTING_PROCESS_ID
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
+    )
+    response = requests.post(
+        request_url,
+        json=POST_PROCESS_REQUEST_BODY_SUCCESS,
+        headers=AUTH_HEADERS_VALID_1,
+    )
+    exp_status_code = 201
+    assert response.status_code == exp_status_code
+
+    response_body = response.json()
+    job_id = response_body["jobID"]
+
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
+    response = requests.delete(request_url, headers=AUTH_HEADERS_VALID_1)
+    response_status_code = response.status_code
+    exp_status_code = 200
+    assert response_status_code == exp_status_code
+
+    exp_keys = (
+        "processID",
+        "type",
+        "jobID",
+        "status",
+        "created",
+        "updated",
+        "links",
+    )
+    assert all([key in response_body for key in exp_keys])
+
+    response_body = response.json()
+    exp_status = "dismissed"
+    assert response_body["status"] == exp_status
+
+    response = requests.delete(request_url, headers=AUTH_HEADERS_VALID_1)
+    response_status_code = response.status_code
+    exp_status_code = 404
+    assert response_status_code == exp_status_code
+
+
+def test_delete_job_not_athorized(dev_env_proc_api_url: str) -> None:
+    process_id = EXISTING_PROCESS_ID
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/execution"
+    )
+    response = requests.post(
+        request_url,
+        json=POST_PROCESS_REQUEST_BODY_SUCCESS,
+        headers=AUTH_HEADERS_VALID_1,
+    )
+    exp_status_code = 201
+    assert response.status_code == exp_status_code
+
+    response_body = response.json()
+    job_id = response_body["jobID"]
+
+    request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
+    response = requests.delete(request_url, headers=AUTH_HEADERS_MISSING)
+    exp_status_code = 401
+    assert response.status_code == exp_status_code
+
+    response = requests.delete(
+        request_url,
+        headers=AUTH_HEADERS_INVALID,
+    )
+    exp_status_code = 401
+    assert response.status_code == exp_status_code
+
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_2)
+    response_status_code = response.status_code
+    exp_status_code = 403
+    assert response_status_code == exp_status_code
+
+    delete_job(dev_env_proc_api_url, job_id, headers=AUTH_HEADERS_VALID_1)
