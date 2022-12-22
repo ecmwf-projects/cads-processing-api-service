@@ -78,7 +78,7 @@ def test_get_processes(dev_env_proc_api_url: str) -> None:
     assert all([key in response_body for key in exp_keys])
 
     number_of_processes = len(response_body["processes"])
-    exp_number_of_processes = 6
+    exp_number_of_processes = 8
     assert number_of_processes == exp_number_of_processes
 
 
