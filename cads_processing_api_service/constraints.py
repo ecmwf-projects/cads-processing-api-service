@@ -6,7 +6,7 @@ from typing import Any
 import cads_catalogue.database
 import requests  # type: ignore
 
-from . import clients, config
+from . import clients, config, translators
 
 
 def ensure_sequence(v: Any) -> list[Any] | tuple[Any]:
@@ -256,32 +256,29 @@ def get_always_valid_params(
     return result
 
 
-def parse_form(form: list[dict[str, Any]]) -> dict[str, set[Any]]:
+def parse_form(raw_form: list[dict[str, Any]]) -> dict[str, set[Any]]:
     """
     Parse the form for a given dataset extracting the information on the possible selections.
 
-    :param form: a dictionary containing
+    :param raw_form: a dictionary containing
     all possible selections in JSON format
     :type: dict[str, list[Any]]
 
     :rtype: dict[str, set[Any]]:
     :return: a dict[str, set[Any]] containing all possible selections.
     """
-    selections: dict[str, set[Any]] = {}
-    for parameter in form:
-        if parameter["type"] in ("StringListWidget", "StringChoiceWidget"):
-            values = parameter["details"]["values"]
-            values = ensure_sequence(values)
-            selections[parameter["name"]] = set(values)
-        elif parameter["type"] == "StringListArrayWidget":
-            selections_p: set[str] = set([])
-            for sub_parameter in parameter["details"]["groups"]:
-                values = ensure_sequence(sub_parameter["values"])
-                selections_p = selections_p | set(values)
-            selections[parameter["name"]] = selections_p
-        else:
+    ocg_form = translators.translate_cds_form(raw_form)
+    form = {}
+    for field_name in ocg_form:
+        print(ocg_form[field_name])
+        try:
+            if ocg_form[field_name]["schema_"]["type"] == "array":
+                form[field_name] = set(ocg_form[field_name]["schema_"]["items"]["enum"])
+            else:
+                form[field_name] = set(ocg_form[field_name]["schema_"]["enum"])
+        except KeyError:
             pass
-    return selections
+    return form
 
 
 def validate_constraints(

@@ -23,6 +23,7 @@ import urllib.parse
 from typing import Any, Callable, Optional, Type
 
 import attrs
+import cacholote.extra_encoders
 import cads_broker.database
 import cads_catalogue.config
 import cads_catalogue.database
@@ -46,29 +47,33 @@ logger = logging.getLogger(__name__)
 
 
 class ProcessSortCriterion(str, enum.Enum):
-    resource_uid: str = "id"
+    resource_uid_asc: str = "id"
+    resource_uid_desc: str = "-id"
 
 
 class JobSortCriterion(str, enum.Enum):
-    created_at: str = "created"
-
-
-class SortDirection(str, enum.Enum):
-    asc: str = "asc"
-    desc: str = "desc"
+    created_at_asc: str = "created"
+    created_at_desc: str = "-created"
 
 
 def lookup_resource_by_id(
     id: str,
     record: Type[cads_catalogue.database.BaseModel],
     session: sqlalchemy.orm.Session,
-) -> cads_catalogue.database.BaseModel:
+) -> cads_catalogue.database.Resource:
 
     try:
         row = session.query(record).filter(record.resource_uid == id).one()
     except sqlalchemy.orm.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     return row
+
+
+def parse_sortby(sortby: str) -> tuple[str]:
+    sort_params = sortby.split("_")
+    sort_key = "_".join(sort_params[:-1])
+    sort_dir = sort_params[-1]
+    return (sort_key, sort_dir)
 
 
 def apply_metadata_filters(
@@ -303,11 +308,44 @@ def make_pagination_qs(
     return pagination_qs
 
 
+def get_accepted_licences(auth_header: dict[str, str]) -> set[tuple[str, int]]:
+    settings = config.ensure_settings()
+    request_url = urllib.parse.urljoin(
+        settings.internal_proxy_url,
+        f"{settings.profiles_base_url}/account/licences",
+    )
+    response = requests.get(request_url, headers=auth_header)
+    licences = response.json()["licences"]
+    accepted_licences = set(
+        [(licence["id"], licence["revision"]) for licence in licences]
+    )
+    return accepted_licences
+
+
+def check_licences(
+    required_licences: set[tuple[str, int]], accepted_licences: set[tuple[str, int]]
+) -> set[tuple[str, int]]:
+    missing_licences = required_licences - accepted_licences
+    if not len(missing_licences) == 0:
+        missing_licences_detail = [
+            {"id": licence[0], "revision": licence[1]} for licence in missing_licences
+        ]
+        raise exceptions.PermissionDenied(
+            title="required licences not accepted",
+            detail=(
+                "please accept the following licences to proceed: "
+                f"{missing_licences_detail}"
+            ),
+        )
+    return missing_licences
+
+
 def validate_request(
     process_id: str,
+    auth_header: dict[str, str],
     session: sqlalchemy.orm.Session,
     process_table: Type[cads_catalogue.database.Resource],
-) -> cads_catalogue.database.BaseModel:
+) -> cads_catalogue.database.Resource:
     """Validate retrieve process execution request.
 
     Check if requested dataset exists and if execution content is valid.
@@ -318,18 +356,30 @@ def validate_request(
     ----------
     process_id : str
         Process ID.
+    auth_header: dict[str, str]
+        Authorization header sent with the request
     session : sqlalchemy.orm.Session
         SQLAlchemy ORM session
+    process_table: Type[cads_catalogue.database.Resource]
+        Resources table
 
     Returns
     -------
     cads_catalogue.database.BaseModel
         Resource (dataset) associated to the process request.
     """
-    # TODO: implement inputs validation
     resource = lookup_resource_by_id(
         id=process_id, record=process_table, session=session
     )
+    # TODO: reaneble this when issue regarding anonymous user is fixed
+    """
+    required_licences = set(
+        (licence.licence_uid, licence.revision) for licence in resource.licences
+    )
+    accepted_licences = get_accepted_licences(auth_header)
+    check_licences(required_licences, accepted_licences)
+    """
+
     return resource
 
 
@@ -381,14 +431,10 @@ def submit_job(
     return status_info
 
 
-def validate_token(
-    pat: Optional[str] = fastapi.Header(
-        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
-    ),
-    jwt: Optional[str] = fastapi.Header(
-        None, description="JSON Web Token", alias="Authorization"
-    ),
-) -> dict[str, str]:
+def check_token(
+    pat: Optional[str] = None, jwt: Optional[str] = None
+) -> tuple[str, dict[str, str]]:
+    print(pat)
     if pat:
         verification_endpoint = "/account/verification/pat"
         auth_header = {"PRIVATE-TOKEN": pat}
@@ -400,6 +446,18 @@ def validate_token(
             status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
         )
+    return (verification_endpoint, auth_header)
+
+
+def validate_token(
+    pat: Optional[str] = fastapi.Header(
+        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
+    ),
+    jwt: Optional[str] = fastapi.Header(
+        None, description="JSON Web Token", alias="Authorization"
+    ),
+) -> dict[str, str]:
+    verification_endpoint, auth_header = check_token(pat=pat, jwt=jwt)
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
         settings.internal_proxy_url,
@@ -411,6 +469,7 @@ def validate_token(
             status_code=response.status_code, detail=response.json()["detail"]
         )
     user = response.json()
+    user["auth_header"] = auth_header
     return user
 
 
@@ -464,11 +523,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_processes(
         self,
         limit: Optional[int] = fastapi.Query(10, ge=1, le=10000),
-        sort_key: Optional[ProcessSortCriterion] = fastapi.Query(
-            ProcessSortCriterion.resource_uid, alias="sort"
-        ),
-        sort_dir: Optional[SortDirection] = fastapi.Query(
-            SortDirection.asc, alias="dir"
+        sortby: Optional[ProcessSortCriterion] = fastapi.Query(
+            ProcessSortCriterion.resource_uid_asc
         ),
         cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
         back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
@@ -481,10 +537,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         limit : Optional[int]
             Number of processes summaries to be returned.
-        sort_key: Optional[ProcessSortCriterion]
+        sortby: Optional[ProcessSortCriterion]
             Sorting criterion for request's results.
-        sort_dir: Optional[SortDirection]
-            Sorting direction for request's results.
         cursor: Optional[str]
             Hash string used for pagination.
         back: Optional[bool]
@@ -497,21 +551,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         with self.reader.context_session() as session:
             statement = sqlalchemy.select(self.process_table)
+            sort_key, sort_dir = parse_sortby(sortby.name)
             if cursor:
                 statement = apply_bookmark(
-                    statement,
-                    self.process_table,
-                    cursor,
-                    back,
-                    sort_key.name,
-                    sort_dir.name,
+                    statement, self.process_table, cursor, back, sort_key, sort_dir
                 )
             statement = apply_sorting(
-                statement,
-                self.process_table,
-                back,
-                sort_key.name,
-                sort_dir.name,
+                statement, self.process_table, back, sort_key, sort_dir
             )
             statement = apply_limit(statement, limit)
             processes_entries = session.scalars(statement).all()
@@ -524,7 +570,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_list = ogc_api_processes_fastapi.responses.ProcessList(
             processes=processes
         )
-        pagination_qs = make_pagination_qs(processes, sort_key=sort_key)
+        pagination_qs = make_pagination_qs(processes, sort_key=sortby.lstrip("-"))
         process_list._pagination_qs = pagination_qs
 
         return process_list
@@ -564,32 +610,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     schema_=ogc_api_processes_fastapi.responses.SchemaItem(
                         type="object",
                         properties={
-                            "value": ogc_api_processes_fastapi.responses.SchemaItem(
-                                type="object",
-                                properties={
-                                    "type": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="string"
-                                    ),
-                                    "href": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="string"
-                                    ),
-                                    "file:checksum": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="integer"
-                                    ),
-                                    "file:size": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="integer"
-                                    ),
-                                    "file:local_path": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="string"
-                                    ),
-                                    "tmp:storage_option": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="object"
-                                    ),
-                                    "tmp:open_kwargs": ogc_api_processes_fastapi.responses.SchemaItem(
-                                        type="object"
-                                    ),
-                                },
-                            ),
+                            "value": cacholote.extra_encoders.FileInfoModel.schema()
                         },
                     ),
                 ),
@@ -638,7 +659,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             },
         )
         with self.reader.context_session() as session:
-            resource = validate_request(process_id, session, self.process_table)
+            resource = validate_request(
+                process_id, user.get("auth_header", None), session, self.process_table
+            )
             status_info = submit_job(user_id, process_id, execution_content, resource)
         return status_info
 
@@ -647,11 +670,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         processID: Optional[list[str]] = fastapi.Query(None),
         status: Optional[list[str]] = fastapi.Query(None),
         limit: Optional[int] = fastapi.Query(10, ge=1, le=10000),
-        sort_key: Optional[JobSortCriterion] = fastapi.Query(
-            JobSortCriterion.created_at, alias="sort"
-        ),
-        sort_dir: Optional[SortDirection] = fastapi.Query(
-            SortDirection.desc, alias="dir"
+        sortby: Optional[JobSortCriterion] = fastapi.Query(
+            JobSortCriterion.created_at_desc
         ),
         cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
         back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
@@ -674,10 +694,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         limit: Optional[int]
             The response shall not contain more jobs than specified by the optional ``limit``
             parameter.
-        sort_key: Optional[JobSortCriterion]
+        sortby: Optional[JobSortCriterion]
             Sorting criterion for request's results.
-        sort_dir: Optional[SortDirection]
-            Sorting direction for request's results.
         cursor: Optional[str] = fastapi.Query(None)
             Hash string used for pagination.
         back: Optional[bool] = fastapi.Query(None),
@@ -694,6 +712,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         user_id = user.get("id", None)
         metadata_filters = {"user_id": [str(user_id)] if user_id else []}
         job_filters = {"process_id": processID, "status": status}
+        sort_key, sort_dir = parse_sortby(sortby.name)
         with session_obj() as session:
             statement = sqlalchemy.select(self.job_table)
             statement = apply_metadata_filters(
@@ -706,11 +725,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     self.job_table,
                     cursor,
                     back,
-                    sort_key.name,
-                    sort_dir.name,
+                    sort_key,
+                    sort_dir,
                 )
             statement = apply_sorting(
-                statement, self.job_table, back, sort_key.name, sort_dir.name
+                statement, self.job_table, back, sort_key, sort_dir
             )
             statement = apply_limit(statement, limit)
             job_entries = session.scalars(statement).all()
@@ -730,7 +749,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             for job in job_entries
         ]
         job_list = ogc_api_processes_fastapi.responses.JobList(jobs=jobs)
-        pagination_qs = make_pagination_qs(jobs, sort_key=sort_key)
+        pagination_qs = make_pagination_qs(jobs, sort_key=sortby.lstrip("-"))
         job_list._pagination_qs = pagination_qs
 
         return job_list

@@ -15,26 +15,23 @@
 # limitations under the License.
 
 import itertools
-from typing import Any
+from typing import Any, Union
 
-ACCEPTED_INPUTS = [
-    "product_type",
-    "variable",
-    "year",
-    "month",
-    "time",
-    "area",
-    "format",
+EXCLUDED_WIDGETS = [
+    "LabelWidget",
+    "FreeEditionWidget",
+    "ExclusiveFrameWidget",
+    "LicenceWidget",
 ]
 
 
-def string_array_to_string_array(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+def translate_string_list(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
     input_ogc_schema: dict[str, Any] = {"type": "array", "items": {"type": "string"}}
     input_ogc_schema["items"]["enum"] = sorted(input_cds_schema["details"]["values"])
     return input_ogc_schema
 
 
-def string_list_to_string_array(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+def translate_string_list_array(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
     input_ogc_schema: dict[str, Any] = {"type": "array", "items": {"type": "string"}}
     values = []
     for group in input_cds_schema["details"]["groups"]:
@@ -45,42 +42,42 @@ def string_list_to_string_array(input_cds_schema: dict[str, Any]) -> dict[str, A
     return input_ogc_schema
 
 
-def string_choice_to_string_value(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+def translate_string_choice(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
     input_ogc_schema = {
         "type": "string",
         "enum": input_cds_schema["details"]["values"],
-        "default": input_cds_schema["details"]["default"],
+        "default": input_cds_schema["details"].get("default", None),
     }
     return input_ogc_schema
 
 
-def extent_to_area(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+def translate_geographic_extent_map(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
     input_ogc_schema = {
         "type": "array",
         "minItems": 4,
         "maxItems": 4,
         "items": {"type": "number"},
-        "default": input_cds_schema["details"]["default"],
+        "default": input_cds_schema["details"].get("default", None),
     }
     return input_ogc_schema
 
 
 SCHEMA_TRANSLATORS = {
-    "StringListWidget": string_array_to_string_array,
-    "StringListArrayWidget": string_list_to_string_array,
-    "StringChoiceWidget": string_choice_to_string_value,
-    "GeographicExtentMapWidget": extent_to_area,
+    "StringListWidget": translate_string_list,
+    "StringListArrayWidget": translate_string_list_array,
+    "StringChoiceWidget": translate_string_choice,
+    "GeographicExtentMapWidget": translate_geographic_extent_map,
 }
 
 
-def build_input_ogc_schema(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
-    input_cds_type = input_cds_schema["type"]
-    input_ogc_schema = SCHEMA_TRANSLATORS[input_cds_type](input_cds_schema)
-    return input_ogc_schema
+def make_ogc_input_schema(cds_input_schema: dict[str, Any]) -> dict[str, Any]:
+    cds_input_type = cds_input_schema["type"]
+    ogc_input_schema = SCHEMA_TRANSLATORS[cds_input_type](cds_input_schema)
+    return ogc_input_schema
 
 
-def translate_cds_into_ogc_inputs(
-    cds_form: list[Any],
+def translate_cds_form(
+    cds_form: Union[list[Any], dict[str, Any]],
 ) -> dict[str, Any]:
     """Translate CDS forms inputs into OGC API compliants ones.
 
@@ -97,12 +94,14 @@ def translate_cds_into_ogc_inputs(
     dict[str, models.InputDescription]
         Python object containing translated inputs information.
     """
-    inputs_ogc = {}
-    for input_cds_schema in cds_form:
-        if input_cds_schema["name"] in ACCEPTED_INPUTS:
-            inputs_ogc[input_cds_schema["name"]] = {
-                "title": input_cds_schema["label"],
-                "schema_": {**build_input_ogc_schema(input_cds_schema)},
+    if not isinstance(cds_form, list):
+        cds_form = list(cds_form)
+    ogc_inputs = {}
+    for cds_input_schema in cds_form:
+        if cds_input_schema["type"] not in EXCLUDED_WIDGETS:
+            ogc_inputs[cds_input_schema["name"]] = {
+                "title": cds_input_schema["label"],
+                "schema_": {**make_ogc_input_schema(cds_input_schema)},
             }
 
-    return inputs_ogc
+    return ogc_inputs

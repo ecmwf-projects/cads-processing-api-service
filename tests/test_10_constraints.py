@@ -103,23 +103,28 @@ def test_parse_form() -> None:
         {
             "details": {
                 "groups": [{"values": ["Z"]}, {"values": ["T"]}],
+                "default": "Z",
             },
             "name": "param",
+            "label": "Variable",
             "type": "StringListArrayWidget",
         },
         {
-            "details": {"values": ["500", "850", "1000"]},
+            "details": {"values": ["500", "850", "1000"], "default": "500"},
             "name": "level",
+            "label": "Pressure Level",
             "type": "StringListWidget",
         },
         {
-            "details": {"values": ["24", "36", "48"]},
+            "details": {"values": ["24", "36", "48"], "default": "24"},
             "name": "step",
+            "label": "Step",
             "type": "StringListWidget",
         },
         {
-            "details": {"values": ["1", "2", "3"]},
+            "details": {"values": ["1", "2", "3"], "default": "1"},
             "name": "number",
+            "label": "Number",
             "type": "StringChoiceWidget",
         },
     ]
