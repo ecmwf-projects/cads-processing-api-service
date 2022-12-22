@@ -1,12 +1,10 @@
 """Main module of the request-constraints API."""
 import copy
-import urllib.parse
 from typing import Any
 
 import cads_catalogue.database
-import requests  # type: ignore
 
-from . import clients, config, translators
+from . import clients, translators
 
 
 def ensure_sequence(v: Any) -> list[Any] | tuple[Any]:
@@ -270,7 +268,6 @@ def parse_form(raw_form: list[dict[str, Any]]) -> dict[str, set[Any]]:
     ocg_form = translators.translate_cds_form(raw_form)
     form = {}
     for field_name in ocg_form:
-        print(ocg_form[field_name])
         try:
             if ocg_form[field_name]["schema_"]["type"] == "array":
                 form[field_name] = set(ocg_form[field_name]["schema_"]["items"]["enum"])
@@ -284,11 +281,6 @@ def parse_form(raw_form: list[dict[str, Any]]) -> dict[str, set[Any]]:
 def validate_constraints(
     process_id: str, body: dict[str, dict[str, Any]]
 ) -> dict[str, list[str]]:
-
-    settings = config.Settings()
-    storage_url = settings.document_storage_url
-    timeout = settings.document_storage_access_timeout
-
     session_obj = cads_catalogue.database.ensure_session_obj(None)
     record = cads_catalogue.database.Resource
     with session_obj() as session:
@@ -296,9 +288,7 @@ def validate_constraints(
 
     form = parse_form(dataset.form_data)
 
-    constraints_url = urllib.parse.urljoin(storage_url, dataset.constraints)
-    raw_constraints = requests.get(constraints_url, timeout=timeout).json()
-    constraints = parse_constraints(raw_constraints)
+    constraints = parse_constraints(dataset.constraints_data)
 
     selection = parse_selection(body["inputs"])
 

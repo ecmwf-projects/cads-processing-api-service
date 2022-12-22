@@ -27,15 +27,10 @@ general_settings = None
 
 
 class Settings(pydantic.BaseSettings):
-    """General settings.
+    """General settings."""
 
-    - ``document_storage_url``: Base URI to identify the document storage
-    """
-
-    document_storage_url: str = "/document-storage/"
     internal_proxy_url: str = "http://proxy"
     profiles_base_url: str = "/api/profiles/"
-    document_storage_access_timeout: int = 10
 
 
 def ensure_settings(
