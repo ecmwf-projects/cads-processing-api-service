@@ -338,8 +338,6 @@ def get_stored_accepted_licences(auth_header: dict[str, str]) -> set[tuple[str, 
 def check_licences(
     required_licences: set[tuple[str, int]], accepted_licences: set[tuple[str, int]]
 ) -> set[tuple[str, int]]:
-    logging.error(f"REQUIRED {required_licences}")
-    logging.error(f"ACCEPTED {accepted_licences}")
     missing_licences = required_licences - accepted_licences
     if not len(missing_licences) == 0:
         missing_licences_detail = [
