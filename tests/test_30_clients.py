@@ -20,6 +20,14 @@ import sqlalchemy
 from cads_processing_api_service import clients, exceptions
 
 
+def test_dictify_job() -> None:
+    request = cads_broker.database.SystemRequest(request_id=0, status="failed")
+    exp_job = {"request_id": 0, "status": "failed"}
+    res_job = clients.dictify_job(request)
+    assert isinstance(res_job, dict)
+    assert all([key in res_job and res_job[key] == exp_job[key] for key in exp_job])
+
+
 def test_parse_sortby() -> None:
     sortby = "my_custom_id_asc"
     sort_params = clients.parse_sortby(sortby)
@@ -234,7 +242,7 @@ def test_check_token() -> None:
 
 
 def test_verify_permission() -> None:
-    job = cads_broker.database.SystemRequest(request_metadata={"user_id": 0})
+    job = {"request_metadata": {"user_id": 0}}
     user = {"id": 0}
     try:
         clients.verify_permission(user, job)
