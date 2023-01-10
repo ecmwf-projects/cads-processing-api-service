@@ -504,9 +504,7 @@ def verify_permission(user: dict[str, str], job: dict[str, Any]) -> None:
         raise exceptions.PermissionDenied(detail="Operation not permitted")
 
 
-def get_results_from_broker_db(
-    job: dict[str, Any]
-) -> ogc_api_processes_fastapi.models.Results:
+def get_results_from_broker_db(job: dict[str, Any]) -> dict[str, Any]:
     job_status = job["status"]
     job_id = job["request_uid"]
     if job_status == "successful":
@@ -527,7 +525,7 @@ def get_results_from_broker_db(
     return results
 
 
-def make_status_info(job: dict[str, Any]) -> models.StatusInfo:
+def make_status_info(job: dict[str, Any], add_results=True) -> models.StatusInfo:
     job_status = job["status"]
     request_uid = job["request_uid"]
     status_info = models.StatusInfo(
@@ -540,18 +538,19 @@ def make_status_info(job: dict[str, Any]) -> models.StatusInfo:
         finished=job["finished_at"],
         updated=job["updated_at"],
     )
-    results = None
-    try:
-        results = get_results_from_broker_db(job)
-    except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
-        results = {
-            "type": exc.type,
-            "title": exc.title,
-            "detail": exc.detail,
-        }
-    except ogc_api_processes_fastapi.exceptions.ResultsNotReady:
+    if add_results:
         results = None
-    status_info.results = results
+        try:
+            results = get_results_from_broker_db(job)
+        except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
+            results = {
+                "type": exc.type,
+                "title": exc.title,
+                "detail": exc.detail,
+            }
+        except ogc_api_processes_fastapi.exceptions.ResultsNotReady:
+            results = None
+        status_info.results = results
     return status_info
 
 
@@ -902,5 +901,5 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         verify_permission(user, job)
         job = cads_broker.database.delete_request(request_uid=job_id)
         job = dictify_job(job)
-        status_info = make_status_info(job)
+        status_info = make_status_info(job, add_results=False)
         return status_info
