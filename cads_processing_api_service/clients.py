@@ -504,17 +504,48 @@ def verify_permission(user: dict[str, str], job: dict[str, Any]) -> None:
         raise exceptions.PermissionDenied(detail="Operation not permitted")
 
 
+def get_results_from_broker_db(
+    job: dict[str, Any]
+) -> ogc_api_processes_fastapi.models.Results:
+    job_status = job["status"]
+    job_id = job["request_uid"]
+    if job_status == "successful":
+        asset_value = cads_broker.database.get_request_result(request_uid=job_id)[
+            "args"
+        ][0]
+        results = {"asset": {"value": asset_value}}
+    elif job_status == "failed":
+        raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
+            type="RuntimeError",
+            detail=job["response_traceback"],
+            status_code=fastapi.status.HTTP_400_BAD_REQUEST,
+        )
+    elif job_status in ("accepted", "running"):
+        raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
+            f"Status of {job_id} is {job_status}."
+        )
+    return results
+
+
 def make_status_info(job: dict[str, Any]) -> models.StatusInfo:
+    job_status = job["status"]
+    request_uid = job["request_uid"]
     status_info = models.StatusInfo(
         type="process",
-        jobID=job["request_uid"],
+        jobID=request_uid,
         processID=job["process_id"],
-        status=job["status"],
+        status=job_status,
         created=job["created_at"],
         started=job["started_at"],
         finished=job["finished_at"],
         updated=job["updated_at"],
     )
+    results_metadata = None
+    try:
+        results_metadata = get_results_from_broker_db(job)
+    except ogc_api_processes_fastapi.exceptions.JobResultsFailed:
+        results_metadata = None
+    status_info.resultsMetadata = results_metadata
     return status_info
 
 
@@ -832,22 +863,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         job = get_job_from_broker_db(job_id=job_id)
         verify_permission(user, job)
-        job_status = job["status"]
-        if job_status == "successful":
-            asset_value = cads_broker.database.get_request_result(
-                request_uid=job["request_uid"]
-            )["args"][0]
-            return {"asset": {"value": asset_value}}
-        elif job_status == "failed":
-            raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
-                type="RuntimeError",
-                detail=job["response_traceback"],
-                status_code=fastapi.status.HTTP_400_BAD_REQUEST,
-            )
-        elif job_status in ("accepted", "running"):
-            raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
-                f"Status of {job_id} is {job_status}."
-            )
+        results = get_results_from_broker_db(job=job)
+        return results
 
     def delete_job(
         self,
