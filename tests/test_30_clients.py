@@ -22,7 +22,7 @@ import pytest
 import sqlalchemy
 import sqlalchemy.orm.exc
 
-from cads_processing_api_service import clients, exceptions
+from cads_processing_api_service import clients, exceptions, models
 
 
 def test_parse_sortby() -> None:
@@ -260,21 +260,22 @@ def test_dictify_job() -> None:
 
 
 def test_get_job_from_broker_db() -> None:
+    test_job_id = "1234"
     with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
         mock_get_request.return_value = cads_broker.database.SystemRequest(
-            user_id=0, request_uid="1234"
+            user_id=0, request_uid=test_job_id
         )
-        job = clients.get_job_from_broker_db("1234")
+        job = clients.get_job_from_broker_db(test_job_id)
     assert isinstance(job, dict)
     assert job["user_id"] == 0
-    assert job["request_uid"] == "1234"
+    assert job["request_uid"] == test_job_id
 
     with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
         mock_get_request.side_effect = sqlalchemy.exc.StatementError(
             message=None, statement=None, params=None, orig=None
         )
         with pytest.raises(ogc_api_processes_fastapi.exceptions.NoSuchJob):
-            job = clients.get_job_from_broker_db("1234")
+            job = clients.get_job_from_broker_db(test_job_id)
 
     with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
         mock_get_request.side_effect = sqlalchemy.orm.exc.NoResultFound()
@@ -282,11 +283,85 @@ def test_get_job_from_broker_db() -> None:
             job = clients.get_job_from_broker_db("1234")
 
 
-@pytest.mark.skip(reason="test not implemented")
 def test_get_results_from_broker_db() -> None:
-    assert True
+    job = {"status": "successful", "request_uid": "1234"}
+    with unittest.mock.patch(
+        "cads_broker.database.get_request_result"
+    ) as mock_get_request_result:
+        mock_get_request_result.return_value = {
+            "args": [
+                {"key": "value"},
+            ]
+        }
+        results = clients.get_results_from_broker_db(job)
+    exp_results = {"asset": {"value": {"key": "value"}}}
+    assert results == exp_results
+
+    job = {"status": "failed", "request_uid": "1234", "response_traceback": "traceback"}
+    with pytest.raises(ogc_api_processes_fastapi.exceptions.JobResultsFailed):
+        results = clients.get_results_from_broker_db(job)
+
+    job = {
+        "status": "accepted",
+        "request_uid": "1234",
+    }
+    with pytest.raises(ogc_api_processes_fastapi.exceptions.ResultsNotReady):
+        results = clients.get_results_from_broker_db(job)
+
+    job = {
+        "status": "running",
+        "request_uid": "1234",
+    }
+    with pytest.raises(ogc_api_processes_fastapi.exceptions.ResultsNotReady):
+        results = clients.get_results_from_broker_db(job)
 
 
-@pytest.mark.skip(reason="test not implemented")
 def test_make_status_info() -> None:
-    assert True
+    job = {
+        "status": "running",
+        "request_uid": "1234",
+        "process_id": "1234",
+        "created_at": "2023-01-01T16:20:12.175021",
+        "started_at": "2023-01-01T16:20:12.175021",
+        "finished_at": "2023-01-01T16:20:12.175021",
+        "updated_at": "2023-01-01T16:20:12.175021",
+    }
+    status_info = clients.make_status_info(job, add_results=False)
+    exp_status_info = models.StatusInfo(
+        type="process",
+        jobID=job["request_uid"],
+        processID=job["process_id"],
+        status=job["status"],
+        created=job["created_at"],
+        started=job["started_at"],
+        finished=job["finished_at"],
+        updated=job["updated_at"],
+    )
+    assert status_info == exp_status_info
+
+    exp_results = {"key": "value"}
+    with unittest.mock.patch(
+        "cads_processing_api_service.clients.get_results_from_broker_db"
+    ) as mock_get_results_from_broker_db:
+        mock_get_results_from_broker_db.return_value = exp_results
+        status_info = clients.make_status_info(job)
+    assert status_info.results == exp_results
+
+    with unittest.mock.patch(
+        "cads_processing_api_service.clients.get_results_from_broker_db"
+    ) as mock_get_results_from_broker_db:
+        mock_get_results_from_broker_db.side_effect = (
+            ogc_api_processes_fastapi.exceptions.JobResultsFailed
+        )
+        status_info = clients.make_status_info(job)
+    exp_results_keys = ("type", "title", "detail")
+    assert all([key in status_info.results.keys() for key in exp_results_keys])
+
+    with unittest.mock.patch(
+        "cads_processing_api_service.clients.get_results_from_broker_db"
+    ) as mock_get_results_from_broker_db:
+        mock_get_results_from_broker_db.side_effect = (
+            ogc_api_processes_fastapi.exceptions.ResultsNotReady
+        )
+        status_info = clients.make_status_info(job)
+    assert status_info.results is None
