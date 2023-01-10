@@ -12,20 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cads_broker  # type: ignore
+import unittest.mock
+from typing import Optional
+
+import cads_broker
+import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
 import pytest
 import sqlalchemy
+import sqlalchemy.orm.exc
 
 from cads_processing_api_service import clients, exceptions
-
-
-def test_dictify_job() -> None:
-    request = cads_broker.database.SystemRequest(request_id=0, status="failed")
-    exp_job = {"request_id": 0, "status": "failed"}
-    res_job = clients.dictify_job(request)
-    assert isinstance(res_job, dict)
-    assert all([key in res_job and res_job[key] == exp_job[key] for key in exp_job])
 
 
 def test_parse_sortby() -> None:
@@ -194,7 +191,7 @@ def test_make_pagination_qs() -> None:
 
 
 def test_get_contextual_accepted_licences() -> None:
-    execution_content = {
+    execution_content: dict[str, Optional[list[dict[str, str | int]]]] = {
         "acceptedLicences": [
             {"id": "licence", "revision": 0},
             {"id": "licence", "revision": 0},
@@ -252,3 +249,44 @@ def test_verify_permission() -> None:
     user = {"id": 1}
     with pytest.raises(exceptions.PermissionDenied):
         clients.verify_permission(user, job)
+
+
+def test_dictify_job() -> None:
+    request = cads_broker.database.SystemRequest(request_id=0, status="failed")
+    exp_job = {"request_id": 0, "status": "failed"}
+    res_job = clients.dictify_job(request)
+    assert isinstance(res_job, dict)
+    assert all([key in res_job and res_job[key] == exp_job[key] for key in exp_job])
+
+
+def test_get_job_from_broker_db() -> None:
+    with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
+        mock_get_request.return_value = cads_broker.database.SystemRequest(
+            user_id=0, request_uid="1234"
+        )
+        job = clients.get_job_from_broker_db("1234")
+    assert isinstance(job, dict)
+    assert job["user_id"] == 0
+    assert job["request_uid"] == "1234"
+
+    with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
+        mock_get_request.side_effect = sqlalchemy.exc.StatementError(
+            message=None, statement=None, params=None, orig=None
+        )
+        with pytest.raises(ogc_api_processes_fastapi.exceptions.NoSuchJob):
+            job = clients.get_job_from_broker_db("1234")
+
+    with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
+        mock_get_request.side_effect = sqlalchemy.orm.exc.NoResultFound()
+        with pytest.raises(ogc_api_processes_fastapi.exceptions.NoSuchJob):
+            job = clients.get_job_from_broker_db("1234")
+
+
+@pytest.mark.skip(reason="test not implemented")
+def test_get_results_from_broker_db() -> None:
+    assert True
+
+
+@pytest.mark.skip(reason="test not implemented")
+def test_make_status_info() -> None:
+    assert True
