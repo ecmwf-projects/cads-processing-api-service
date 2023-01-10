@@ -14,14 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import itertools
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 EXCLUDED_WIDGETS = [
     "LabelWidget",
     "FreeEditionWidget",
     "ExclusiveFrameWidget",
     "LicenceWidget",
+    "DateRangeWidget",
 ]
 
 
@@ -31,14 +31,30 @@ def translate_string_list(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
     return input_ogc_schema
 
 
-def translate_string_list_array(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
-    input_ogc_schema: dict[str, Any] = {"type": "array", "items": {"type": "string"}}
-    values = []
-    for group in input_cds_schema["details"]["groups"]:
-        values.append(group["values"])
-    input_ogc_schema["items"]["enum"] = sorted(
-        list(set(itertools.chain.from_iterable(values)))
-    )
+def extract_groups_values(
+    groups: list[Any],
+    values: Optional[list[Any]] = None
+) -> list[Any]:
+
+    if values is None:
+        values = []
+
+    for group in groups:
+        if "values" in group:
+            values.extend(group["values"])
+        elif "groups" in group:
+            values = extract_groups_values(group["groups"], values)
+    return values
+
+
+def translate_string_list_array(
+    input_cds_schema: dict[str, Any],
+) -> dict[str, Any]:
+    values = extract_groups_values(input_cds_schema["details"]["groups"])
+    input_ogc_schema: dict[str, Any] = {
+        "type": "array",
+        "items": {"type": "string", "enum": sorted(list(set(values)))},
+    }
     return input_ogc_schema
 
 
