@@ -540,12 +540,18 @@ def make_status_info(job: dict[str, Any]) -> models.StatusInfo:
         finished=job["finished_at"],
         updated=job["updated_at"],
     )
-    results_metadata = None
+    results = None
     try:
-        results_metadata = get_results_from_broker_db(job)
-    except ogc_api_processes_fastapi.exceptions.JobResultsFailed:
-        results_metadata = None
-    status_info.resultsMetadata = results_metadata
+        results = get_results_from_broker_db(job)
+    except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
+        results = {
+            "type": exc.type,
+            "title": exc.title,
+            "detail": exc.detail,
+        }
+    except ogc_api_processes_fastapi.exceptions.ResultsNotReady:
+        results = None
+    status_info.results = results
     return status_info
 
 

@@ -30,7 +30,7 @@ class Execute(ogc_api_processes_fastapi.models.Execute):
 
 
 class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
-    resultsMetadata: Optional[dict[str, Any]] = None
+    results: Optional[dict[str, Any]] = None
 
 
 class JobList(ogc_api_processes_fastapi.models.JobList):
