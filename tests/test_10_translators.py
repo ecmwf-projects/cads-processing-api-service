@@ -33,6 +33,25 @@ TEST_INPUT = {
         "details": {"default": [1, 2, 3, 4]},
         "type": "GeographicExtentMapWidget",
     },
+    "string_list_array_groups": {
+        "details": {
+            "groups": [
+                {
+                    "groups": [
+                        {"values": ["val1", "val2"]},
+                        {"values": ["val2", "val3"]},
+                    ]
+                },
+                {
+                    "groups": [
+                        {"values": ["val4", "val5"]},
+                        {"values": ["val5", "val6"]},
+                    ]
+                },
+            ]
+        },
+        "type": "StringListArrayWidget",
+    },
 }
 
 
@@ -54,6 +73,20 @@ def test_translate_string_list_array() -> None:
     exp_ouput = {
         "type": "array",
         "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
+    }
+    res_output = cads_processing_api_service.translators.translate_string_list_array(
+        test_input
+    )
+
+    assert res_output == exp_ouput
+
+    test_input = TEST_INPUT["string_list_array_groups"]
+    exp_ouput = {
+        "type": "array",
+        "items": {
+            "type": "string",
+            "enum": ["val1", "val2", "val3", "val4", "val5", "val6"],
+        },
     }
     res_output = cads_processing_api_service.translators.translate_string_list_array(
         test_input
