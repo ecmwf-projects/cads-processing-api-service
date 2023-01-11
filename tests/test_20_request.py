@@ -1,16 +1,16 @@
-from cads_processing_api_service import layers
+from cads_processing_api_service import request
 
 
 def test_compute_combinations():
-    assert layers.compute_combinations(dict()) == []
+    assert request.compute_combinations(dict()) == []
 
-    result = layers.compute_combinations({"param1": {"1", "2"}})
+    result = request.compute_combinations({"param1": {"1", "2"}})
     expected = [{"param1": "2"}, {"param1": "1"}]
     assert len(result) == len(expected) and all(
         combination in expected for combination in result
     )
 
-    result = layers.compute_combinations({"param1": {"1", "2"}, "param2": {"a", "b"}})
+    result = request.compute_combinations({"param1": {"1", "2"}, "param2": {"a", "b"}})
     expected = [
         {"param1": "1", "param2": "b"},
         {"param1": "1", "param2": "a"},
@@ -23,7 +23,7 @@ def test_compute_combinations():
 
 
 def test_remove_duplicates():
-    result = layers.remove_duplicates(
+    result = request.remove_duplicates(
         [{"level": {"500"}, "param": {"Z", "T"}}, {"level": {"500"}, "param": {"Z"}}]
     )
     expected = [{"level": "500", "param": "Z"}, {"level": "500", "param": "T"}]
@@ -32,7 +32,7 @@ def test_remove_duplicates():
     )
 
 
-def test_estimate_layers():
+def test_estimate_request():
     form = {
         "level": {"500", "850"},
         "param": {"Z", "T"},
@@ -44,13 +44,13 @@ def test_estimate_layers():
     ]
 
     assert (
-        layers.estimate_layers(
+        request.estimate_granules(
             form, {"param": {"Z", "T"}, "level": {"500"}}, constraints
         )
         == 2
     )
     assert (
-        layers.estimate_layers(
+        request.estimate_granules(
             form, {"param": {"Z", "T"}, "level": {"500", "850"}}, constraints
         )
         == 3
@@ -68,13 +68,13 @@ def test_estimate_layers():
     ]
 
     assert (
-        layers.estimate_layers(
+        request.estimate_granules(
             form, {"param": {"Z", "T"}, "level": {"500"}}, constraints, safe=False
         )
         == 3
     )
     assert (
-        layers.estimate_layers(
+        request.estimate_granules(
             form, {"param": {"Z", "T"}, "level": {"500"}}, constraints, safe=True
         )
         == 2
@@ -92,13 +92,13 @@ def test_estimate_layers():
     ]
 
     assert (
-        layers.estimate_layers(
+        request.estimate_granules(
             form, {"param": {"Z"}, "stat": {"daily_mean"}}, constraints
         )
         == 1
     )
     assert (
-        layers.estimate_layers(
+        request.estimate_granules(
             form,
             {"param": {"Z"}, "time": {"12:00", "00:00"}, "stat": {"hourly"}},
             constraints,
@@ -106,7 +106,7 @@ def test_estimate_layers():
         == 2
     )
     assert (
-        layers.estimate_layers(
+        request.estimate_granules(
             form,
             {"param": {"Z"}, "time": {"12:00", "00:00"}, "stat": {"daily_mean"}},
             constraints,
@@ -127,7 +127,7 @@ def test_estimate_layers():
     ]
 
     assert (
-        layers.estimate_layers(
+        request.estimate_granules(
             form,
             {
                 "param": {"Z"},
@@ -153,7 +153,7 @@ def test_estimate_layers():
 
     selection = {"param": {"Z", "T"}, "level": {"500"}}
 
-    assert layers.estimate_layers(form, selection, constraints, safe=True) == 2
+    assert request.estimate_granules(form, selection, constraints, safe=True) == 2
 
     form = {
         "type": {"projection", "historical"},
@@ -181,7 +181,7 @@ def test_estimate_layers():
         "stat": {"hourly", "daily_mean"},
     }
 
-    assert layers.estimate_layers(form, selection, constraints) == 4
+    assert request.estimate_granules(form, selection, constraints) == 4
 
     form = {
         "level": {"500", "850"},
@@ -213,4 +213,12 @@ def test_estimate_layers():
         {"level": {"850"}, "param": {"T"}, "stat": {"daily_mean"}},
     ]
 
-    assert layers.estimate_layers(form, selection, constraints)
+    assert request.estimate_granules(form, selection, constraints)
+
+
+def test_estimate_request_size():
+    form = {"param": {"Z", "T"}}
+    constraints = [{"param": {"Z", "T"}}]
+
+    assert request.estimate_size(form, {"param": {"Z", "T"}}, constraints) == 2
+    assert request.estimate_size(form, {"param": {"Z"}}, constraints) == 1
