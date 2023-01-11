@@ -32,8 +32,7 @@ def translate_string_list(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def extract_groups_values(
-    groups: list[Any],
-    values: Optional[list[Any]] = None
+    groups: list[Any], values: Optional[list[Any]] = None
 ) -> list[Any]:
 
     if values is None:
