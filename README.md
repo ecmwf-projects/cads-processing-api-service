@@ -2,6 +2,13 @@
 
 CADS Processing API service
 
+## Quick Start
+
+```python
+>>> import cads_processing_api_service
+
+```
+
 ## Workflow for developers/contributors
 
 For best experience create a new conda environment (e.g. DEVELOP) with Python 3.10:

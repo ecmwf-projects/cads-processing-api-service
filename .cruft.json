@@ -1,6 +1,6 @@
 {
   "template": "https://github.com/ecmwf-projects/cookiecutter-conda-package",
-  "commit": "fa22e97dff1a88de1834d9deba827197b081fe29",
+  "commit": "c4101cc46ee7312553f246d8806aebc7160edcc4",
   "checkout": null,
   "context": {
     "cookiecutter": {
@@ -9,6 +9,7 @@
       "project_short_description": "CADS Processing API service",
       "copyright_holder": "European Union",
       "copyright_year": "2022",
+      "mypy_strict": "False",
       "_template": "https://github.com/ecmwf-projects/cookiecutter-conda-package"
     }
   },
