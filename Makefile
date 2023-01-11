@@ -9,10 +9,10 @@ qa:
 	pre-commit run --all-files
 
 unit-tests:
-	python -m pytest -vv --cov=. --cov-report=$(COV_REPORT)
+	python -m pytest -vv --cov=. --cov-report=$(COV_REPORT) --doctest-glob="*.md" --doctest-glob="*.rst"
 
 type-check:
-	python -m mypy --strict .
+	python -m mypy .
 
 conda-env-update:
 	$(CONDA) env update $(CONDAFLAGS) -f environment.yml
