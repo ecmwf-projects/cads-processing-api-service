@@ -5,6 +5,8 @@ CADS Processing API service.
 ```{toctree}
 :caption: 'Contents:'
 :maxdepth: 2
+
+API Reference <_api/cads_processing_api_service/index>
 ```
 
 # Indices and tables
