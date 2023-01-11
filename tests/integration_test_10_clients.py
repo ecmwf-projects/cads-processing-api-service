@@ -834,3 +834,31 @@ def test_delete_job_not_athorized(dev_env_proc_api_url: str) -> None:
     assert response_status_code == exp_status_code
 
     delete_job(dev_env_proc_api_url, job_id, headers=AUTH_HEADERS_VALID_1)
+
+
+def test_constraints(dev_env_proc_api_url: str) -> None:
+    process_id = EXISTING_PROCESS_ID
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/constraints"
+    )
+    request_body = {"inputs": {}}
+
+    response = requests.post(
+        request_url,
+        json=request_body,
+    )
+
+    assert response.status_code == 200
+
+    process_id = "cams-global-reanalysis-eac4"
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/constraints"
+    )
+    request_body = {"inputs": {}}
+
+    response = requests.post(
+        request_url,
+        json=request_body,
+    )
+
+    assert response.status_code == 200
