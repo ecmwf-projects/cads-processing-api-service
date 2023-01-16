@@ -19,9 +19,11 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 
 import logging
 import logging.handlers
+from typing import Any
 
+import asgi_correlation_id
 import pydantic
-from syslog_rfc5424_formatter import RFC5424Formatter
+import structlog
 
 general_settings = None
 
@@ -55,16 +57,33 @@ def ensure_settings(
     return general_settings
 
 
+def add_correlation(
+    logger: logging.Logger, method_name: str, event_dict: dict[str, Any]
+) -> dict[str, Any]:
+    """Add request id to log message."""
+    if request_id := asgi_correlation_id.correlation_id.get():
+        event_dict["request_id"] = request_id
+    return event_dict
+
+
 def configure_logger() -> None:
     """
     Configure the logging module.
 
     This function configures the logging module to log in rfc5424 format.
     """
-    fmt = RFC5424Formatter(
-        sd_id="cads_processing_api_service",
+    structlog.configure(
+        processors=[
+            add_correlation,
+            structlog.stdlib.filter_by_level,
+            structlog.stdlib.add_logger_name,
+            structlog.stdlib.add_log_level,
+            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M.%S"),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.processors.JSONRenderer(),
+        ],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
     )
-    logger = logging.getLogger()
-    handler = logging.StreamHandler()
-    handler.setFormatter(fmt)
-    logger.addHandler(handler)
