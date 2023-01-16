@@ -14,16 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-import fastapi
 import ogc_api_processes_fastapi
 import starlette_exporter
 
 from . import clients, config, constraints, exceptions, metrics
 
 config.configure_logger()
-app = fastapi.FastAPI()
-app.add_middleware(starlette_exporter.PrometheusMiddleware)
-metrics.add_metrics_middleware(app)  # type: ignore
 app = ogc_api_processes_fastapi.instantiate_app(
     clients.DatabaseClient()  # type: ignore
 )
@@ -35,3 +31,5 @@ app.add_api_route(
     methods=["POST"],
 )
 app.add_route("/metrics", starlette_exporter.handle_metrics)
+app.add_middleware(starlette_exporter.PrometheusMiddleware)
+metrics.add_metrics_middleware(app)  # type: ignore
