@@ -17,8 +17,10 @@ dependencies:
 - python>=3.10
 - sqlalchemy
 - sqlalchemy-stubs
+- structlog
 - uvicorn
 - pip:
+  - asgi-correlation-id
   - fastapi-utils
   - starlette-exporter
   - syslog-rfc5424-formatter
