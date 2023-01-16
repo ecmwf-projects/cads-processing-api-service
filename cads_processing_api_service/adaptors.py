@@ -60,7 +60,7 @@ def make_system_job_kwargs(
     setup_code = resource.adaptor
     if setup_code is None:
         setup_code = FALLBACK_SETUP_CODE
-    config["collection_id"] = process_id
+        config["collection_id"] = process_id
 
     mapping = resource.mapping
     if resource.mapping is not None:

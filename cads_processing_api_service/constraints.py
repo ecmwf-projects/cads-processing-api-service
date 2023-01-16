@@ -6,6 +6,32 @@ import cads_catalogue.database
 
 from . import clients, translators
 
+SUPPORTED_CONSTRAINTS = [
+    "StringListWidget",
+    "StringListArrayWidget",
+    "StringChoiceWidget",
+]
+
+
+def get_unsupported_vars(orig_form: list[dict[str, Any]]) -> list[str]:
+    if not isinstance(orig_form, list):
+        orig_form = list(orig_form)
+    unsupported_vars = []
+    for schema in orig_form:
+        if schema["type"] not in SUPPORTED_CONSTRAINTS:
+            unsupported_vars.append(schema["name"])
+    return unsupported_vars
+
+
+def remove_unsupported_vars(
+    constraints: list[dict[str, list[Any]]], unsupported_vars: list[str]
+) -> list[dict[str, list[Any]]]:
+    constraints = copy.deepcopy(constraints)
+    for constraint in constraints:
+        for var in unsupported_vars:
+            constraint.pop(var, None)
+    return constraints
+
 
 def ensure_sequence(v: Any) -> list[Any] | tuple[Any]:
     if not isinstance(v, list | tuple):
@@ -143,8 +169,7 @@ def get_possible_values(
                 ok = False
                 break
             else:
-                print(f'Error: invalid param "{field_name}"')
-                raise KeyError
+                raise KeyError(f'Error: invalid param "{field_name}"')
         if ok:
             for field_name, valid_values in combination.items():
                 result[field_name] |= set(valid_values)
@@ -286,9 +311,12 @@ def validate_constraints(
     with session_obj() as session:
         dataset = clients.lookup_resource_by_id(process_id, record, session)
 
-    form = parse_form(dataset.form_data)
+    orig_form = dataset.form_data
+    form = parse_form(orig_form)
+    unsupported_vars = get_unsupported_vars(orig_form)
 
     constraints = parse_constraints(dataset.constraints_data)
+    constraints = remove_unsupported_vars(constraints, unsupported_vars)
 
     selection = parse_selection(body["inputs"])
 
