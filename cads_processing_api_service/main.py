@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import asgi_correlation_id
 import ogc_api_processes_fastapi
 import starlette_exporter
 
@@ -33,3 +34,4 @@ app.add_api_route(
 app.add_route("/metrics", starlette_exporter.handle_metrics)
 app.add_middleware(starlette_exporter.PrometheusMiddleware)
 metrics.add_metrics_middleware(app)  # type: ignore
+app.add_middleware(asgi_correlation_id.CorrelationIdMiddleware)
