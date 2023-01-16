@@ -449,7 +449,6 @@ def submit_job(
 def check_token(
     pat: Optional[str] = None, jwt: Optional[str] = None
 ) -> tuple[str, dict[str, str]]:
-    print(pat)
     if pat:
         verification_endpoint = "/account/verification/pat"
         auth_header = {"PRIVATE-TOKEN": pat}
