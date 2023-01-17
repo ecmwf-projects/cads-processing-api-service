@@ -25,7 +25,7 @@ app = ogc_api_processes_fastapi.instantiate_app(
 )
 app = ogc_api_processes_fastapi.include_exception_handlers(app=app)
 app = exceptions.include_exception_handlers(app=app)
-app.add_api_route(
+app.router.add_api_route(
     "/processes/{process_id}/constraints",
     constraints.validate_constraints,
     methods=["POST"],
