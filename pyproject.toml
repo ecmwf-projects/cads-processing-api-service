@@ -69,6 +69,9 @@ ignore = [
   "D417"
 ]
 
+[tool.setuptools]
+packages = ["cads_processing_api_service"]
+
 [tool.setuptools_scm]
 write_to = "cads_processing_api_service/version.py"
 write_to_template = '''
