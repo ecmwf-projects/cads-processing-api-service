@@ -169,7 +169,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
         user: dict[str, str] = fastapi.Depends(utils.validate_token),
-    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+    ) -> models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
 
         Request execution of the process identified by `process_id`.
@@ -185,7 +185,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.models.StatusInfo
+        models.StatusInfo
             Information on the status of the job.
 
         Raises
@@ -229,7 +229,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
         back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
         user: dict[str, str] = fastapi.Depends(utils.validate_token),
-    ) -> ogc_api_processes_fastapi.models.JobList:
+    ) -> models.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
 
         Get jobs' status information list.
@@ -258,7 +258,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.models.JobList
+        models.JobList
             Information on the status of the job.
         """
         session_obj = cads_broker.database.ensure_session_obj(None)
@@ -288,20 +288,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job_entries = session.scalars(statement).all()
         if back:
             job_entries = reversed(job_entries)
-        jobs = [
-            ogc_api_processes_fastapi.models.StatusInfo(
-                type="process",
-                jobID=job.request_uid,
-                processID=job.process_id,
-                status=job.status,
-                created=job.created_at,
-                started=job.started_at,
-                finished=job.finished_at,
-                updated=job.updated_at,
-            )
-            for job in job_entries
-        ]
-        job_list = ogc_api_processes_fastapi.models.JobList(jobs=jobs)
+        jobs = [utils.make_status_info(utils.dictify_job(job)) for job in job_entries]
+        job_list = models.JobList(jobs=jobs)
         pagination_qs = utils.make_pagination_qs(jobs, sort_key=sortby.lstrip("-"))
         job_list._pagination_qs = pagination_qs
 
@@ -325,7 +313,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.models.StatusInfo
+        models.StatusInfo
             Information on the status of the job.
 
         Raises
@@ -335,16 +323,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         job = utils.get_job_from_broker_db(job_id=job_id)
         utils.verify_permission(user, job)
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(
-            processID=job.process_id,
-            type="process",
-            jobID=job.request_uid,
-            status=job.status,
-            created=job.created_at,
-            started=job.started_at,
-            finished=job.finished_at,
-            updated=job.updated_at,
-        )
+        status_info = utils.make_status_info(job)
         return status_info
 
     def get_job_results(
@@ -379,21 +358,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         job = utils.get_job_from_broker_db(job_id=job_id)
         utils.verify_permission(user, job)
-        if job.status == "successful":
-            asset_value = cads_broker.database.get_request_result(
-                request_uid=job.request_uid
-            )["args"][0]
-            return {"asset": {"value": asset_value}}
-        elif job.status == "failed":
-            raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
-                type="RuntimeError",
-                detail=job.response_traceback,
-                status_code=fastapi.status.HTTP_400_BAD_REQUEST,
-            )
-        elif job.status in ("accepted", "running"):
-            raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
-                f"Status of {job_id} is {job.status}."
-            )
+        results = utils.get_results_from_broker_db(job=job)
+        return results
 
     def delete_job(
         self,
@@ -413,7 +379,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.models.StatusInfo
+        models.StatusInfo
             Information on the status of the job.
 
         Raises
@@ -424,14 +390,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job = utils.get_job_from_broker_db(job_id=job_id)
         utils.verify_permission(user, job)
         job = cads_broker.database.delete_request(request_uid=job_id)
-        status_info = ogc_api_processes_fastapi.models.StatusInfo(
-            processID=job.process_id,
-            type="process",
-            jobID=job.request_uid,
-            status=job.status,
-            created=job.created_at,
-            started=job.started_at,
-            finished=job.finished_at,
-            updated=job.updated_at,
-        )
+        job = utils.dictify_job(job)
+        status_info = utils.make_status_info(job, add_results=False)
         return status_info

@@ -31,7 +31,7 @@ import sqlalchemy.orm.decl_api
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
-from . import adaptors, config, exceptions
+from . import adaptors, config, exceptions, models
 
 
 class ProcessSortCriterion(str, enum.Enum):
@@ -477,9 +477,17 @@ def validate_token(
     return user
 
 
-def get_job_from_broker_db(job_id: str) -> cads_broker.database.SystemRequest:
+def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
+    job: dict[str, Any] = {
+        column.key: getattr(request, column.key)
+        for column in sqlalchemy.inspect(request).mapper.column_attrs
+    }
+    return job
+
+
+def get_job_from_broker_db(job_id: str) -> dict[str, Any]:
     try:
-        job = cads_broker.database.get_request(request_uid=job_id)
+        request = cads_broker.database.get_request(request_uid=job_id)
     except (
         sqlalchemy.exc.StatementError,
         sqlalchemy.orm.exc.NoResultFound,
@@ -487,12 +495,63 @@ def get_job_from_broker_db(job_id: str) -> cads_broker.database.SystemRequest:
         raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
             f"Can't find the job {job_id}."
         )
+    job = dictify_job(request)
     return job
 
 
-def verify_permission(
-    user: dict[str, str], job: cads_broker.database.SystemRequest
-) -> None:
+def verify_permission(user: dict[str, str], job: dict[str, Any]) -> None:
     user_id = user.get("id", None)
-    if job.request_metadata["user_id"] != user_id:
+    if job["request_metadata"]["user_id"] != user_id:
         raise exceptions.PermissionDenied(detail="Operation not permitted")
+
+
+def get_results_from_broker_db(job: dict[str, Any]) -> dict[str, Any]:
+    job_status = job["status"]
+    job_id = job["request_uid"]
+    if job_status == "successful":
+        asset_value = cads_broker.database.get_request_result(request_uid=job_id)[
+            "args"
+        ][0]
+        results = {"asset": {"value": asset_value}}
+    elif job_status == "failed":
+        raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
+            type="RuntimeError",
+            detail=job["response_traceback"],
+            status_code=fastapi.status.HTTP_400_BAD_REQUEST,
+        )
+    elif job_status in ("accepted", "running"):
+        raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
+            f"Status of {job_id} is {job_status}."
+        )
+    return results
+
+
+def make_status_info(
+    job: dict[str, Any], add_results: bool = True
+) -> models.StatusInfo:
+    job_status = job["status"]
+    request_uid = job["request_uid"]
+    status_info = models.StatusInfo(
+        type="process",
+        jobID=request_uid,
+        processID=job["process_id"],
+        status=job_status,
+        created=job["created_at"],
+        started=job["started_at"],
+        finished=job["finished_at"],
+        updated=job["updated_at"],
+    )
+    if add_results:
+        results = None
+        try:
+            results = get_results_from_broker_db(job)
+        except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
+            results = {
+                "type": exc.type,
+                "title": exc.title,
+                "detail": exc.detail,
+            }
+        except ogc_api_processes_fastapi.exceptions.ResultsNotReady:
+            results = None
+        status_info.results = results
+    return status_info
