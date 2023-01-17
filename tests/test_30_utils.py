@@ -22,7 +22,7 @@ import pytest
 import sqlalchemy
 import sqlalchemy.orm.exc
 
-from cads_processing_api_service import exceptions, utils
+from cads_processing_api_service import exceptions, models, utils
 
 
 def test_parse_sortby() -> None:
@@ -323,7 +323,7 @@ def test_make_status_info() -> None:
         "updated_at": "2023-01-01T16:20:12.175021",
     }
     status_info = utils.make_status_info(job, add_results=False)
-    exp_status_info = utils.StatusInfo(
+    exp_status_info = models.StatusInfo(
         type="process",
         jobID=job["request_uid"],
         processID=job["process_id"],
@@ -337,14 +337,14 @@ def test_make_status_info() -> None:
 
     exp_results = {"key": "value"}
     with unittest.mock.patch(
-        "cads_processing_api_service.clients.get_results_from_broker_db"
+        "cads_processing_api_service.utils.get_results_from_broker_db"
     ) as mock_get_results_from_broker_db:
         mock_get_results_from_broker_db.return_value = exp_results
         status_info = utils.make_status_info(job)
     assert status_info.results == exp_results
 
     with unittest.mock.patch(
-        "cads_processing_api_service.clients.get_results_from_broker_db"
+        "cads_processing_api_service.utils.get_results_from_broker_db"
     ) as mock_get_results_from_broker_db:
         mock_get_results_from_broker_db.side_effect = (
             ogc_api_processes_fastapi.exceptions.JobResultsFailed
@@ -354,7 +354,7 @@ def test_make_status_info() -> None:
     assert all([key in status_info.results.keys() for key in exp_results_keys])
 
     with unittest.mock.patch(
-        "cads_processing_api_service.clients.get_results_from_broker_db"
+        "cads_processing_api_service.utils.get_results_from_broker_db"
     ) as mock_get_results_from_broker_db:
         mock_get_results_from_broker_db.side_effect = (
             ogc_api_processes_fastapi.exceptions.ResultsNotReady

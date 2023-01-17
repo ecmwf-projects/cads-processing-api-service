@@ -31,7 +31,7 @@ import sqlalchemy.orm.decl_api
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
-from . import adaptors, config, exceptions
+from . import adaptors, config, exceptions, models
 
 
 class ProcessSortCriterion(str, enum.Enum):
@@ -477,10 +477,10 @@ def validate_token(
     return user
 
 
-def dictify_job(job: cads_broker.database.SystemRequest) -> dict[str, Any]:
-    job = {
-        column.key: getattr(job, column.key)
-        for column in sqlalchemy.inspect(job).mapper.column_attrs
+def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
+    job: dict[str, Any] = {
+        column.key: getattr(request, column.key)
+        for column in sqlalchemy.inspect(request).mapper.column_attrs
     }
     return job
 
@@ -527,11 +527,11 @@ def get_results_from_broker_db(job: dict[str, Any]) -> dict[str, Any]:
 
 
 def make_status_info(
-    job: dict[str, Any], add_results=True
-) -> ogc_api_processes_fastapi.models.StatusInfo:
+    job: dict[str, Any], add_results: bool = True
+) -> models.StatusInfo:
     job_status = job["status"]
     request_uid = job["request_uid"]
-    status_info = ogc_api_processes_fastapi.models.StatusInfo(
+    status_info = models.StatusInfo(
         type="process",
         jobID=request_uid,
         processID=job["process_id"],
