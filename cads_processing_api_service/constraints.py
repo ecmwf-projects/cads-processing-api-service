@@ -4,7 +4,7 @@ from typing import Any
 
 import cads_catalogue.database
 
-from . import clients, translators
+from . import translators, utils
 
 SUPPORTED_CONSTRAINTS = [
     "StringListWidget",
@@ -309,7 +309,7 @@ def validate_constraints(
     session_obj = cads_catalogue.database.ensure_session_obj(None)
     record = cads_catalogue.database.Resource
     with session_obj() as session:
-        dataset = clients.lookup_resource_by_id(process_id, record, session)
+        dataset = utils.lookup_resource_by_id(process_id, record, session)
 
     orig_form = dataset.form_data
     form = parse_form(orig_form)
