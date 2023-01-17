@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import unittest.mock
-from typing import Optional
 
 import cads_broker
 import ogc_api_processes_fastapi.exceptions
@@ -190,7 +189,7 @@ def test_make_pagination_qs() -> None:
 
 
 def test_get_contextual_accepted_licences() -> None:
-    execution_content: dict[str, Optional[list[dict[str, str | int]]]] = {
+    execution_content: dict[str, list[dict[str, str | int]] | None] = {
         "acceptedLicences": [
             {"id": "licence", "revision": 0},
             {"id": "licence", "revision": 0},

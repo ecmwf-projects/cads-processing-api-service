@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict
+from typing import Any
 
 import cads_catalogue.database
 
@@ -47,7 +47,7 @@ FALLBACK_CONFIG: dict[str, str] = {
 
 def make_system_job_kwargs(
     process_id: str,
-    execution_content: Dict[str, Any],
+    execution_content: dict[str, Any],
     resource: cads_catalogue.database.Resource,
 ) -> dict[str, Any]:
 

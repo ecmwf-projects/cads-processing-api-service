@@ -1,6 +1,6 @@
 """Main module of the request-constraints API."""
 import copy
-from typing import Any, Optional, Union
+from typing import Any
 
 import cads_catalogue.database
 
@@ -13,9 +13,7 @@ SUPPORTED_CONSTRAINTS = [
 ]
 
 
-def get_unsupported_vars(
-    orig_form: Optional[Union[list[Any], dict[str, Any]]]
-) -> list[str]:
+def get_unsupported_vars(orig_form: list[Any] | dict[str, Any] | None) -> list[str]:
     if not orig_form:
         orig_form = list(dict())
     if not isinstance(orig_form, list):
@@ -44,7 +42,7 @@ def ensure_sequence(v: Any) -> list[Any] | tuple[Any]:
 
 
 def parse_constraints(
-    constraints: Optional[Union[list[Any], dict[str, Any]]],
+    constraints: list[Any] | dict[str, Any] | None,
 ) -> list[dict[str, set[Any]]]:
     """
     Parse constraints for a given dataset. Convert dict[str, list[Any]] into dict[str, Set[Any]].
@@ -287,9 +285,7 @@ def get_always_valid_params(
     return result
 
 
-def parse_form(
-    raw_form: Optional[Union[list[Any], dict[str, Any]]]
-) -> dict[str, set[Any]]:
+def parse_form(raw_form: list[Any] | dict[str, Any] | None) -> dict[str, set[Any]]:
     """
     Parse the form for a given dataset extracting the information on the possible selections.
 

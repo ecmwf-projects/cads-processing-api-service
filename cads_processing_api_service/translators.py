@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional, Union
+from typing import Any
 
 EXCLUDED_WIDGETS = [
     "LabelWidget",
@@ -32,7 +32,7 @@ def translate_string_list(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def extract_groups_values(
-    groups: list[Any], values: Optional[list[Any]] = None
+    groups: list[Any], values: list[Any] | None = None
 ) -> list[Any]:
 
     if values is None:
@@ -92,7 +92,7 @@ def make_ogc_input_schema(cds_input_schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def translate_cds_form(
-    cds_form: Union[list[Any], dict[str, Any]],
+    cds_form: list[Any] | dict[str, Any],
 ) -> dict[str, Any]:
     """Translate CDS forms inputs into OGC API compliants ones.
 
