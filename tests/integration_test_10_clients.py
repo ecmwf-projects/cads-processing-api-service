@@ -450,6 +450,7 @@ def test_get_job_successful(request, dev_env_proc_api_url: str) -> None:  # type
             "updated",
             "finished",
             "links",
+            "results",
         )
         assert all([key in response_body for key in exp_keys])
 
