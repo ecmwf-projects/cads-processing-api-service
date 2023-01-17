@@ -15,7 +15,7 @@
 # limitations under the License
 
 import ogc_api_processes_fastapi
-import starlette_exporter
+import starlette_exporter.middleware
 
 from . import clients, config, constraints, exceptions, metrics
 
@@ -31,5 +31,5 @@ app.add_api_route(
     methods=["POST"],
 )
 app.add_route("/metrics", starlette_exporter.handle_metrics)
-app.add_middleware(starlette_exporter.PrometheusMiddleware)
+app.add_middleware(starlette_exporter.middleware.PrometheusMiddleware)
 metrics.add_metrics_middleware(app)  # type: ignore

@@ -17,7 +17,7 @@
 import base64
 import enum
 import urllib.parse
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Mapping, Optional, Type
 
 import cads_broker.database
 import cads_catalogue.database
@@ -27,7 +27,6 @@ import ogc_api_processes_fastapi.models
 import requests
 import sqlalchemy.orm
 import sqlalchemy.orm.attributes
-import sqlalchemy.orm.decl_api
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
@@ -46,7 +45,7 @@ class JobSortCriterion(str, enum.Enum):
 
 def lookup_resource_by_id(
     id: str,
-    record: Type[cads_catalogue.database.BaseModel],
+    record: Type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
 ) -> cads_catalogue.database.Resource:
     try:
@@ -67,8 +66,8 @@ def parse_sortby(sortby: str) -> tuple[str, str]:
 
 def apply_metadata_filters(
     statement: sqlalchemy.sql.selectable.Select,
-    resource: cads_broker.database.SystemRequest,
-    filters: dict[str, Optional[list[str]]],
+    resource: Type[cads_broker.database.SystemRequest],
+    filters: dict[str, list[str]],
 ) -> sqlalchemy.sql.selectable.Select:
     """Apply search filters to the running query.
 
@@ -97,8 +96,8 @@ def apply_metadata_filters(
 
 def apply_job_filters(
     statement: sqlalchemy.sql.selectable.Select,
-    resource: cads_broker.database.SystemRequest,
-    filters: dict[str, Optional[list[str]]],
+    resource: Type[cads_broker.database.SystemRequest],
+    filters: Mapping[str, Optional[list[str]]],
 ) -> sqlalchemy.sql.selectable.Select:
     """Apply search filters related to the job status to the running query.
 
@@ -125,7 +124,9 @@ def apply_job_filters(
     return statement
 
 
-def get_compare_and_sort_method_name(sort_dir: str, back: bool) -> dict[str, str]:
+def get_compare_and_sort_method_name(
+    sort_dir: str, back: Optional[bool] = False
+) -> dict[str, str]:
     if (sort_dir == "asc" and back) or (sort_dir == "desc" and not back):
         compare_method_name = "__lt__"
         sort_method_name = "desc"
@@ -159,7 +160,8 @@ def encode_base64(decoded: str) -> str:
 
 def apply_bookmark(
     statement: sqlalchemy.sql.selectable.Select,
-    resource: sqlalchemy.orm.decl_api.DeclarativeMeta,
+    resource: Type[cads_catalogue.database.Resource]
+    | Type[cads_broker.database.SystemRequest],
     cursor: str,
     back: bool,
     sort_key: str,
@@ -171,7 +173,7 @@ def apply_bookmark(
     ----------
         statement: sqlalchemy.sql.selectable.Select
             select statement
-        resource: sqlalchemy.orm.decl_api.DeclarativeMeta
+        resource: Type[cads_catalogue.database.Resource] | Type[cads_broker.database.SystemRequest],
             sqlalchemy declarative base
         cursor: str
             bookmark cursor
@@ -202,7 +204,8 @@ def apply_bookmark(
 
 def apply_sorting(
     statement: sqlalchemy.sql.selectable.Select,
-    resource: sqlalchemy.orm.decl_api.DeclarativeMeta,
+    resource: Type[cads_catalogue.database.Resource]
+    | Type[cads_broker.database.SystemRequest],
     back: bool,
     sort_key: str,
     sort_dir: str,
@@ -213,7 +216,7 @@ def apply_sorting(
     ----------
         statement: sqlalchemy.sql.selectable.Select
             select statement
-        resource: sqlalchemy.orm.decl_api.DeclarativeMeta
+        resource: Type[cads_catalogue.database.Resource] | Type[cads_broker.database.SystemRequest],
             sqlalchemy declarative base
         back: bool
             if True set bookmark for previous page, else set bookmark for next page
@@ -262,10 +265,8 @@ def apply_limit(
 
 
 def make_cursor(
-    entries: list[
-        ogc_api_processes_fastapi.models.StatusInfo
-        | ogc_api_processes_fastapi.models.ProcessSummary
-    ],
+    entries: list[ogc_api_processes_fastapi.models.StatusInfo]
+    | list[ogc_api_processes_fastapi.models.ProcessSummary],
     sort_key: str,
     page: str,
 ) -> str:
@@ -280,10 +281,8 @@ def make_cursor(
 
 
 def make_pagination_qs(
-    entries: list[
-        ogc_api_processes_fastapi.models.StatusInfo
-        | ogc_api_processes_fastapi.models.ProcessSummary
-    ],
+    entries: list[ogc_api_processes_fastapi.models.StatusInfo]
+    | list[ogc_api_processes_fastapi.models.ProcessSummary],
     sort_key: str,
 ) -> ogc_api_processes_fastapi.models.PaginationQueryParameters:
     pagination_qs = ogc_api_processes_fastapi.models.PaginationQueryParameters(
@@ -376,8 +375,9 @@ def validate_request(
     resource = lookup_resource_by_id(
         id=process_id, record=process_table, session=session
     )
+    licences: list[cads_catalogue.database.Licence] = resource.licences
     required_licences = set(
-        (licence.licence_uid, licence.revision) for licence in resource.licences
+        (licence.licence_uid, licence.revision) for licence in licences
     )
     contextual_accepted_licences = get_contextual_accepted_licences(execution_content)
     stored_accepted_licences = get_stored_accepted_licences(auth_header)
@@ -459,7 +459,7 @@ def validate_token(
     jwt: Optional[str] = fastapi.Header(
         None, description="JSON Web Token", alias="Authorization"
     ),
-) -> dict[str, str]:
+) -> dict[str, str | int | Mapping[str, str | int]]:
     verification_endpoint, auth_header = check_token(pat=pat, jwt=jwt)
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
@@ -472,7 +472,7 @@ def validate_token(
             status_code=response.status_code, detail=response.json()["detail"]
         )
     response.raise_for_status()
-    user: dict[str, Any] = response.json()
+    user: dict[str, str | int | Mapping[str, str | int]] = response.json()
     user["auth_header"] = auth_header
     return user
 
@@ -499,7 +499,9 @@ def get_job_from_broker_db(job_id: str) -> dict[str, Any]:
     return job
 
 
-def verify_permission(user: dict[str, str], job: dict[str, Any]) -> None:
+def verify_permission(
+    user: Mapping[str, str | int | Mapping[str, str | int]], job: dict[str, Any]
+) -> None:
     user_id = user.get("id", None)
     if job["request_metadata"]["user_id"] != user_id:
         raise exceptions.PermissionDenied(detail="Operation not permitted")

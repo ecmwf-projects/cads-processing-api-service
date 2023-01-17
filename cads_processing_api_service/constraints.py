@@ -1,6 +1,6 @@
 """Main module of the request-constraints API."""
 import copy
-from typing import Any
+from typing import Any, Optional, Union
 
 import cads_catalogue.database
 
@@ -13,19 +13,23 @@ SUPPORTED_CONSTRAINTS = [
 ]
 
 
-def get_unsupported_vars(orig_form: list[dict[str, Any]]) -> list[str]:
+def get_unsupported_vars(
+    orig_form: Optional[Union[list[Any], dict[str, Any]]]
+) -> list[str]:
+    if not orig_form:
+        orig_form = list(dict())
     if not isinstance(orig_form, list):
         orig_form = list(orig_form)
     unsupported_vars = []
     for schema in orig_form:
-        if schema["type"] not in SUPPORTED_CONSTRAINTS:
+        if "type" in schema.keys() and schema["type"] not in SUPPORTED_CONSTRAINTS:
             unsupported_vars.append(schema["name"])
     return unsupported_vars
 
 
 def remove_unsupported_vars(
-    constraints: list[dict[str, list[Any]]], unsupported_vars: list[str]
-) -> list[dict[str, list[Any]]]:
+    constraints: list[dict[str, set[Any]]], unsupported_vars: list[str]
+) -> list[dict[str, set[Any]]]:
     constraints = copy.deepcopy(constraints)
     for constraint in constraints:
         for var in unsupported_vars:
@@ -40,7 +44,7 @@ def ensure_sequence(v: Any) -> list[Any] | tuple[Any]:
 
 
 def parse_constraints(
-    constraints: list[dict[str, list[Any]]]
+    constraints: Optional[Union[list[Any], dict[str, Any]]],
 ) -> list[dict[str, set[Any]]]:
     """
     Parse constraints for a given dataset. Convert dict[str, list[Any]] into dict[str, Set[Any]].
@@ -53,6 +57,10 @@ def parse_constraints(
     for a given dataset.
 
     """
+    if not constraints:
+        constraints = list(dict())
+    if not isinstance(constraints, list):
+        constraints = list(constraints)
     result = []
     for combination in constraints:
         parsed_combination = {}
@@ -279,7 +287,9 @@ def get_always_valid_params(
     return result
 
 
-def parse_form(raw_form: list[dict[str, Any]]) -> dict[str, set[Any]]:
+def parse_form(
+    raw_form: Optional[Union[list[Any], dict[str, Any]]]
+) -> dict[str, set[Any]]:
     """
     Parse the form for a given dataset extracting the information on the possible selections.
 
@@ -290,14 +300,16 @@ def parse_form(raw_form: list[dict[str, Any]]) -> dict[str, set[Any]]:
     :rtype: dict[str, set[Any]]:
     :return: a dict[str, set[Any]] containing all possible selections.
     """
-    ocg_form = translators.translate_cds_form(raw_form)
+    ogc_form = {}
+    if raw_form:
+        ogc_form = translators.translate_cds_form(raw_form)
     form = {}
-    for field_name in ocg_form:
+    for field_name in ogc_form:
         try:
-            if ocg_form[field_name]["schema_"]["type"] == "array":
-                form[field_name] = set(ocg_form[field_name]["schema_"]["items"]["enum"])
+            if ogc_form[field_name]["schema_"]["type"] == "array":
+                form[field_name] = set(ogc_form[field_name]["schema_"]["items"]["enum"])
             else:
-                form[field_name] = set(ocg_form[field_name]["schema_"]["enum"])
+                form[field_name] = set(ogc_form[field_name]["schema_"]["enum"])
         except KeyError:
             pass
     return form

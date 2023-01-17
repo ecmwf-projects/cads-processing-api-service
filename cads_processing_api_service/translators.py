@@ -101,7 +101,7 @@ def translate_cds_form(
 
     Parameters
     ----------
-    cds_form : list
+    cds_form : Optional[Union[list[Any], dict[str, Any]]]
         CDS form.
 
     Returns

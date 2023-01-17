@@ -66,10 +66,10 @@ def test_encode_decode_base64() -> None:
 def test_apply_metadata_filters() -> None:
     job_table = cads_broker.database.SystemRequest
     statement = sqlalchemy.select(job_table)
-    metadata_filters = {"user_id": [0]}
+    metadata_filters = {"user_id": ["0"]}
     statement = utils.apply_metadata_filters(statement, job_table, metadata_filters)
     compiled_statement = statement.compile()
-    exp_params = {"param_1": [0], "request_metadata_1": "user_id"}
+    exp_params = {"param_1": ["0"], "request_metadata_1": "user_id"}
     exp_substatement = (
         "WHERE (system_requests.request_metadata ->> :request_metadata_1) "
         "IN (__[POSTCOMPILE_param_1])"
@@ -81,7 +81,10 @@ def test_apply_metadata_filters() -> None:
 def test_apply_job_filters() -> None:
     job_table = cads_broker.database.SystemRequest
     statement = sqlalchemy.select(job_table)
-    filters = {"process_id": ["process"], "status": ["successful", "failed"]}
+    filters = {
+        "process_id": ["process"],
+        "status": ["successful", "failed"],
+    }
     statement = utils.apply_job_filters(statement, job_table, filters)
     compiled_statement = statement.compile()
     exp_params = {"process_id_1": ["process"], "status_1": ["successful", "failed"]}
@@ -259,11 +262,10 @@ def test_get_job_from_broker_db() -> None:
     test_job_id = "1234"
     with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
         mock_get_request.return_value = cads_broker.database.SystemRequest(
-            user_id=0, request_uid=test_job_id
+            request_uid=test_job_id
         )
         job = utils.get_job_from_broker_db(test_job_id)
     assert isinstance(job, dict)
-    assert job["user_id"] == 0
     assert job["request_uid"] == test_job_id
 
     with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
@@ -351,7 +353,9 @@ def test_make_status_info() -> None:
         )
         status_info = utils.make_status_info(job)
     exp_results_keys = ("type", "title", "detail")
-    assert all([key in status_info.results.keys() for key in exp_results_keys])
+    results = status_info.results
+    assert results is not None
+    assert all([key in results.keys() for key in exp_results_keys])
 
     with unittest.mock.patch(
         "cads_processing_api_service.utils.get_results_from_broker_db"
