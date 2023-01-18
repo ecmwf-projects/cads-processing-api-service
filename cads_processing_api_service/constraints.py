@@ -14,13 +14,13 @@ SUPPORTED_CONSTRAINTS = [
 
 
 def get_unsupported_vars(orig_form: list[Any] | dict[str, Any] | None) -> list[str]:
-    if not orig_form:
-        orig_form = list(dict())
+    if orig_form is None:
+        orig_form = list()
     if not isinstance(orig_form, list):
         orig_form = list(orig_form)
     unsupported_vars = []
     for schema in orig_form:
-        if "type" in schema.keys() and schema["type"] not in SUPPORTED_CONSTRAINTS:
+        if schema["type"] not in SUPPORTED_CONSTRAINTS:
             unsupported_vars.append(schema["name"])
     return unsupported_vars
 
@@ -55,8 +55,8 @@ def parse_constraints(
     for a given dataset.
 
     """
-    if not constraints:
-        constraints = list(dict())
+    if constraints is None:
+        constraints = list()
     if not isinstance(constraints, list):
         constraints = list(constraints)
     result = []
@@ -296,9 +296,9 @@ def parse_form(raw_form: list[Any] | dict[str, Any] | None) -> dict[str, set[Any
     :rtype: dict[str, set[Any]]:
     :return: a dict[str, set[Any]] containing all possible selections.
     """
-    ogc_form = {}
-    if raw_form:
-        ogc_form = translators.translate_cds_form(raw_form)
+    if raw_form is None:
+        raw_form = list()
+    ogc_form = translators.translate_cds_form(raw_form)
     form = {}
     for field_name in ogc_form:
         try:
