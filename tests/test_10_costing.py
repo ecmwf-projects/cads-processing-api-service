@@ -1,7 +1,7 @@
 from cads_processing_api_service import costing
 
 
-def test_compute_combinations():
+def test_compute_combinations() -> None:
     assert costing.compute_combinations(dict()) == []
 
     result = costing.compute_combinations({"param1": {"1", "2"}})
@@ -22,7 +22,7 @@ def test_compute_combinations():
     )
 
 
-def test_remove_duplicates():
+def test_remove_duplicates() -> None:
     result = costing.remove_duplicates(
         [{"level": {"500"}, "param": {"Z", "T"}}, {"level": {"500"}, "param": {"Z"}}]
     )
@@ -32,7 +32,7 @@ def test_remove_duplicates():
     )
 
 
-def test_estimate_request():
+def test_estimate_request() -> None:
     form = {
         "level": {"500", "850"},
         "param": {"Z", "T"},
@@ -216,7 +216,7 @@ def test_estimate_request():
     assert costing.estimate_granules(form, selection, constraints)
 
 
-def test_estimate_request_size():
+def test_estimate_request_size() -> None:
     form = {"param": {"Z", "T"}}
     constraints = [{"param": {"Z", "T"}}]
 

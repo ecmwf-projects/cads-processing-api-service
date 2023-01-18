@@ -4,22 +4,27 @@ import math
 from . import constraints
 
 
-def compute_combinations(d):
+def compute_combinations(d: dict[str, set[str]]) -> list[dict[str, str]]:
     if not d:
         return []
     keys, values = zip(*d.items())
     return [dict(zip(keys, v)) for v in itertools.product(*values)]
 
 
-def remove_duplicates(found):
-    granules = []
+def remove_duplicates(found: list[dict[str, set[str]]]) -> list[dict[str, str]]:
+    combinations: list[dict[str, str]] = []
     for d in found:
-        granules += compute_combinations(d)
-    granules = set([tuple(granule.items()) for granule in granules])
+        combinations += compute_combinations(d)
+    granules = {tuple(combination.items()) for combination in combinations}
     return [dict(granule) for granule in granules]
 
 
-def estimate_granules(form, selection, _constraints, safe=True):
+def estimate_granules(
+    form: dict[str, set[str]],
+    selection: dict[str, set[str]],
+    _constraints: list[dict[str, set[str]]],
+    safe: bool = True,
+) -> int:
     always_valid = constraints.get_always_valid_params(form, _constraints)
     selected_but_always_valid = {
         k: v for k, v in selection.items() if k in always_valid.keys()
@@ -47,13 +52,19 @@ def estimate_granules(form, selection, _constraints, safe=True):
             if intersection not in found:
                 found.append(intersection)
     if safe:
-        found = remove_duplicates(found)
-        return (len(found)) * max(1, always_valid_multiplier)
+        unique_granules = remove_duplicates(found)
+        return (len(unique_granules)) * max(1, always_valid_multiplier)
     else:
         return sum([math.prod([len(e) for e in d.values()]) for d in found]) * max(
             1, always_valid_multiplier
         )
 
 
-def estimate_size(form, selection, _constraints, safe=True, granule_size=1):
+def estimate_size(
+    form: dict[str, set[str]],
+    selection: dict[str, set[str]],
+    _constraints: list[dict[str, set[str]]],
+    safe: bool = True,
+    granule_size: int = 1,
+) -> int:
     return estimate_granules(form, selection, _constraints, safe=safe) * granule_size
