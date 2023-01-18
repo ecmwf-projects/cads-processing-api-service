@@ -296,7 +296,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         user: dict[str, str] = fastapi.Depends(utils.validate_token),
-    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+    ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
         Get status information for the job identifed by `job_id`.
@@ -376,7 +376,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        models.StatusInfo
+        ogc_api_processes_fastapi.models.StatusInfo
             Information on the status of the job.
 
         Raises
