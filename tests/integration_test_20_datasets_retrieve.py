@@ -198,13 +198,15 @@ def test_dataset_retrieve(test_case: str, dev_env_proc_api_url: str) -> None:
 
     response_body = response.json()
     job_id = response_body["jobID"]
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
+    job_request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
     while response_body["status"] not in ("successful", "failed"):
         time.sleep(3)
-        response = requests.get(request_url, headers=TEST_AUTH_HEADERS)
+        response = requests.get(job_request_url, headers=TEST_AUTH_HEADERS)
         response_body = response.json()
-    request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}/results")
-    results_response = requests.get(request_url, headers=TEST_AUTH_HEADERS)
+    results_request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"jobs/{job_id}/results"
+    )
+    results_response = requests.get(results_request_url, headers=TEST_AUTH_HEADERS)
     assert response_body["status"] == "successful", results_response.json()["detail"]
 
-    response = requests.delete(request_url, headers=TEST_AUTH_HEADERS)
+    response = requests.delete(job_request_url, headers=TEST_AUTH_HEADERS)
