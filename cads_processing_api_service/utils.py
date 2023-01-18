@@ -372,7 +372,7 @@ def validate_request(
     resource = lookup_resource_by_id(
         id=process_id, record=process_table, session=session
     )
-    licences: list[cads_catalogue.database.Licence] = resource.licences
+    licences: list[cads_catalogue.database.Licence] = resource.licences  # type: ignore
     required_licences = {
         (licence.licence_uid, licence.revision) for licence in licences
     }
