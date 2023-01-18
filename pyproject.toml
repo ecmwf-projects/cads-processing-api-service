@@ -33,6 +33,7 @@ branch = true
 
 [tool.mypy]
 strict = true
+plugins = ["sqlmypy"]
 
 [[tool.mypy.overrides]]
 module = [

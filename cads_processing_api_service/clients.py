@@ -17,7 +17,6 @@
 # limitations under the License
 
 import logging
-from typing import Optional, Type
 
 import attrs
 import cacholote.extra_encoders
@@ -52,10 +51,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         Processes record/table.
     """
 
-    process_table: Type[cads_catalogue.database.Resource] = attrs.field(
+    process_table: type[cads_catalogue.database.Resource] = attrs.field(
         default=cads_catalogue.database.Resource
     )
-    job_table: Type[cads_broker.database.SystemRequest] = attrs.field(
+    job_table: type[cads_broker.database.SystemRequest] = attrs.field(
         default=cads_broker.database.SystemRequest
     )
 
@@ -70,12 +69,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def get_processes(
         self,
-        limit: Optional[int] = fastapi.Query(10, ge=1, le=10000),
-        sortby: Optional[utils.ProcessSortCriterion] = fastapi.Query(
-            utils.ProcessSortCriterion.resource_uid_asc
-        ),
-        cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
-        back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
+        limit: int | None = fastapi.Query(10, ge=1, le=10000),
+        sortby: utils.ProcessSortCriterion
+        | None = fastapi.Query(utils.ProcessSortCriterion.resource_uid_asc),
+        cursor: str | None = fastapi.Query(None, include_in_schema=False),
+        back: bool | None = fastapi.Query(None, include_in_schema=False),
     ) -> ogc_api_processes_fastapi.models.ProcessList:
         """Implement OGC API - Processes `GET /processes` endpoint.
 
@@ -220,14 +218,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def get_jobs(
         self,
-        processID: Optional[list[str]] = fastapi.Query(None),
-        status: Optional[list[str]] = fastapi.Query(None),
-        limit: Optional[int] = fastapi.Query(10, ge=1, le=10000),
-        sortby: Optional[utils.JobSortCriterion] = fastapi.Query(
-            utils.JobSortCriterion.created_at_desc
-        ),
-        cursor: Optional[str] = fastapi.Query(None, include_in_schema=False),
-        back: Optional[bool] = fastapi.Query(None, include_in_schema=False),
+        processID: list[str] | None = fastapi.Query(None),
+        status: list[str] | None = fastapi.Query(None),
+        limit: int | None = fastapi.Query(10, ge=1, le=10000),
+        sortby: utils.JobSortCriterion
+        | None = fastapi.Query(utils.JobSortCriterion.created_at_desc),
+        cursor: str | None = fastapi.Query(None, include_in_schema=False),
+        back: bool | None = fastapi.Query(None, include_in_schema=False),
         user: dict[str, str] = fastapi.Depends(utils.validate_token),
     ) -> models.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
@@ -299,7 +296,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         user: dict[str, str] = fastapi.Depends(utils.validate_token),
-    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+    ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
         Get status information for the job identifed by `job_id`.
@@ -379,7 +376,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        models.StatusInfo
+        ogc_api_processes_fastapi.models.StatusInfo
             Information on the status of the job.
 
         Raises

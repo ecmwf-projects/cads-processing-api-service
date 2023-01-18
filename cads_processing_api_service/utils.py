@@ -17,7 +17,8 @@
 import base64
 import enum
 import urllib.parse
-from typing import Any, Callable, Optional, Type
+from collections.abc import Callable, Mapping
+from typing import Any
 
 import cads_broker.database
 import cads_catalogue.database
@@ -27,7 +28,6 @@ import ogc_api_processes_fastapi.models
 import requests
 import sqlalchemy.orm
 import sqlalchemy.orm.attributes
-import sqlalchemy.orm.decl_api
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
@@ -46,7 +46,7 @@ class JobSortCriterion(str, enum.Enum):
 
 def lookup_resource_by_id(
     id: str,
-    record: Type[cads_catalogue.database.BaseModel],
+    record: type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
 ) -> cads_catalogue.database.Resource:
     try:
@@ -67,8 +67,8 @@ def parse_sortby(sortby: str) -> tuple[str, str]:
 
 def apply_metadata_filters(
     statement: sqlalchemy.sql.selectable.Select,
-    resource: cads_broker.database.SystemRequest,
-    filters: dict[str, Optional[list[str]]],
+    resource: type[cads_broker.database.SystemRequest],
+    filters: dict[str, list[str]],
 ) -> sqlalchemy.sql.selectable.Select:
     """Apply search filters to the running query.
 
@@ -97,8 +97,8 @@ def apply_metadata_filters(
 
 def apply_job_filters(
     statement: sqlalchemy.sql.selectable.Select,
-    resource: cads_broker.database.SystemRequest,
-    filters: dict[str, Optional[list[str]]],
+    resource: type[cads_broker.database.SystemRequest],
+    filters: Mapping[str, list[str] | None],
 ) -> sqlalchemy.sql.selectable.Select:
     """Apply search filters related to the job status to the running query.
 
@@ -125,7 +125,9 @@ def apply_job_filters(
     return statement
 
 
-def get_compare_and_sort_method_name(sort_dir: str, back: bool) -> dict[str, str]:
+def get_compare_and_sort_method_name(
+    sort_dir: str, back: bool | None = False
+) -> dict[str, str]:
     if (sort_dir == "asc" and back) or (sort_dir == "desc" and not back):
         compare_method_name = "__lt__"
         sort_method_name = "desc"
@@ -159,7 +161,8 @@ def encode_base64(decoded: str) -> str:
 
 def apply_bookmark(
     statement: sqlalchemy.sql.selectable.Select,
-    resource: sqlalchemy.orm.decl_api.DeclarativeMeta,
+    resource: type[cads_catalogue.database.Resource]
+    | type[cads_broker.database.SystemRequest],
     cursor: str,
     back: bool,
     sort_key: str,
@@ -171,7 +174,7 @@ def apply_bookmark(
     ----------
         statement: sqlalchemy.sql.selectable.Select
             select statement
-        resource: sqlalchemy.orm.decl_api.DeclarativeMeta
+        resource: Type[cads_catalogue.database.Resource] | Type[cads_broker.database.SystemRequest],
             sqlalchemy declarative base
         cursor: str
             bookmark cursor
@@ -202,7 +205,8 @@ def apply_bookmark(
 
 def apply_sorting(
     statement: sqlalchemy.sql.selectable.Select,
-    resource: sqlalchemy.orm.decl_api.DeclarativeMeta,
+    resource: type[cads_catalogue.database.Resource]
+    | type[cads_broker.database.SystemRequest],
     back: bool,
     sort_key: str,
     sort_dir: str,
@@ -213,7 +217,7 @@ def apply_sorting(
     ----------
         statement: sqlalchemy.sql.selectable.Select
             select statement
-        resource: sqlalchemy.orm.decl_api.DeclarativeMeta
+        resource: Type[cads_catalogue.database.Resource] | Type[cads_broker.database.SystemRequest],
             sqlalchemy declarative base
         back: bool
             if True set bookmark for previous page, else set bookmark for next page
@@ -241,7 +245,7 @@ def apply_sorting(
 
 def apply_limit(
     statement: sqlalchemy.sql.selectable.Select,
-    limit: Optional[int],
+    limit: int | None,
 ) -> sqlalchemy.sql.selectable.Select:
     """Apply limit to the running query.
 
@@ -262,10 +266,8 @@ def apply_limit(
 
 
 def make_cursor(
-    entries: list[
-        ogc_api_processes_fastapi.models.StatusInfo
-        | ogc_api_processes_fastapi.models.ProcessSummary
-    ],
+    entries: list[ogc_api_processes_fastapi.models.StatusInfo]
+    | list[ogc_api_processes_fastapi.models.ProcessSummary],
     sort_key: str,
     page: str,
 ) -> str:
@@ -280,10 +282,8 @@ def make_cursor(
 
 
 def make_pagination_qs(
-    entries: list[
-        ogc_api_processes_fastapi.models.StatusInfo
-        | ogc_api_processes_fastapi.models.ProcessSummary
-    ],
+    entries: list[ogc_api_processes_fastapi.models.StatusInfo]
+    | list[ogc_api_processes_fastapi.models.ProcessSummary],
     sort_key: str,
 ) -> ogc_api_processes_fastapi.models.PaginationQueryParameters:
     pagination_qs = ogc_api_processes_fastapi.models.PaginationQueryParameters(
@@ -303,9 +303,7 @@ def get_contextual_accepted_licences(
     licences = execution_content.get("acceptedLicences")
     if not licences:
         licences = []
-    accepted_licences = set(
-        [(licence["id"], licence["revision"]) for licence in licences]
-    )
+    accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}
     return accepted_licences
 
 
@@ -318,9 +316,7 @@ def get_stored_accepted_licences(auth_header: dict[str, str]) -> set[tuple[str, 
     response = requests.get(request_url, headers=auth_header)
     response.raise_for_status()
     licences = response.json()["licences"]
-    accepted_licences = set(
-        [(licence["id"], licence["revision"]) for licence in licences]
-    )
+    accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}
     return accepted_licences
 
 
@@ -347,7 +343,7 @@ def validate_request(
     execution_content: dict[str, Any],
     auth_header: dict[str, str],
     session: sqlalchemy.orm.Session,
-    process_table: Type[cads_catalogue.database.Resource],
+    process_table: type[cads_catalogue.database.Resource],
 ) -> cads_catalogue.database.Resource:
     """Validate retrieve process execution request.
 
@@ -376,9 +372,10 @@ def validate_request(
     resource = lookup_resource_by_id(
         id=process_id, record=process_table, session=session
     )
-    required_licences = set(
-        (licence.licence_uid, licence.revision) for licence in resource.licences
-    )
+    licences: list[cads_catalogue.database.Licence] = resource.licences  # type: ignore
+    required_licences = {
+        (licence.licence_uid, licence.revision) for licence in licences
+    }
     contextual_accepted_licences = get_contextual_accepted_licences(execution_content)
     stored_accepted_licences = get_stored_accepted_licences(auth_header)
     accepted_licences = contextual_accepted_licences.union(stored_accepted_licences)
@@ -436,7 +433,7 @@ def submit_job(
 
 
 def check_token(
-    pat: Optional[str] = None, jwt: Optional[str] = None
+    pat: str | None = None, jwt: str | None = None
 ) -> tuple[str, dict[str, str]]:
     if pat:
         verification_endpoint = "/account/verification/pat"
@@ -453,13 +450,13 @@ def check_token(
 
 
 def validate_token(
-    pat: Optional[str] = fastapi.Header(
+    pat: str
+    | None = fastapi.Header(
         None, description="Personal Access Token", alias="PRIVATE-TOKEN"
     ),
-    jwt: Optional[str] = fastapi.Header(
-        None, description="JSON Web Token", alias="Authorization"
-    ),
-) -> dict[str, str]:
+    jwt: str
+    | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
+) -> dict[str, str | int | Mapping[str, str | int]]:
     verification_endpoint, auth_header = check_token(pat=pat, jwt=jwt)
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
@@ -472,7 +469,7 @@ def validate_token(
             status_code=response.status_code, detail=response.json()["detail"]
         )
     response.raise_for_status()
-    user: dict[str, Any] = response.json()
+    user: dict[str, str | int | Mapping[str, str | int]] = response.json()
     user["auth_header"] = auth_header
     return user
 
@@ -499,7 +496,9 @@ def get_job_from_broker_db(job_id: str) -> dict[str, Any]:
     return job
 
 
-def verify_permission(user: dict[str, str], job: dict[str, Any]) -> None:
+def verify_permission(
+    user: Mapping[str, str | int | Mapping[str, str | int]], job: dict[str, Any]
+) -> None:
     user_id = user.get("id", None)
     if job["request_metadata"]["user_id"] != user_id:
         raise exceptions.PermissionDenied(detail="Operation not permitted")
