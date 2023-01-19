@@ -16,7 +16,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+# import functools
 import logging
+from typing import Iterator
 
 import attrs
 import cacholote.extra_encoders
@@ -39,6 +41,15 @@ import sqlalchemy.sql.selectable
 from . import models, serializers, utils
 
 logger = logging.getLogger(__name__)
+
+# @functools.lru_cache()
+def get_compute_session() -> Iterator[sqlalchemy.orm.Session]:
+    session_obj = cads_broker.database.ensure_session_obj(None)
+    session: sqlalchemy.orm.Session = session_obj()
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 @attrs.define
@@ -167,6 +178,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
         user: dict[str, str] = fastapi.Depends(utils.validate_token),
+        compute_session: sqlalchemy.orm.Session = fastapi.Depends(get_compute_session),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
 
@@ -212,7 +224,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 self.process_table,
             )
             status_info = utils.submit_job(
-                user_id, process_id, execution_content, resource
+                user_id, process_id, execution_content, resource, compute_session
             )
         return status_info
 

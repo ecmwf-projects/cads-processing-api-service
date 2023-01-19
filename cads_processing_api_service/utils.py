@@ -389,6 +389,7 @@ def submit_job(
     process_id: str,
     execution_content: dict[str, Any],
     resource: cads_catalogue.database.Resource,
+    compute_session: sqlalchemy.orm.Session,
 ) -> ogc_api_processes_fastapi.models.StatusInfo:
     """Submit new job.
 
@@ -412,7 +413,8 @@ def submit_job(
     job_kwargs = adaptors.make_system_job_kwargs(
         process_id, execution_content, resource
     )
-    job = cads_broker.database.create_request(
+    job = cads_broker.database.create_request_in_session(
+        session=compute_session,
         user_id=user_id,
         process_id=process_id,
         **job_kwargs,
