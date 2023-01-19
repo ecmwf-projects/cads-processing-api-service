@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-from typing import Optional
+from typing import Any
 
 import ogc_api_processes_fastapi.models
 import pydantic
@@ -26,4 +26,12 @@ class Licence(pydantic.BaseModel):
 
 
 class Execute(ogc_api_processes_fastapi.models.Execute):
-    acceptedLicences: Optional[list[Licence]] = None
+    acceptedLicences: list[Licence] | None = None
+
+
+class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
+    results: dict[str, Any] | None = None
+
+
+class JobList(ogc_api_processes_fastapi.models.JobList):
+    jobs: list[StatusInfo]  # type: ignore
