@@ -4,7 +4,7 @@ from typing import Any
 
 import cads_catalogue.database
 
-from . import clients, translators
+from . import clients, translators, exceptions
 
 SUPPORTED_CONSTRAINTS = [
     "StringListWidget",
@@ -169,7 +169,7 @@ def get_possible_values(
                 ok = False
                 break
             else:
-                raise KeyError(f'Error: invalid param "{field_name}"')
+                raise exceptions.ParameterError(f"Error: invalid param '{field_name}'")
         if ok:
             for field_name, valid_values in combination.items():
                 result[field_name] |= set(valid_values)
