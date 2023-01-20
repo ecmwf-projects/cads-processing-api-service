@@ -16,7 +16,6 @@
 
 import base64
 import enum
-import logging
 import urllib.parse
 from collections.abc import Callable, Mapping
 from typing import Any
@@ -33,8 +32,6 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 
 from . import adaptors, config, exceptions, models
-
-logger = logging.getLogger(__name__)
 
 
 class ProcessSortCriterion(str, enum.Enum):
