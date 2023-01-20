@@ -389,6 +389,7 @@ def submit_job(
     process_id: str,
     execution_content: dict[str, Any],
     resource: cads_catalogue.database.Resource,
+    compute_session: sqlalchemy.orm.Session,
 ) -> ogc_api_processes_fastapi.models.StatusInfo:
     """Submit new job.
 
@@ -412,7 +413,8 @@ def submit_job(
     job_kwargs = adaptors.make_system_job_kwargs(
         process_id, execution_content, resource
     )
-    job = cads_broker.database.create_request(
+    job = cads_broker.database.create_request_in_session(
+        session=compute_session,
         user_id=user_id,
         process_id=process_id,
         **job_kwargs,
@@ -449,31 +451,6 @@ def check_token(
     return (verification_endpoint, auth_header)
 
 
-def validate_token(
-    pat: str
-    | None = fastapi.Header(
-        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
-    ),
-    jwt: str
-    | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
-) -> dict[str, str | int | Mapping[str, str | int]]:
-    verification_endpoint, auth_header = check_token(pat=pat, jwt=jwt)
-    settings = config.ensure_settings()
-    request_url = urllib.parse.urljoin(
-        settings.internal_proxy_url,
-        f"{settings.profiles_base_url}{verification_endpoint}",
-    )
-    response = requests.post(request_url, headers=auth_header)
-    if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
-        raise exceptions.PermissionDenied(
-            status_code=response.status_code, detail=response.json()["detail"]
-        )
-    response.raise_for_status()
-    user: dict[str, str | int | Mapping[str, str | int]] = response.json()
-    user["auth_header"] = auth_header
-    return user
-
-
 def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
     job: dict[str, Any] = {
         column.key: getattr(request, column.key)
@@ -482,9 +459,13 @@ def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
     return job
 
 
-def get_job_from_broker_db(job_id: str) -> dict[str, Any]:
+def get_job_from_broker_db(
+    job_id: str, session: sqlalchemy.orm.Session
+) -> dict[str, Any]:
     try:
-        request = cads_broker.database.get_request(request_uid=job_id)
+        request = cads_broker.database.get_request_in_session(
+            request_uid=job_id, session=session
+        )
     except (
         sqlalchemy.exc.StatementError,
         sqlalchemy.orm.exc.NoResultFound,
@@ -504,13 +485,15 @@ def verify_permission(
         raise exceptions.PermissionDenied(detail="Operation not permitted")
 
 
-def get_results_from_broker_db(job: dict[str, Any]) -> dict[str, Any]:
+def get_results_from_broker_db(
+    job: dict[str, Any], session: sqlalchemy.orm.Session
+) -> dict[str, Any]:
     job_status = job["status"]
     job_id = job["request_uid"]
     if job_status == "successful":
-        asset_value = cads_broker.database.get_request_result(request_uid=job_id)[
-            "args"
-        ][0]
+        asset_value = cads_broker.database.get_request_result_in_session(
+            request_uid=job_id, session=session
+        )["args"][0]
         results = {"asset": {"value": asset_value}}
     elif job_status == "failed":
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
@@ -526,7 +509,9 @@ def get_results_from_broker_db(job: dict[str, Any]) -> dict[str, Any]:
 
 
 def make_status_info(
-    job: dict[str, Any], add_results: bool = True
+    job: dict[str, Any],
+    session: sqlalchemy.orm.Session,
+    add_results: bool = True,
 ) -> models.StatusInfo:
     job_status = job["status"]
     request_uid = job["request_uid"]
@@ -543,7 +528,7 @@ def make_status_info(
     if add_results:
         results = None
         try:
-            results = get_results_from_broker_db(job)
+            results = get_results_from_broker_db(job=job, session=session)
         except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
             results = {
                 "type": exc.type,

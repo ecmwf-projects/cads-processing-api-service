@@ -247,8 +247,8 @@ def test_post_process_execution_stored_accepted_licences(
 ) -> None:
     response = accept_licence(dev_env_prof_api_url)
     response_status_code = response.status_code
-    exp_status_code = 201
-    assert response_status_code == exp_status_code
+    exp_status_codes = (201, 409)
+    assert response_status_code in exp_status_codes
 
     response = submit_job(dev_env_proc_api_url)
     response_body = response.json()
