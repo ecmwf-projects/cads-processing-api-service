@@ -58,7 +58,12 @@ def get_catalogue_session() -> Iterator[sqlalchemy.orm.Session]:
 
 
 def validate_token(
-    pat: str | None = None, jwt: str | None = None
+    pat: str
+    | None = fastapi.Header(
+        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
+    ),
+    jwt: str
+    | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
 ) -> dict[str, str | int | Mapping[str, str | int]]:
     verification_endpoint, auth_header = utils.check_token(pat=pat, jwt=jwt)
     settings = config.ensure_settings()
