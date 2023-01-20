@@ -17,7 +17,6 @@
 import base64
 import enum
 import logging
-import time
 import urllib.parse
 from collections.abc import Callable, Mapping
 from typing import Any
@@ -46,22 +45,6 @@ class ProcessSortCriterion(str, enum.Enum):
 class JobSortCriterion(str, enum.Enum):
     created_at_asc: str = "created"
     created_at_desc: str = "-created"
-
-
-def log_execution_time_maker(log_tag: str):
-    def log_execution_time(function):
-        def wrapper(*args, **kwargs):
-            start_time = time.time()
-            func = function(*args, **kwargs)
-            logger.info(
-                log_tag,
-                {"structured_data": {"time": time.time() - start_time}},
-            )
-            return func
-
-        return wrapper
-
-    return log_execution_time
 
 
 def lookup_resource_by_id(
@@ -358,7 +341,6 @@ def check_licences(
     return missing_licences
 
 
-@log_execution_time_maker("validate_request")
 def validate_request(
     process_id: str,
     execution_content: dict[str, Any],
@@ -405,7 +387,6 @@ def validate_request(
     return resource
 
 
-@log_execution_time_maker("submit_job")
 def submit_job(
     user_id: int,
     process_id: str,
@@ -471,27 +452,6 @@ def check_token(
             detail="Authentication required",
         )
     return (verification_endpoint, auth_header)
-
-
-@log_execution_time_maker("validate_token")
-def validate_token_timed(
-    pat: str | None = None, jwt: str | None = None
-) -> dict[str, str | int | Mapping[str, str | int]]:
-    verification_endpoint, auth_header = check_token(pat=pat, jwt=jwt)
-    settings = config.ensure_settings()
-    request_url = urllib.parse.urljoin(
-        settings.internal_proxy_url,
-        f"{settings.profiles_base_url}{verification_endpoint}",
-    )
-    response = requests.post(request_url, headers=auth_header)
-    if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
-        raise exceptions.PermissionDenied(
-            status_code=response.status_code, detail=response.json()["detail"]
-        )
-    response.raise_for_status()
-    user: dict[str, str | int | Mapping[str, str | int]] = response.json()
-    user["auth_header"] = auth_header
-    return user
 
 
 def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:

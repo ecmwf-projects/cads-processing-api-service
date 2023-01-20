@@ -15,14 +15,16 @@
 # limitations under the License
 
 import functools
+import urllib
 from typing import Iterator, Mapping
 
 import cads_broker.database
 import cads_catalogue.database
 import fastapi
+import requests
 import sqlalchemy.orm
 
-from . import utils
+from . import config, exceptions, utils
 
 
 @functools.lru_cache()
@@ -56,12 +58,20 @@ def get_catalogue_session() -> Iterator[sqlalchemy.orm.Session]:
 
 
 def validate_token(
-    pat: str
-    | None = fastapi.Header(
-        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
-    ),
-    jwt: str
-    | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
+    pat: str | None = None, jwt: str | None = None
 ) -> dict[str, str | int | Mapping[str, str | int]]:
-    user = utils.validate_token_timed(pat, jwt)
+    verification_endpoint, auth_header = utils.check_token(pat=pat, jwt=jwt)
+    settings = config.ensure_settings()
+    request_url = urllib.parse.urljoin(
+        settings.internal_proxy_url,
+        f"{settings.profiles_base_url}{verification_endpoint}",
+    )
+    response = requests.post(request_url, headers=auth_header)
+    if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
+        raise exceptions.PermissionDenied(
+            status_code=response.status_code, detail=response.json()["detail"]
+        )
+    response.raise_for_status()
+    user: dict[str, str | int | Mapping[str, str | int]] = response.json()
+    user["auth_header"] = auth_header
     return user
