@@ -17,7 +17,6 @@
 # limitations under the License
 
 import logging
-import time
 
 import attrs
 import cacholote.extra_encoders
@@ -192,7 +191,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        start_time = time.time()
         user_id = user.get("id", None)
         execution_content = execution_content.dict()
         logger.info(
@@ -214,10 +212,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         status_info = utils.submit_job(
             user_id, process_id, execution_content, resource, compute_session
-        )
-        logger.info(
-            "post_process_execution",
-            {"structured_data": {"time": time.time() - start_time}},
         )
         return status_info
 
