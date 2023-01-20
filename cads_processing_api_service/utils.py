@@ -16,6 +16,8 @@
 
 import base64
 import enum
+import logging
+import time
 import urllib.parse
 from collections.abc import Callable, Mapping
 from typing import Any
@@ -33,6 +35,8 @@ import sqlalchemy.sql.selectable
 
 from . import adaptors, config, exceptions, models
 
+logger = logging.getLogger(__name__)
+
 
 class ProcessSortCriterion(str, enum.Enum):
     resource_uid_asc: str = "id"
@@ -42,6 +46,22 @@ class ProcessSortCriterion(str, enum.Enum):
 class JobSortCriterion(str, enum.Enum):
     created_at_asc: str = "created"
     created_at_desc: str = "-created"
+
+
+def log_execution_time_maker(log_tag: str):
+    def log_execution_time(function):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            func = function(*args, **kwargs)
+            logger.info(
+                log_tag,
+                {"structured_data": {"time": time.time() - start_time}},
+            )
+            return func
+
+        return wrapper
+
+    return log_execution_time
 
 
 def lookup_resource_by_id(
@@ -338,6 +358,7 @@ def check_licences(
     return missing_licences
 
 
+@log_execution_time_maker("validate_request")
 def validate_request(
     process_id: str,
     execution_content: dict[str, Any],
@@ -384,6 +405,7 @@ def validate_request(
     return resource
 
 
+@log_execution_time_maker("submit_job")
 def submit_job(
     user_id: int,
     process_id: str,
@@ -451,13 +473,9 @@ def check_token(
     return (verification_endpoint, auth_header)
 
 
-def validate_token(
-    pat: str
-    | None = fastapi.Header(
-        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
-    ),
-    jwt: str
-    | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
+@log_execution_time_maker("validate_token")
+def validate_token_timed(
+    pat: str | None = None, jwt: str | None = None
 ) -> dict[str, str | int | Mapping[str, str | int]]:
     verification_endpoint, auth_header = check_token(pat=pat, jwt=jwt)
     settings = config.ensure_settings()
@@ -473,6 +491,18 @@ def validate_token(
     response.raise_for_status()
     user: dict[str, str | int | Mapping[str, str | int]] = response.json()
     user["auth_header"] = auth_header
+    return user
+
+
+def validate_token(
+    pat: str
+    | None = fastapi.Header(
+        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
+    ),
+    jwt: str
+    | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
+) -> dict[str, str | int | Mapping[str, str | int]]:
+    user = validate_token_timed(pat, jwt)
     return user
 
 
