@@ -494,18 +494,6 @@ def validate_token_timed(
     return user
 
 
-def validate_token(
-    pat: str
-    | None = fastapi.Header(
-        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
-    ),
-    jwt: str
-    | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
-) -> dict[str, str | int | Mapping[str, str | int]]:
-    user = validate_token_timed(pat, jwt)
-    return user
-
-
 def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
     job: dict[str, Any] = {
         column.key: getattr(request, column.key)
@@ -514,9 +502,13 @@ def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
     return job
 
 
-def get_job_from_broker_db(job_id: str) -> dict[str, Any]:
+def get_job_from_broker_db(
+    job_id: str, session: sqlalchemy.orm.Session
+) -> dict[str, Any]:
     try:
-        request = cads_broker.database.get_request(request_uid=job_id)
+        request = cads_broker.database.get_request_in_session(
+            request_uid=job_id, session=session
+        )
     except (
         sqlalchemy.exc.StatementError,
         sqlalchemy.orm.exc.NoResultFound,
@@ -536,13 +528,15 @@ def verify_permission(
         raise exceptions.PermissionDenied(detail="Operation not permitted")
 
 
-def get_results_from_broker_db(job: dict[str, Any]) -> dict[str, Any]:
+def get_results_from_broker_db(
+    job: dict[str, Any], session: sqlalchemy.orm.Session
+) -> dict[str, Any]:
     job_status = job["status"]
     job_id = job["request_uid"]
     if job_status == "successful":
-        asset_value = cads_broker.database.get_request_result(request_uid=job_id)[
-            "args"
-        ][0]
+        asset_value = cads_broker.database.get_request_result_in_session(
+            request_uid=job_id, session=session
+        )["args"][0]
         results = {"asset": {"value": asset_value}}
     elif job_status == "failed":
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
@@ -558,7 +552,9 @@ def get_results_from_broker_db(job: dict[str, Any]) -> dict[str, Any]:
 
 
 def make_status_info(
-    job: dict[str, Any], add_results: bool = True
+    job: dict[str, Any],
+    session: sqlalchemy.orm.Session,
+    add_results: bool = True,
 ) -> models.StatusInfo:
     job_status = job["status"]
     request_uid = job["request_uid"]
@@ -575,7 +571,7 @@ def make_status_info(
     if add_results:
         results = None
         try:
-            results = get_results_from_broker_db(job)
+            results = get_results_from_broker_db(job=job, session=session)
         except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
             results = {
                 "type": exc.type,
