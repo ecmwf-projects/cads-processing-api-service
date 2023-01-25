@@ -135,7 +135,7 @@ def test_get_processes(dev_env_proc_api_url: str) -> None:
     assert all([key in response_body for key in exp_keys])
 
     number_of_processes = len(response_body["processes"])
-    exp_number_of_processes = 6
+    exp_number_of_processes = 7
     assert number_of_processes == exp_number_of_processes
 
 
@@ -442,6 +442,7 @@ def test_get_job_successful(
     job_id = response.json()["jobID"]
     request_url = urllib.parse.urljoin(dev_env_proc_api_url, f"jobs/{job_id}")
     response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
+    response.raise_for_status()
     response_body = response.json()
     while response_body["status"] not in ("successful", "failed"):
         time.sleep(5)
