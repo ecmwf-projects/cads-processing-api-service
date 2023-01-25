@@ -30,6 +30,11 @@ class Execute(ogc_api_processes_fastapi.models.Execute):
 
 
 class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
+    request: dict[
+        str,
+        ogc_api_processes_fastapi.models.InlineOrRefData
+        | list[ogc_api_processes_fastapi.models.InlineOrRefData],
+    ]
     results: dict[str, Any] | None = None
 
 
