@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import fastapi.middleware.cors
 import ogc_api_processes_fastapi
 import starlette_exporter
 
@@ -33,3 +34,12 @@ app.router.add_api_route(
 app.add_route("/metrics", starlette_exporter.handle_metrics)
 app.add_middleware(starlette_exporter.middleware.PrometheusMiddleware)
 metrics.add_metrics_middleware(app)  # type: ignore
+
+# FIXME: temporary workaround
+app.add_middleware(
+    fastapi.middleware.cors.CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
