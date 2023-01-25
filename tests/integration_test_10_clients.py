@@ -25,47 +25,47 @@ NON_EXISTING_PROCESS_ID = "non-existing-dataset"
 NON_EXISTING_JOB_ID = "1234"
 POST_PROCESS_REQUEST_BODY_SUCCESS = {
     "inputs": {
-        "product_type": "reanalysis",
+        "product_type": ["reanalysis"],
         "format": "grib",
-        "variable": "temperature",
-        "pressure_level": "1",
-        "year": "1971",
-        "month": "01",
-        "day": "25",
-        "time": "06:00",
+        "variable": ["temperature"],
+        "pressure_level": ["1"],
+        "year": ["1971"],
+        "month": ["01"],
+        "day": ["25"],
+        "time": ["06:00"],
     }
 }
 POST_PROCESS_REQUEST_BODY_SUCCESS_W_LICENCES = {
     "inputs": {
-        "product_type": "reanalysis",
-        "format": "grib",
-        "variable": "temperature",
-        "pressure_level": "1",
-        "year": "1971",
-        "month": "01",
-        "day": "25",
-        "time": "06:00",
+        "product_type": ["reanalysis"],
+        "format": ["grib"],
+        "variable": ["temperature"],
+        "pressure_level": ["1"],
+        "year": ["1971"],
+        "month": ["01"],
+        "day": ["25"],
+        "time": ["06:00"],
     },
     "acceptedLicences": [{"id": "licence-to-use-copernicus-products", "revision": 12}],
 }
 POST_PROCESS_REQUEST_BODY_FAIL = {
     "inputs": {
-        "product_type": "non-existing-product-type",
-        "format": "grib",
-        "variable": "temperature",
-        "pressure_level": "1",
-        "year": "1971",
-        "month": "01",
-        "day": "25",
-        "time": "06:00",
+        "product_type": ["non-existing-product-type"],
+        "format": ["grib"],
+        "variable": ["temperature"],
+        "pressure_level": ["1"],
+        "year": ["1971"],
+        "month": ["01"],
+        "day": ["25"],
+        "time": ["06:00"],
     }
 }
 POST_PROCESS_REQUEST_BODY_SLOW = {
     "inputs": {
-        "product_type": "reanalysis",
+        "product_type": ["reanalysis"],
         "format": "grib",
-        "variable": "temperature",
-        "pressure_level": "1",
+        "variable": ["temperature"],
+        "pressure_level": ["1"],
         "year": [f"{year}" for year in range(1959, 2022)],
         "month": [f"{month:02}" for month in range(1, 13)],
         "day": [f"{day:02}" for day in range(1, 32)],
@@ -260,14 +260,15 @@ def test_post_process_execution_stored_accepted_licences(
         "created",
         "updated",
         "links",
+        "request",
     )
     assert all([key in response_body for key in exp_keys])
-
     exp_process_id = EXISTING_PROCESS_ID
     assert response_body["processID"] == exp_process_id
-
     exp_status = "accepted"
     assert response_body["status"] == exp_status
+    exp_request = POST_PROCESS_REQUEST_BODY_SUCCESS["inputs"]
+    assert response_body["request"] == exp_request
 
     response = delete_job(
         dev_env_proc_api_url,
@@ -311,27 +312,9 @@ def test_post_process_execution_anon_user(
     exp_status_code = 201
     assert response_status_code == exp_status_code
 
-    response_body = response.json()
-    exp_keys = (
-        "processID",
-        "type",
-        "jobID",
-        "status",
-        "created",
-        "updated",
-        "links",
-    )
-    assert all([key in response_body for key in exp_keys])
-
-    exp_process_id = EXISTING_PROCESS_ID
-    assert response_body["processID"] == exp_process_id
-
-    exp_status = "accepted"
-    assert response_body["status"] == exp_status
-
     response = delete_job(
         dev_env_proc_api_url,
-        response_body["jobID"],
+        response.json()["jobID"],
         auth_headers=AUTH_HEADERS_VALID_ANON,
     )
 
@@ -426,10 +409,13 @@ def test_get_job(dev_env_proc_api_url: str, dev_env_prof_api_url: str) -> None:
         "created",
         "updated",
         "links",
+        "request",
     )
     assert all([key in response_body for key in exp_keys])
     exp_status = ("accepted", "running", "successful")
     assert response_body["status"] in exp_status
+    exp_request = POST_PROCESS_REQUEST_BODY_SUCCESS["inputs"]
+    assert response_body["request"] == exp_request
 
     response = delete_job(dev_env_proc_api_url, job_id)
 
@@ -458,10 +444,10 @@ def test_get_job_successful(
             "updated",
             "finished",
             "links",
+            "request",
             "results",
         )
         assert all([key in response_body for key in exp_keys])
-
         exp_results_link = {
             "href": f"{request_url}/results",
             "rel": "results",

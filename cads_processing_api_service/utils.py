@@ -419,8 +419,7 @@ def submit_job(
         process_id=process_id,
         **job_kwargs,
     )
-
-    status_info = ogc_api_processes_fastapi.models.StatusInfo(
+    status_info = models.StatusInfo(
         processID=job["process_id"],
         type="process",
         jobID=job["request_uid"],
@@ -429,6 +428,7 @@ def submit_job(
         started=job["started_at"],
         finished=job["finished_at"],
         updated=job["updated_at"],
+        request=job["request_body"]["kwargs"]["request"],
     )
 
     return status_info
@@ -524,6 +524,7 @@ def make_status_info(
         started=job["started_at"],
         finished=job["finished_at"],
         updated=job["updated_at"],
+        request=job["request_body"]["kwargs"]["request"],
     )
     if add_results:
         results = None
