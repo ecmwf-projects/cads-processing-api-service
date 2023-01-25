@@ -15,7 +15,7 @@
 # limitations under the License
 
 import ogc_api_processes_fastapi
-import starlette_exporter.middleware
+import starlette_exporter
 
 from . import clients, config, constraints, exceptions, metrics
 
