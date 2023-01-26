@@ -17,8 +17,8 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
 import logging
-import logging.handlers
 from typing import Any
 
 import asgi_correlation_id
@@ -61,17 +61,23 @@ def add_correlation(
     logger: logging.Logger, method_name: str, event_dict: dict[str, Any]
 ) -> dict[str, Any]:
     """Add request id to log message."""
-    if request_id := asgi_correlation_id.correlation_id.get():
+    request_id = asgi_correlation_id.correlation_id.get()
+    if request_id:
         event_dict["request_id"] = request_id
     return event_dict
 
 
+@functools.lru_cache()
 def configure_logger() -> None:
     """
     Configure the logging module.
 
     This function configures the logging module to log in rfc5424 format.
     """
+    logging.basicConfig(
+        level=logging.INFO,
+    )
+
     structlog.configure(
         processors=[
             add_correlation,

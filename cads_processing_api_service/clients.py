@@ -16,8 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-import logging
-
 import attrs
 import cacholote.extra_encoders
 import cads_broker.database
@@ -34,10 +32,11 @@ import sqlalchemy.orm.attributes
 import sqlalchemy.orm.decl_api
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
+import structlog
 
 from . import dependencies, models, serializers, utils
 
-logger = logging.getLogger(__name__)
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 @attrs.define
@@ -193,16 +192,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         user_id = user.get("id", None)
         execution_content = execution_content.dict()
-        logger.info(
-            "post_process_execution",
-            {
-                "structured_data": {
-                    "user_id": user_id,
-                    "process_id": process_id,
-                    **execution_content,
-                }
-            },
-        )
+        logger.info("ciao", user_id=user_id, process_id=process_id, **execution_content)
         resource = utils.validate_request(
             process_id,
             execution_content,
