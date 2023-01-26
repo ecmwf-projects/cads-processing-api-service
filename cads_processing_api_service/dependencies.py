@@ -15,7 +15,7 @@
 # limitations under the License
 
 import functools
-import urllib
+import urllib.parse
 from typing import Iterator, Mapping
 
 import cads_broker.database

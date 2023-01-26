@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import unittest.mock
+from typing import Any
 
 import cads_broker
 import ogc_api_processes_fastapi.exceptions
@@ -323,7 +324,7 @@ def test_get_results_from_broker_db() -> None:
 
 
 def test_make_status_info() -> None:
-    job = {
+    job: dict[str, Any] = {
         "status": "running",
         "request_uid": "1234",
         "process_id": "1234",
@@ -331,6 +332,7 @@ def test_make_status_info() -> None:
         "started_at": "2023-01-01T16:20:12.175021",
         "finished_at": "2023-01-01T16:20:12.175021",
         "updated_at": "2023-01-01T16:20:12.175021",
+        "request_body": {"kwargs": {"request": {"product_type": ["reanalysis"]}}},
     }
     mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
     status_info = utils.make_status_info(job, session=mock_session, add_results=False)
@@ -343,6 +345,7 @@ def test_make_status_info() -> None:
         started=job["started_at"],
         finished=job["finished_at"],
         updated=job["updated_at"],
+        request=job["request_body"]["kwargs"]["request"],
     )
     assert status_info == exp_status_info
 
