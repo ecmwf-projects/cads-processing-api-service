@@ -18,7 +18,7 @@ import fastapi.middleware.cors
 import ogc_api_processes_fastapi
 import starlette_exporter
 
-from . import clients, config, constraints, exceptions, metrics
+from . import clients, config, constraints, exceptions
 
 config.configure_logger()
 app = ogc_api_processes_fastapi.instantiate_app(
@@ -33,7 +33,8 @@ app.router.add_api_route(
 )
 app.add_route("/metrics", starlette_exporter.handle_metrics)
 app.add_middleware(starlette_exporter.middleware.PrometheusMiddleware)
-metrics.add_metrics_middleware(app)  # type: ignore
+# FIXME: disable the metrics middleware that leaks database connections
+# metrics.add_metrics_middleware(app)  # type: ignore
 
 # FIXME: temporary workaround
 app.add_middleware(
