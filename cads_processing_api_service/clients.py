@@ -398,7 +398,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
         utils.verify_permission(user, job)
-        job = cads_broker.database.delete_request(request_uid=job_id)
+        job = cads_broker.database.delete_request_in_session(
+            request_uid=job_id, session=compute_session
+        )
         job = utils.dictify_job(job)
         status_info = utils.make_status_info(
             job, session=compute_session, add_results=False
