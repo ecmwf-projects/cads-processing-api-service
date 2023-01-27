@@ -22,7 +22,7 @@ import cads_broker.database
 import cads_catalogue.database
 import fastapi
 import requests
-import sqlalchemy.orm
+import sqlalchemy
 
 from . import config, exceptions, utils
 
@@ -44,8 +44,11 @@ def get_compute_session() -> Iterator[sqlalchemy.orm.Session]:
 
 @functools.lru_cache()
 def get_catalogue_session_maker() -> sqlalchemy.orm.sessionmaker:
-    session_maker = cads_catalogue.database.ensure_session_obj(None)
-    return session_maker
+    catalogue_settings = cads_catalogue.config.ensure_settings()
+    catalogue_engine = sqlalchemy.create_engine(
+        catalogue_settings.connection_string, pool_size=30, max_overflow=20
+    )
+    return sqlalchemy.orm.sessionmaker(catalogue_engine)
 
 
 def get_catalogue_session() -> Iterator[sqlalchemy.orm.Session]:
