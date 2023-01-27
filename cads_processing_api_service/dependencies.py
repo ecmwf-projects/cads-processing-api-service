@@ -30,9 +30,7 @@ from . import config, exceptions, utils
 @functools.lru_cache()
 def get_compute_session_maker() -> sqlalchemy.orm.sessionmaker:
     broker_settings = cads_broker.config.ensure_settings()
-    broker_engine = sqlalchemy.create_engine(
-        broker_settings.connection_string, pool_size=30, max_overflow=20
-    )
+    broker_engine = sqlalchemy.create_engine(broker_settings.connection_string)
     return sqlalchemy.orm.sessionmaker(broker_engine)
 
 
@@ -48,9 +46,7 @@ def get_compute_session() -> Iterator[sqlalchemy.orm.Session]:
 @functools.lru_cache()
 def get_catalogue_session_maker() -> sqlalchemy.orm.sessionmaker:
     catalogue_settings = cads_catalogue.config.ensure_settings()
-    catalogue_engine = sqlalchemy.create_engine(
-        catalogue_settings.connection_string, pool_size=30, max_overflow=20
-    )
+    catalogue_engine = sqlalchemy.create_engine(catalogue_settings.connection_string)
     return sqlalchemy.orm.sessionmaker(catalogue_engine)
 
 
