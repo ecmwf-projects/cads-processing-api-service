@@ -18,8 +18,8 @@ import functools
 import urllib.parse
 from typing import Iterator, Mapping
 
-import cads_broker.database
-import cads_catalogue.database
+import cads_broker
+import cads_catalogue
 import fastapi
 import requests
 import sqlalchemy
@@ -29,8 +29,11 @@ from . import config, exceptions, utils
 
 @functools.lru_cache()
 def get_compute_session_maker() -> sqlalchemy.orm.sessionmaker:
-    session_maker = cads_broker.database.ensure_session_obj(None)
-    return session_maker
+    broker_settings = cads_broker.config.ensure_settings()
+    broker_engine = sqlalchemy.create_engine(
+        broker_settings.connection_string, pool_size=30, max_overflow=20
+    )
+    return sqlalchemy.orm.sessionmaker(broker_engine)
 
 
 def get_compute_session() -> Iterator[sqlalchemy.orm.Session]:
