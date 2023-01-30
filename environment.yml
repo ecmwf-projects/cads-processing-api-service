@@ -11,7 +11,7 @@ dependencies:
 - attrs
 - fastapi
 - pip
-- sqlalchemy
+- sqlalchemy==1.4*
 - uvicorn
 - pip:
   - fastapi-utils
