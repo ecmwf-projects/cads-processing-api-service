@@ -18,13 +18,17 @@ import functools
 import urllib.parse
 from typing import Iterator, Mapping
 
-import cads_broker
-import cads_catalogue
+import asgi_correlation_id
+import cads_broker.config
+import cads_catalogue.config
 import fastapi
 import requests
 import sqlalchemy
+import structlog
 
 from . import config, exceptions, utils
+
+logger = structlog.get_logger(__name__)
 
 
 @functools.lru_cache()
@@ -82,3 +86,9 @@ def validate_token(
     user: dict[str, str | int | Mapping[str, str | int]] = response.json()
     user["auth_header"] = auth_header
     return user
+
+
+def initialize_logger() -> None:
+    request_id = asgi_correlation_id.correlation_id.get()
+    if request_id:
+        structlog.contextvars.bind_contextvars(request_id=request_id)

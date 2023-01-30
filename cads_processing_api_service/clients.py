@@ -192,7 +192,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         user_id = user.get("id", None)
         execution_content = execution_content.dict()
-        logger.info("ciao", user_id=user_id, process_id=process_id, **execution_content)
+        logger.info(
+            "process execution",
+            user_id=user_id,
+            process_id=process_id,
+            **execution_content
+        )
         resource = utils.validate_request(
             process_id,
             execution_content,

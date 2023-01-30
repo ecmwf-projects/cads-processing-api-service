@@ -19,9 +19,7 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 
 import functools
 import logging
-from typing import Any
 
-import asgi_correlation_id
 import pydantic
 import structlog
 
@@ -57,16 +55,6 @@ def ensure_settings(
     return general_settings
 
 
-def add_correlation(
-    logger: logging.Logger, method_name: str, event_dict: dict[str, Any]
-) -> dict[str, Any]:
-    """Add request id to log message."""
-    request_id = asgi_correlation_id.correlation_id.get()
-    if request_id:
-        event_dict["request_id"] = request_id
-    return event_dict
-
-
 @functools.lru_cache()
 def configure_logger() -> None:
     """
@@ -80,7 +68,7 @@ def configure_logger() -> None:
 
     structlog.configure(
         processors=[
-            add_correlation,
+            structlog.contextvars.merge_contextvars,
             structlog.stdlib.filter_by_level,
             structlog.stdlib.add_logger_name,
             structlog.stdlib.add_log_level,

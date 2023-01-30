@@ -19,22 +19,27 @@ import fastapi.middleware.cors
 import ogc_api_processes_fastapi
 import starlette_exporter
 
-from . import clients, config, constraints, exceptions, metrics
+from . import clients, config, constraints, dependencies, exceptions, metrics
 
 config.configure_logger()
 app = ogc_api_processes_fastapi.instantiate_app(
     clients.DatabaseClient()  # type: ignore
 )
+
 app = ogc_api_processes_fastapi.include_exception_handlers(app=app)
 app = exceptions.include_exception_handlers(app=app)
+
 app.router.add_api_route(
     "/processes/{process_id}/constraints",
     constraints.validate_constraints,
     methods=["POST"],
 )
+
 app.router.add_api_route("/metrics", metrics.handle_metrics)
 app.add_middleware(starlette_exporter.middleware.PrometheusMiddleware)
+
 app.add_middleware(asgi_correlation_id.CorrelationIdMiddleware)
+app.router.dependencies.append(dependencies.initialize_logger)
 
 # FIXME: temporary workaround
 app.add_middleware(
