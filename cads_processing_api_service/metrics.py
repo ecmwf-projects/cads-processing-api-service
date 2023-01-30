@@ -21,9 +21,7 @@ def handle_metrics(
         dependencies.get_compute_session
     ),
 ) -> starlette.responses.Response:
-    accepted_request = cads_broker.database.count_accepted_requests_in_session(
-        compute_session
+    GAUGE.labels("queue").set(
+        cads_broker.database.count_accepted_requests_in_session(compute_session)
     )
-    raise ValueError(accepted_request)
-    GAUGE.labels("queue").set(accepted_request)
     return starlette_exporter.handle_metrics(request)
