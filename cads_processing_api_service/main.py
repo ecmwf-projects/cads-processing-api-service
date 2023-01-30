@@ -32,11 +32,9 @@ app.router.add_api_route(
     constraints.validate_constraints,
     methods=["POST"],
 )
-app.add_route("/metrics", starlette_exporter.handle_metrics)
+app.router.add_api_route("/metrics", metrics.handle_metrics)
 app.add_middleware(starlette_exporter.middleware.PrometheusMiddleware)
-metrics.add_metrics_middleware(app)  # type: ignore
 app.add_middleware(asgi_correlation_id.CorrelationIdMiddleware)
-
 
 # FIXME: temporary workaround
 app.add_middleware(

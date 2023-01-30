@@ -1,18 +1,27 @@
 # type: ignore
 
 import cads_broker
+import fastapi
 import prometheus_client
+import sqlalchemy
 import starlette.requests
+import starlette.responses
+import starlette_exporter
+
+from . import dependencies
 
 GAUGE = prometheus_client.Gauge(
     "broker_queue", "Number of accepted requests", labelnames=("queue",)
 )
 
 
-def add_metrics_middleware(app):
-    @app.middleware("http")
-    async def add_accepted_requests(request: starlette.requests.Request, call_next):
-        if request.scope["path"] == "/metrics":
-            GAUGE.labels("queue").set(cads_broker.database.count_accepted_requests())
-        response = await call_next(request)
-        return response
+def handle_metrics(
+    request: starlette.requests.Request,
+    compute_session: sqlalchemy.orm.Session = fastapi.Depends(
+        dependencies.get_compute_session
+    ),
+) -> starlette.responses.Response:
+    GAUGE.labels("queue").set(
+        cads_broker.database.count_accepted_requests_in_session(compute_session)
+    )
+    return starlette_exporter.handle_metrics(request)
