@@ -4,7 +4,8 @@ import cads_broker
 import fastapi
 import prometheus_client
 import sqlalchemy
-import starlette
+import starlette.requests
+import starlette.responses
 import starlette_exporter
 
 from . import dependencies
@@ -21,6 +22,6 @@ def handle_metrics(
     ),
 ) -> starlette.responses.Response:
     GAUGE.labels("queue").set(
-        cads_broker.database.count_accepted_requests(compute_session)
+        cads_broker.database.count_accepted_requests_in_session(compute_session)
     )
     return starlette_exporter.handle_metrics(request)
