@@ -14,14 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-import asgi_correlation_id
+import uuid
+
+import fastapi
 import fastapi.middleware.cors
 import ogc_api_processes_fastapi
 import starlette_exporter
+import structlog
 
-from . import clients, config, constraints, dependencies, exceptions, metrics
+from . import clients, config, constraints, exceptions, metrics
 
 config.configure_logger()
+logger = structlog.get_logger(__name__)
+
 app = ogc_api_processes_fastapi.instantiate_app(
     clients.DatabaseClient()  # type: ignore
 )
@@ -38,8 +43,17 @@ app.router.add_api_route(
 app.router.add_api_route("/metrics", metrics.handle_metrics)
 app.add_middleware(starlette_exporter.middleware.PrometheusMiddleware)
 
-app.add_middleware(asgi_correlation_id.CorrelationIdMiddleware)
-app.router.dependencies.append(dependencies.initialize_logger)
+
+@app.middleware("http")
+async def initialize_logger(request: fastapi.Request, call_next) -> fastapi.Response:
+    structlog.contextvars.clear_contextvars()
+    request_id = request.headers.get("X-Request-ID", None)
+    if not request_id:
+        request_id = str(uuid.uuid4())
+    structlog.contextvars.bind_contextvars(request_id=request_id)
+    response = await call_next(request)
+    return response
+
 
 # FIXME: temporary workaround
 app.add_middleware(
