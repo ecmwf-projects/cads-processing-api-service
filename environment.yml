@@ -14,7 +14,5 @@ dependencies:
 - sqlalchemy==1.4*
 - uvicorn
 - pip:
-  - asgi-correlation-id
   - fastapi-utils
   - starlette-exporter
-  - syslog-rfc5424-formatter
