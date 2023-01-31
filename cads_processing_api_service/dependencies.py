@@ -15,7 +15,7 @@
 # limitations under the License
 
 import functools
-from typing import Collection, Iterator
+from typing import Iterator
 
 import cads_broker.config
 import cads_catalogue.config
@@ -64,7 +64,7 @@ def get_user_auth_requirements(
     ),
     jwt: str
     | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
-) -> dict[str, Collection[str]]:
+) -> dict[str, str]:
     if not pat and not jwt:
         raise exceptions.PermissionDenied(
             status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
@@ -72,12 +72,14 @@ def get_user_auth_requirements(
         )
     if pat:
         auth_requirements = {
-            "authentication_header": {"PRIVATE-TOKEN": pat},
+            "auth_header_name": "PRIVATE-TOKEN",
+            "auth_header_value": pat,
             "verification_endpoint": "/account/verification/pat",
         }
     elif jwt:
         auth_requirements = {
-            "authentication_header": {"Authorization": jwt},
+            "auth_header_name": "Authorization",
+            "auth_header_value": jwt,
             "verification_endpoint": "/account/verification/oidc",
         }
 
