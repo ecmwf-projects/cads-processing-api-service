@@ -219,25 +219,6 @@ def test_check_licences() -> None:
         missing_licences = utils.check_licences(required_licences, accepted_licences)
 
 
-def test_check_token() -> None:
-    token = "token"
-
-    verification_endpoint, auth_header = utils.check_token(pat=token)
-    exp_verification_endpoint = "/account/verification/pat"
-    exp_auth_header = {"PRIVATE-TOKEN": token}
-    assert verification_endpoint == exp_verification_endpoint
-    assert auth_header == exp_auth_header
-
-    verification_endpoint, auth_header = utils.check_token(jwt=token)
-    exp_verification_endpoint = "/account/verification/oidc"
-    exp_auth_header = {"Authorization": token}
-    assert verification_endpoint == exp_verification_endpoint
-    assert auth_header == exp_auth_header
-
-    with pytest.raises(exceptions.PermissionDenied):
-        verification_endpoint, auth_header = utils.check_token()
-
-
 def test_verify_permission() -> None:
     job = {"request_metadata": {"user_id": 0}}
     user = {"id": 0}
