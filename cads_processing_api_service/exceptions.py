@@ -28,6 +28,10 @@ class PermissionDenied(Exception):
     detail: str = "permission denied"
 
 
+class ParameterError(KeyError):
+    pass
+
+
 def permission_denied_exception_handler(
     request: fastapi.Request, exc: PermissionDenied
 ) -> fastapi.responses.JSONResponse:
@@ -51,6 +55,14 @@ def request_readtimeout_handler(
     return out
 
 
+def parameter_error_handler(
+    request: fastapi.Request, exc: ParameterError
+) -> fastapi.Response:
+    return fastapi.responses.JSONResponse(
+        status_code=422, content={"message": str(exc)}
+    )
+
+
 def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     """Add CADS Processes API exceptions handlers to a FastAPI application.
 
@@ -69,4 +81,5 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     app.add_exception_handler(
         requests.exceptions.ReadTimeout, request_readtimeout_handler
     )
+    app.add_exception_handler(ParameterError, parameter_error_handler)
     return app
