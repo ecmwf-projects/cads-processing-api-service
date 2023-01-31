@@ -4,7 +4,6 @@ from typing import Any
 
 import cads_catalogue.database
 
-
 from . import exceptions, translators, utils
 
 SUPPORTED_CONSTRAINTS = [
@@ -15,8 +14,6 @@ SUPPORTED_CONSTRAINTS = [
 
 
 def get_unsupported_vars(orig_form: list[Any] | dict[str, Any] | None) -> list[str]:
-    if orig_form is None:
-        orig_form = list()
     if orig_form is None:
         orig_form = list()
     if not isinstance(orig_form, list):

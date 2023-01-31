@@ -56,7 +56,9 @@ def request_readtimeout_handler(
 
 
 def parameter_error_handler(request: fastapi.Request, exc: ParameterError):
-    return fastapi.responses.JSONResponse(status_code=422, content={"message": str(exc)})
+    return fastapi.responses.JSONResponse(
+        status_code=422, content={"message": str(exc)}
+    )
 
 
 def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
@@ -77,7 +79,5 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     app.add_exception_handler(
         requests.exceptions.ReadTimeout, request_readtimeout_handler
     )
-    app.add_exception_handler(
-        ParameterError, parameter_error_handler
-    )
+    app.add_exception_handler(ParameterError, parameter_error_handler)
     return app
