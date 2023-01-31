@@ -198,7 +198,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         resource = utils.validate_request(
             process_id,
             execution_content,
-            user_auth_requirements.get("authentication_header", None),
+            user.get("authentication_header", None),
             catalogue_session,
             self.process_table,
         )
