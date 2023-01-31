@@ -15,6 +15,7 @@
 # limitations under the License
 
 import uuid
+from typing import Any, Awaitable, Callable
 
 import fastapi
 import fastapi.middleware.cors
@@ -45,7 +46,9 @@ app.add_middleware(starlette_exporter.middleware.PrometheusMiddleware)
 
 
 @app.middleware("http")
-async def initialize_logger(request: fastapi.Request, call_next) -> fastapi.Response:
+async def initialize_logger(
+    request: fastapi.Request, call_next: Callable[[fastapi.Request], Awaitable[Any]]
+) -> Any:
     structlog.contextvars.clear_contextvars()
     request_id = request.headers.get("X-Request-ID", None)
     if not request_id:
