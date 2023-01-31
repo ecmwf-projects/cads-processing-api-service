@@ -17,8 +17,8 @@
 import base64
 import enum
 import urllib.parse
-from collections.abc import Callable, Collection, Mapping
-from typing import Any
+import uuid
+from typing import Any, Callable, Mapping
 
 import cads_broker.database
 import cads_catalogue.database
@@ -316,7 +316,11 @@ def get_stored_accepted_licences(auth_header: dict[str, str]) -> set[tuple[str, 
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}/account/licences",
     )
-    response = requests.get(request_url, headers=auth_header)
+    headers = {
+        **auth_header,
+        "X-Request-ID": structlog.contextvars.get_contextvars().get("request-id", None),
+    }
+    response = requests.get(request_url, headers=headers)
     response.raise_for_status()
     licences = response.json()["licences"]
     accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}
@@ -413,11 +417,14 @@ def submit_job(
     ogc_api_processes_fastapi.models.StatusInfo
         Sumbitted job status info.
     """
+    job_id = str(uuid.uuid4())
+    structlog.contextvars.bind_contextvars(job_id=job_id)
     job_kwargs = adaptors.make_system_job_kwargs(
         process_id, execution_content, resource
     )
     job = cads_broker.database.create_request_in_session(
         session=compute_session,
+        request_uid=job_id,
         user_id=user_id,
         process_id=process_id,
         **job_kwargs,
@@ -438,22 +445,30 @@ def submit_job(
 
 
 def authenticate_user(
-    user_auth_requirements: dict[str, Collection[str]]
-) -> tuple[str, dict[str, str]]:
-    authentication_header = user_auth_requirements["authentication_header"]
-    verification_endpoint = user_auth_requirements["verification_endpoint"]
+    user_auth_reqs: dict[str, str]
+) -> dict[str, str | int | Mapping[str, str | int]]:
+    auth_header = {
+        user_auth_reqs["auth_header_name"]: user_auth_reqs["auth_header_value"]
+    }
+    verification_endpoint = user_auth_reqs["verification_endpoint"]
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}{verification_endpoint}",
     )
-    response = requests.post(request_url, headers=authentication_header)
+    headers = {
+        **auth_header,
+        "X-Request-ID": structlog.contextvars.get_contextvars().get("request_id", None),
+    }
+    response = requests.post(request_url, headers=headers)
     if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
         raise exceptions.PermissionDenied(
             status_code=response.status_code, detail=response.json()["detail"]
         )
     response.raise_for_status()
     user: dict[str, str | int | Mapping[str, str | int]] = response.json()
+    user["authentication_header"] = auth_header
+    structlog.contextvars.bind_contextvars(user_id=user["id"])
     return user
 
 
