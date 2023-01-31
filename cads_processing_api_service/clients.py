@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+
 import attrs
 import cacholote.extra_encoders
 import cads_broker.database
@@ -159,7 +160,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
-        user: dict[str, str] = fastapi.Depends(dependencies.validate_token),
+        user_auth_requirements: dict[str, str] = fastapi.Depends(
+            dependencies.get_user_auth_requirements
+        ),
         catalogue_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_catalogue_session
         ),
@@ -190,23 +193,21 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        user_id = user.get("id", None)
+        user = utils.authenticate_user(user_auth_requirements)
         execution_content = execution_content.dict()
-        logger.info(
-            "process execution",
-            user_id=user_id,
-            process_id=process_id,
-            **execution_content
-        )
         resource = utils.validate_request(
             process_id,
             execution_content,
-            user.get("auth_header", None),
+            user_auth_requirements.get("authentication_header", None),
             catalogue_session,
             self.process_table,
         )
         status_info = utils.submit_job(
-            user_id, process_id, execution_content, resource, compute_session
+            user.get("id", None),
+            process_id,
+            execution_content,
+            resource,
+            compute_session,
         )
         return status_info
 
@@ -219,7 +220,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         | None = fastapi.Query(utils.JobSortCriterion.created_at_desc),
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
-        user: dict[str, str] = fastapi.Depends(dependencies.validate_token),
+        user_auth_requirements: dict[str, str] = fastapi.Depends(
+            dependencies.get_user_auth_requirements
+        ),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_compute_session
         ),
@@ -255,6 +258,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             Information on the status of the job.
         """
+        user = utils.authenticate_user(user_auth_requirements)
         user_id = user.get("id", None)
         metadata_filters = {"user_id": [str(user_id)] if user_id else []}
         job_filters = {"process_id": processID, "status": status}
@@ -293,7 +297,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_job(
         self,
         job_id: str = fastapi.Path(...),
-        user: dict[str, str] = fastapi.Depends(dependencies.validate_token),
+        user_auth_requirements: dict[str, str] = fastapi.Depends(
+            dependencies.get_user_auth_requirements
+        ),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_compute_session
         ),
@@ -319,6 +325,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
+        user = utils.authenticate_user(user_auth_requirements)
         job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
         utils.verify_permission(user, job)
         status_info = utils.make_status_info(job=job, session=compute_session)
@@ -327,7 +334,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_job_results(
         self,
         job_id: str = fastapi.Path(...),
-        user: dict[str, str] = fastapi.Depends(dependencies.validate_token),
+        user_auth_requirements: dict[str, str] = fastapi.Depends(
+            dependencies.get_user_auth_requirements
+        ),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_compute_session
         ),
@@ -357,6 +366,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.JobResultsFailed
             If job `job_id` results preparation failed.
         """
+        user = utils.authenticate_user(user_auth_requirements)
         job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
         utils.verify_permission(user, job)
         results = utils.get_results_from_broker_db(job=job, session=compute_session)
@@ -365,7 +375,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def delete_job(
         self,
         job_id: str = fastapi.Path(...),
-        user: dict[str, str] = fastapi.Depends(dependencies.validate_token),
+        user_auth_requirements: dict[str, str] = fastapi.Depends(
+            dependencies.get_user_auth_requirements
+        ),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_compute_session
         ),
@@ -391,6 +403,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
+        user = utils.authenticate_user(user_auth_requirements)
         job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
         utils.verify_permission(user, job)
         job = cads_broker.database.delete_request_in_session(

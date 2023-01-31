@@ -15,19 +15,14 @@
 # limitations under the License
 
 import functools
-import urllib.parse
-from typing import Iterator, Mapping
+from typing import Collection, Iterator
 
 import cads_broker.config
 import cads_catalogue.config
 import fastapi
-import requests
 import sqlalchemy
-import structlog
 
-from . import config, exceptions, utils
-
-logger = structlog.get_logger(__name__)
+from . import exceptions
 
 
 @functools.lru_cache()
@@ -62,28 +57,28 @@ def get_catalogue_session() -> Iterator[sqlalchemy.orm.Session]:
         session.close()
 
 
-def validate_token(
+def get_user_auth_requirements(
     pat: str
     | None = fastapi.Header(
         None, description="Personal Access Token", alias="PRIVATE-TOKEN"
     ),
     jwt: str
     | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
-) -> dict[str, str | int | Mapping[str, str | int]]:
-    verification_endpoint, auth_header = utils.check_token(pat=pat, jwt=jwt)
-    settings = config.ensure_settings()
-    request_url = urllib.parse.urljoin(
-        settings.internal_proxy_url,
-        f"{settings.profiles_base_url}{verification_endpoint}",
-    )
-    headers = auth_header
-    headers["X-Request-ID"] = structlog.contextvars.get_contextvars()["request_id"]
-    response = requests.post(request_url, headers=headers)
-    if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
+) -> dict[str, Collection[str]]:
+    if not pat and not jwt:
         raise exceptions.PermissionDenied(
-            status_code=response.status_code, detail=response.json()["detail"]
+            status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
         )
-    response.raise_for_status()
-    user: dict[str, str | int | Mapping[str, str | int]] = response.json()
-    user["auth_header"] = auth_header
-    return user
+    if pat:
+        auth_requirements = {
+            "authentication_header": {"PRIVATE-TOKEN": pat},
+            "verification_endpoint": "/account/verification/pat",
+        }
+    elif jwt:
+        auth_requirements = {
+            "authentication_header": {"Authorization": jwt},
+            "verification_endpoint": "/account/verification/oidc",
+        }
+
+    return auth_requirements

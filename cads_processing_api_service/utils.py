@@ -17,7 +17,7 @@
 import base64
 import enum
 import urllib.parse
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from typing import Any
 
 import cads_broker.database
@@ -30,8 +30,11 @@ import sqlalchemy.orm
 import sqlalchemy.orm.attributes
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
+import structlog
 
 from . import adaptors, config, exceptions, models
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 class ProcessSortCriterion(str, enum.Enum):
@@ -434,21 +437,24 @@ def submit_job(
     return status_info
 
 
-def check_token(
-    pat: str | None = None, jwt: str | None = None
+def authenticate_user(
+    user_auth_requirements: dict[str, Collection[str]]
 ) -> tuple[str, dict[str, str]]:
-    if pat:
-        verification_endpoint = "/account/verification/pat"
-        auth_header = {"PRIVATE-TOKEN": pat}
-    elif jwt:
-        verification_endpoint = "/account/verification/oidc"
-        auth_header = {"Authorization": jwt}
-    else:
+    authentication_header = user_auth_requirements["authentication_header"]
+    verification_endpoint = user_auth_requirements["verification_endpoint"]
+    settings = config.ensure_settings()
+    request_url = urllib.parse.urljoin(
+        settings.internal_proxy_url,
+        f"{settings.profiles_base_url}{verification_endpoint}",
+    )
+    response = requests.post(request_url, headers=authentication_header)
+    if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
         raise exceptions.PermissionDenied(
-            status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
+            status_code=response.status_code, detail=response.json()["detail"]
         )
-    return (verification_endpoint, auth_header)
+    response.raise_for_status()
+    user: dict[str, str | int | Mapping[str, str | int]] = response.json()
+    return user
 
 
 def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
