@@ -53,13 +53,15 @@ def make_system_job_kwargs(
 
     config: dict[str, Any] = resource.adaptor_configuration  # type: ignore
     if config is None:
-        config = FALLBACK_CONFIG.copy()
+        config = {}
 
     entry_point = config.pop("entry_point", FALLBACK_ENTRY_POINT)
 
     setup_code = resource.adaptor
     if setup_code is None:
         setup_code = FALLBACK_SETUP_CODE
+        if not config:
+            config = FALLBACK_CONFIG.copy()
         config["collection_id"] = process_id
 
     mapping = resource.mapping
