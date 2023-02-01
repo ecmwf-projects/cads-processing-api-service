@@ -12,6 +12,7 @@ dependencies:
 - fastapi
 - pip
 - sqlalchemy==1.4*
+- structlog
 - uvicorn
 - pip:
   - fastapi-utils
