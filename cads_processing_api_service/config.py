@@ -17,7 +17,6 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import functools
 import logging
 
 import pydantic
@@ -55,7 +54,6 @@ def ensure_settings(
     return general_settings
 
 
-@functools.lru_cache()
 def configure_logger() -> None:
     """
     Configure the logging module.
