@@ -18,6 +18,7 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 # limitations under the License.
 
 import logging
+from typing import Any, Mapping, MutableMapping
 
 import pydantic
 import structlog
@@ -54,6 +55,15 @@ def ensure_settings(
     return general_settings
 
 
+def add_user_request_flag(
+    logger: logging.Logger, method_name: str, event_dict: MutableMapping[str, Any]
+) -> Mapping[str, Any]:
+    """Add user_request flag to log message."""
+    if "user_id" in event_dict:
+        event_dict["user_request"] = True
+    return event_dict
+
+
 def configure_logger() -> None:
     """
     Configure the logging module.
@@ -70,6 +80,7 @@ def configure_logger() -> None:
             structlog.stdlib.filter_by_level,
             structlog.stdlib.add_logger_name,
             structlog.stdlib.add_log_level,
+            add_user_request_flag,
             structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M.%S"),
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
