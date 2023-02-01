@@ -449,15 +449,15 @@ def submit_job(
 def authenticate_user(
     user_auth_reqs: dict[str, str]
 ) -> dict[str, str | int | Mapping[str, str | int]]:
-    auth_header = {
-        user_auth_reqs["auth_header_name"]: user_auth_reqs["auth_header_value"]
-    }
-    verification_endpoint = user_auth_reqs["verification_endpoint"]
     settings = config.ensure_settings()
+    verification_endpoint = user_auth_reqs["verification_endpoint"]
     request_url = urllib.parse.urljoin(
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}{verification_endpoint}",
     )
+    auth_header = {
+        user_auth_reqs["auth_header_name"]: user_auth_reqs["auth_header_value"]
+    }
     headers = {
         **auth_header,
         "X-Request-ID": structlog.contextvars.get_contextvars().get("request_id", None),
