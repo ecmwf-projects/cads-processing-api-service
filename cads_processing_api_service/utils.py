@@ -56,7 +56,8 @@ def lookup_resource_by_id(
         row: cads_catalogue.database.Resource = (
             session.query(record).filter(record.resource_uid == id).one()
         )
-    except sqlalchemy.orm.exc.NoResultFound:
+    except sqlalchemy.orm.exc.NoResultFound as exc:
+        logger.exception(repr(exc))
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     return row
 
@@ -496,7 +497,8 @@ def get_job_from_broker_db(
     except (
         sqlalchemy.exc.StatementError,
         sqlalchemy.orm.exc.NoResultFound,
-    ):
+    ) as exc:
+        logger.exception(repr(exc))
         raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
             f"Can't find the job {job_id}."
         )
@@ -523,15 +525,22 @@ def get_results_from_broker_db(
         )["args"][0]
         results = {"asset": {"value": asset_value}}
     elif job_status == "failed":
-        raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
+        job_results_failed_exc = ogc_api_processes_fastapi.exceptions.JobResultsFailed(
             type="RuntimeError",
             detail=job["response_traceback"],
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
         )
+        logger.warning(
+            job_results_failed_exc.title,
+            traceback=job_results_failed_exc.detail,
+        )
+        raise job_results_failed_exc
     elif job_status in ("accepted", "running"):
-        raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
+        results_not_ready_exc = ogc_api_processes_fastapi.exceptions.ResultsNotReady(
             f"Status of {job_id} is {job_status}."
         )
+        logger.warning("Job not ready")
+        raise results_not_ready_exc
     return results
 
 
