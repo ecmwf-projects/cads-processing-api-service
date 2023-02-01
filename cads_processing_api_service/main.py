@@ -50,8 +50,8 @@ async def initialize_logger(
     request: fastapi.Request, call_next: Callable[[fastapi.Request], Awaitable[Any]]
 ) -> Any:
     structlog.contextvars.clear_contextvars()
-    request_id = str(uuid.uuid4())
-    structlog.contextvars.bind_contextvars(request_id=request_id)
+    trace_id = str(uuid.uuid4())
+    structlog.contextvars.bind_contextvars(trace_id=trace_id)
     response = await call_next(request)
     return response
 

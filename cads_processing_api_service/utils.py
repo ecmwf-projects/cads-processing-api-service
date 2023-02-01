@@ -445,10 +445,10 @@ def submit_job(
 
 def add_request_id_header(headers: Mapping[str, str]) -> Mapping[str, str]:
     structlog_contextvars = structlog.contextvars.get_contextvars()
-    request_id = structlog_contextvars.get("request_id", None)
+    request_id = structlog_contextvars.get("trace_id", None)
     enriched_headers = {
         **headers,
-        "X-Request-ID": request_id,
+        "X-Trace-ID": request_id,
     }
     return enriched_headers
 
