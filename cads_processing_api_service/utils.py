@@ -491,10 +491,13 @@ def get_results_from_broker_db(
     job_status = job["status"]
     job_id = job["request_uid"]
     if job_status == "successful":
-        asset_value = cads_broker.database.get_request_result_in_session(
-            request_uid=job_id, session=session
-        )["args"][0]
-        results = {"asset": {"value": asset_value}}
+        try:
+            asset_value = cads_broker.database.get_request_result_in_session(
+                request_uid=job_id, session=session
+            )["args"][0]
+            results = {"asset": {"value": asset_value}}
+        except Exception:
+            results = {}
     elif job_status == "failed":
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
             type="RuntimeError",
