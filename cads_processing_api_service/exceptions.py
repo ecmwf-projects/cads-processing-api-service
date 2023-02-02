@@ -16,35 +16,19 @@
 
 import attrs
 import fastapi
+import ogc_api_processes_fastapi.exceptions
 import requests
 
 
 @attrs.define
-class PermissionDenied(Exception):
+class PermissionDenied(ogc_api_processes_fastapi.exceptions.OGCAPIException):
 
     type: str = "permission denied"
     status_code: int = fastapi.status.HTTP_403_FORBIDDEN
-    title: str = "permission denied"
-    detail: str = "permission denied"
 
 
 class ParameterError(KeyError):
     pass
-
-
-def permission_denied_exception_handler(
-    request: fastapi.Request, exc: PermissionDenied
-) -> fastapi.responses.JSONResponse:
-    out = fastapi.responses.JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "type": exc.type,
-            "title": exc.title,
-            "detail": exc.detail,
-            "instance": str(request.url),
-        },
-    )
-    return out
 
 
 def request_readtimeout_handler(
@@ -77,7 +61,9 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     fastapi.FastAPI
         FastAPI application including CADS Processes API exceptions handlers.
     """
-    app.add_exception_handler(PermissionDenied, permission_denied_exception_handler)
+    app.add_exception_handler(
+        PermissionDenied, ogc_api_processes_fastapi.exceptions.ogc_api_exception_handler
+    )
     app.add_exception_handler(
         requests.exceptions.ReadTimeout, request_readtimeout_handler
     )
