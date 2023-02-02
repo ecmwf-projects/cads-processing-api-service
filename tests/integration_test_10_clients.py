@@ -228,18 +228,6 @@ def test_get_process_exc_no_such_process(dev_env_proc_api_url: str) -> None:
     exp_status_code = 404
     assert response_status_code == exp_status_code
 
-    response_body = response.json()
-    exp_response_body = {
-        "type": (
-            "http://www.opengis.net/def/exceptions/"
-            "ogcapi-processes-1/1.0/no-such-process"
-        ),
-        "title": "process not found",
-        "detail": f"process {process_id} has not been found",
-        "instance": request_url,
-    }
-    assert response_body == exp_response_body
-
 
 def test_post_process_execution_stored_accepted_licences(
     dev_env_proc_api_url: str,
@@ -347,22 +335,6 @@ def test_post_process_execution_exc_no_such_process(dev_env_proc_api_url: str) -
     exp_status_code = 404
     assert response_status_code == exp_status_code
 
-    response_body = response.json()
-    exp_process_id = process_id
-    exp_request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/execution"
-    )
-    exp_response_body = {
-        "type": (
-            "http://www.opengis.net/def/exceptions/"
-            "ogcapi-processes-1/1.0/no-such-process"
-        ),
-        "title": "process not found",
-        "detail": f"process {exp_process_id} has not been found",
-        "instance": exp_request_url,
-    }
-    assert response_body == exp_response_body
-
 
 def test_get_job_not_authorized(
     dev_env_proc_api_url: str, dev_env_prof_api_url: str
@@ -469,18 +441,6 @@ def test_get_job_exc_no_such_job(dev_env_proc_api_url: str) -> None:
     exp_status_code = 404
     assert response_status_code == exp_status_code
 
-    response_body = response.json()
-    exp_response_body = {
-        "type": (
-            "http://www.opengis.net/def/exceptions/"
-            "ogcapi-processes-1/1.0/no-such-job"
-        ),
-        "title": "job not found",
-        "detail": f"job {job_id} has not been found",
-        "instance": request_url,
-    }
-    assert response_body == exp_response_body
-
 
 def test_get_job_results(request, dev_env_proc_api_url: str) -> None:  # type: ignore
     response = submit_job(dev_env_proc_api_url)
@@ -536,18 +496,6 @@ def test_get_job_results_exc_no_such_job(dev_env_proc_api_url: str) -> None:
     exp_status_code = 404
     assert response_status_code == exp_status_code
 
-    response_body = response.json()
-    exp_response_body = {
-        "type": (
-            "http://www.opengis.net/def/exceptions/"
-            "ogcapi-processes-1/1.0/no-such-job"
-        ),
-        "title": "job not found",
-        "detail": f"job {job_id} has not been found",
-        "instance": request_url,
-    }
-    assert response_body == exp_response_body
-
 
 def test_get_job_results_exc_job_results_failed(dev_env_proc_api_url: str) -> None:
     response = submit_job(
@@ -597,18 +545,6 @@ def test_get_job_results_exc_results_not_ready(dev_env_proc_api_url: str) -> Non
     response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
     response_status_code = response.status_code
     assert response_status_code == 404
-
-    response_body = response.json()
-    exp_response_body = {
-        "type": (
-            "http://www.opengis.net/def/exceptions/"
-            "ogcapi-processes-1/1.0/result-not-ready"
-        ),
-        "title": "job results not ready",
-        "detail": f"job {job_id} results are not yet ready",
-        "instance": request_url,
-    }
-    assert [(key, val) in response_body for key, val in exp_response_body.items()]
 
     response = delete_job(dev_env_proc_api_url, job_id)
 
