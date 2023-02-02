@@ -30,7 +30,10 @@ from . import config, exceptions, utils
 @functools.lru_cache()
 def get_compute_session_maker() -> sqlalchemy.orm.sessionmaker:
     broker_settings = cads_broker.config.ensure_settings()
-    broker_engine = sqlalchemy.create_engine(broker_settings.connection_string)
+    broker_engine = sqlalchemy.create_engine(
+        broker_settings.connection_string,
+        pool_timeout=0.1,
+    )
     return sqlalchemy.orm.sessionmaker(broker_engine)
 
 
