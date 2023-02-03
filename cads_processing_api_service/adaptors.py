@@ -32,7 +32,7 @@ def adaptor(request, config, metadata):
         raise ValueError(f'collection_id is required in request')
 
     # retrieve data
-    client = cdsapi.Client(config["url"], config["key"])
+    client = cdsapi.Client(config["url"], config["key"], retry_max=1)
     result_path = client.retrieve(collection_id, request).download()
     return open(result_path, "rb")
 """
