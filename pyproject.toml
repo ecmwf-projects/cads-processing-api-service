@@ -26,6 +26,7 @@ dependencies = [
   "cacholote",
   "ogc-api-processes-fastapi",
   "sqlalchemy",
+  "structlog"
 ]
 
 [tool.coverage.run]

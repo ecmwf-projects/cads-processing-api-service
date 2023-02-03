@@ -17,8 +17,8 @@
 import base64
 import enum
 import urllib.parse
-from collections.abc import Callable, Mapping
-from typing import Any
+import uuid
+from typing import Any, Callable, Mapping
 
 import cads_broker.database
 import cads_catalogue.database
@@ -30,8 +30,11 @@ import sqlalchemy.orm
 import sqlalchemy.orm.attributes
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
+import structlog
 
 from . import adaptors, config, exceptions, models
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 class ProcessSortCriterion(str, enum.Enum):
@@ -53,7 +56,8 @@ def lookup_resource_by_id(
         row: cads_catalogue.database.Resource = (
             session.query(record).filter(record.resource_uid == id).one()
         )
-    except sqlalchemy.orm.exc.NoResultFound:
+    except sqlalchemy.orm.exc.NoResultFound as exc:
+        logger.exception(repr(exc))
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     return row
 
@@ -313,7 +317,8 @@ def get_stored_accepted_licences(auth_header: dict[str, str]) -> set[tuple[str, 
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}/account/licences",
     )
-    response = requests.get(request_url, headers=auth_header)
+    headers = add_request_id_header(auth_header)
+    response = requests.get(request_url, headers=headers)
     response.raise_for_status()
     licences = response.json()["licences"]
     accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}
@@ -410,15 +415,20 @@ def submit_job(
     ogc_api_processes_fastapi.models.StatusInfo
         Sumbitted job status info.
     """
+    job_id = str(uuid.uuid4())
+    structlog.contextvars.bind_contextvars(job_id=job_id)
     job_kwargs = adaptors.make_system_job_kwargs(
         process_id, execution_content, resource
     )
+    logger.info("Submitting job")
     job = cads_broker.database.create_request_in_session(
         session=compute_session,
+        request_uid=job_id,
         user_id=user_id,
         process_id=process_id,
         **job_kwargs,
     )
+    logger.info("Job submitted")
     status_info = models.StatusInfo(
         processID=job["process_id"],
         type="process",
@@ -434,21 +444,39 @@ def submit_job(
     return status_info
 
 
-def check_token(
-    pat: str | None = None, jwt: str | None = None
-) -> tuple[str, dict[str, str]]:
-    if pat:
-        verification_endpoint = "/account/verification/pat"
-        auth_header = {"PRIVATE-TOKEN": pat}
-    elif jwt:
-        verification_endpoint = "/account/verification/oidc"
-        auth_header = {"Authorization": jwt}
-    else:
+def add_request_id_header(headers: Mapping[str, str]) -> Mapping[str, str]:
+    structlog_contextvars = structlog.contextvars.get_contextvars()
+    request_id = structlog_contextvars.get("trace_id", None)
+    enriched_headers = {
+        **headers,
+        "X-Trace-ID": request_id,
+    }
+    return enriched_headers
+
+
+def authenticate_user(
+    user_auth_reqs: dict[str, str]
+) -> dict[str, str | int | Mapping[str, str | int]]:
+    settings = config.ensure_settings()
+    verification_endpoint = user_auth_reqs["verification_endpoint"]
+    request_url = urllib.parse.urljoin(
+        settings.internal_proxy_url,
+        f"{settings.profiles_base_url}{verification_endpoint}",
+    )
+    auth_header = {
+        user_auth_reqs["auth_header_name"]: user_auth_reqs["auth_header_value"]
+    }
+    headers = add_request_id_header(auth_header)
+    response = requests.post(request_url, headers=headers)
+    if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
         raise exceptions.PermissionDenied(
-            status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
+            status_code=response.status_code, detail=response.json()["detail"]
         )
-    return (verification_endpoint, auth_header)
+    response.raise_for_status()
+    user: dict[str, str | int | Mapping[str, str | int]] = response.json()
+    user["authentication_header"] = auth_header
+    structlog.contextvars.bind_contextvars(user_id=user["id"])
+    return user
 
 
 def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
@@ -469,7 +497,8 @@ def get_job_from_broker_db(
     except (
         sqlalchemy.exc.StatementError,
         sqlalchemy.orm.exc.NoResultFound,
-    ):
+    ) as exc:
+        logger.exception(repr(exc))
         raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
             f"Can't find the job {job_id}."
         )
@@ -499,15 +528,17 @@ def get_results_from_broker_db(
         except Exception:
             results = {}
     elif job_status == "failed":
-        raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
+        job_results_failed_exc = ogc_api_processes_fastapi.exceptions.JobResultsFailed(
             type="RuntimeError",
             detail=job["response_traceback"],
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
         )
+        raise job_results_failed_exc
     elif job_status in ("accepted", "running"):
-        raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
+        results_not_ready_exc = ogc_api_processes_fastapi.exceptions.ResultsNotReady(
             f"Status of {job_id} is {job_status}."
         )
+        raise results_not_ready_exc
     return results
 
 

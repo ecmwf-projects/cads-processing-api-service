@@ -12,8 +12,8 @@ dependencies:
 - fastapi
 - pip
 - sqlalchemy==1.4*
+- structlog
 - uvicorn
 - pip:
   - fastapi-utils
   - starlette-exporter
-  - syslog-rfc5424-formatter
