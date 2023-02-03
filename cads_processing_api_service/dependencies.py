@@ -15,16 +15,14 @@
 # limitations under the License
 
 import functools
-import urllib.parse
-from typing import Iterator, Mapping
+from typing import Iterator
 
-import cads_broker
-import cads_catalogue
+import cads_broker.config
+import cads_catalogue.config
 import fastapi
-import requests
 import sqlalchemy
 
-from . import config, exceptions, utils
+from . import exceptions
 
 
 @functools.lru_cache()
@@ -62,26 +60,30 @@ def get_catalogue_session() -> Iterator[sqlalchemy.orm.Session]:
         session.close()
 
 
-def validate_token(
+def get_user_auth_requirements(
     pat: str
     | None = fastapi.Header(
         None, description="Personal Access Token", alias="PRIVATE-TOKEN"
     ),
     jwt: str
     | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
-) -> dict[str, str | int | Mapping[str, str | int]]:
-    verification_endpoint, auth_header = utils.check_token(pat=pat, jwt=jwt)
-    settings = config.ensure_settings()
-    request_url = urllib.parse.urljoin(
-        settings.internal_proxy_url,
-        f"{settings.profiles_base_url}{verification_endpoint}",
-    )
-    response = requests.post(request_url, headers=auth_header)
-    if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
+) -> dict[str, str]:
+    if not pat and not jwt:
         raise exceptions.PermissionDenied(
-            status_code=response.status_code, detail=response.json()["detail"]
+            status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
         )
-    response.raise_for_status()
-    user: dict[str, str | int | Mapping[str, str | int]] = response.json()
-    user["auth_header"] = auth_header
-    return user
+    if pat:
+        auth_requirements = {
+            "auth_header_name": "PRIVATE-TOKEN",
+            "auth_header_value": pat,
+            "verification_endpoint": "/account/verification/pat",
+        }
+    elif jwt:
+        auth_requirements = {
+            "auth_header_name": "Authorization",
+            "auth_header_value": jwt,
+            "verification_endpoint": "/account/verification/oidc",
+        }
+
+    return auth_requirements
