@@ -19,10 +19,7 @@ from typing import Iterator
 
 import cads_broker.config
 import cads_catalogue.config
-import fastapi
 import sqlalchemy
-
-from . import exceptions
 
 
 @functools.lru_cache()
@@ -58,32 +55,3 @@ def get_catalogue_session() -> Iterator[sqlalchemy.orm.Session]:
         yield session
     finally:
         session.close()
-
-
-def get_user_auth_requirements(
-    pat: str
-    | None = fastapi.Header(
-        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
-    ),
-    jwt: str
-    | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
-) -> dict[str, str]:
-    if not pat and not jwt:
-        raise exceptions.PermissionDenied(
-            status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-        )
-    if pat:
-        auth_requirements = {
-            "auth_header_name": "PRIVATE-TOKEN",
-            "auth_header_value": pat,
-            "verification_endpoint": "/account/verification/pat",
-        }
-    elif jwt:
-        auth_requirements = {
-            "auth_header_name": "Authorization",
-            "auth_header_value": jwt,
-            "verification_endpoint": "/account/verification/oidc",
-        }
-
-    return auth_requirements
