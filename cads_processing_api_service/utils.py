@@ -420,7 +420,7 @@ def submit_job(
     job_kwargs = adaptors.make_system_job_kwargs(
         process_id, execution_content, resource
     )
-    logger.info("Submitting job", job_kwargs=job_kwargs)
+    logger.info("Submitting job")
     job = cads_broker.database.create_request_in_session(
         session=compute_session,
         request_uid=job_id,
@@ -428,7 +428,7 @@ def submit_job(
         process_id=process_id,
         **job_kwargs,
     )
-    logger.info("Job submitted", job=job)
+    logger.info("Job submitted")
     status_info = models.StatusInfo(
         processID=job["process_id"],
         type="process",
@@ -530,16 +530,11 @@ def get_results_from_broker_db(
             detail=job["response_traceback"],
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
         )
-        logger.warning(
-            job_results_failed_exc.title,
-            traceback=job_results_failed_exc.detail,
-        )
         raise job_results_failed_exc
     elif job_status in ("accepted", "running"):
         results_not_ready_exc = ogc_api_processes_fastapi.exceptions.ResultsNotReady(
             f"Status of {job_id} is {job_status}."
         )
-        logger.warning("Job not ready")
         raise results_not_ready_exc
     return results
 
