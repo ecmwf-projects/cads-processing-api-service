@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import enum
 
 import attrs
 import cacholote.extra_encoders
@@ -35,9 +36,19 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import dependencies, models, serializers, utils
+from . import auth, crud, models, response, serializers
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+class ProcessSortCriterion(str, enum.Enum):
+    resource_uid_asc: str = "id"
+    resource_uid_desc: str = "-id"
+
+
+class JobSortCriterion(str, enum.Enum):
+    created_at_asc: str = "created"
+    created_at_desc: str = "-created"
 
 
 @attrs.define
@@ -60,12 +71,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_processes(
         self,
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
-        sortby: utils.ProcessSortCriterion
-        | None = fastapi.Query(utils.ProcessSortCriterion.resource_uid_asc),
+        sortby: ProcessSortCriterion
+        | None = fastapi.Query(ProcessSortCriterion.resource_uid_asc),
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
         catalogue_session: sqlalchemy.orm.Session = fastapi.Depends(
-            dependencies.get_catalogue_session
+            crud.get_catalogue_session
         ),
     ) -> ogc_api_processes_fastapi.models.ProcessList:
         """Implement OGC API - Processes `GET /processes` endpoint.
@@ -89,15 +100,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             List of available processes.
         """
         statement = sqlalchemy.select(self.process_table)
-        sort_key, sort_dir = utils.parse_sortby(sortby.name)
+        sort_key, sort_dir = crud.parse_sortby(sortby.name)
         if cursor:
-            statement = utils.apply_bookmark(
+            statement = crud.apply_bookmark(
                 statement, self.process_table, cursor, back, sort_key, sort_dir
             )
-        statement = utils.apply_sorting(
+        statement = crud.apply_sorting(
             statement, self.process_table, back, sort_key, sort_dir
         )
-        statement = utils.apply_limit(statement, limit)
+        statement = crud.apply_limit(statement, limit)
         processes_entries = catalogue_session.scalars(statement).all()
         processes = [
             serializers.serialize_process_summary(process)
@@ -106,7 +117,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         if back:
             processes = list(reversed(processes))
         process_list = ogc_api_processes_fastapi.models.ProcessList(processes=processes)
-        pagination_qs = utils.make_pagination_qs(processes, sort_key=sortby.lstrip("-"))
+        pagination_qs = response.make_pagination_qs(
+            processes, sort_key=sortby.lstrip("-")
+        )
         process_list._pagination_qs = pagination_qs
 
         return process_list
@@ -115,7 +128,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         process_id: str = fastapi.Path(...),
         catalgoue_session: sqlalchemy.orm.Session = fastapi.Depends(
-            dependencies.get_catalogue_session
+            crud.get_catalogue_session
         ),
     ) -> ogc_api_processes_fastapi.models.ProcessDescription:
         """Implement OGC API - Processes `GET /processes/{process_id}` endpoint.
@@ -137,7 +150,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        resource = utils.lookup_resource_by_id(
+        resource = crud.lookup_resource_by_id(
             id=process_id, record=self.process_table, session=catalgoue_session
         )
         process_description = serializers.serialize_process_description(resource)
@@ -161,13 +174,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
         user_auth_requirements: dict[str, str] = fastapi.Depends(
-            dependencies.get_user_auth_requirements
+            auth.get_user_auth_requirements
         ),
         catalogue_session: sqlalchemy.orm.Session = fastapi.Depends(
-            dependencies.get_catalogue_session
+            crud.get_catalogue_session
         ),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
-            dependencies.get_compute_session
+            crud.get_compute_session
         ),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
@@ -193,20 +206,20 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        user = utils.authenticate_user(user_auth_requirements)
+        user = auth.authenticate_user(user_auth_requirements)
         execution_content = execution_content.dict()
         logger.info(
             "Posting process execution",
             execution_content=execution_content,
         )
-        resource = utils.validate_request(
+        resource = auth.validate_request(
             process_id,
             execution_content,
             user.get("authentication_header", None),
             catalogue_session,
             self.process_table,
         )
-        status_info = utils.submit_job(
+        status_info = crud.submit_job(
             user.get("id", None),
             process_id,
             execution_content,
@@ -220,15 +233,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         processID: list[str] | None = fastapi.Query(None),
         status: list[str] | None = fastapi.Query(None),
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
-        sortby: utils.JobSortCriterion
-        | None = fastapi.Query(utils.JobSortCriterion.created_at_desc),
+        sortby: JobSortCriterion
+        | None = fastapi.Query(JobSortCriterion.created_at_desc),
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
         user_auth_requirements: dict[str, str] = fastapi.Depends(
-            dependencies.get_user_auth_requirements
+            auth.get_user_auth_requirements
         ),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
-            dependencies.get_compute_session
+            crud.get_compute_session
         ),
     ) -> models.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
@@ -262,18 +275,18 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             Information on the status of the job.
         """
-        user = utils.authenticate_user(user_auth_requirements)
+        user = auth.authenticate_user(user_auth_requirements)
         user_id = user.get("id", None)
         metadata_filters = {"user_id": [str(user_id)] if user_id else []}
         job_filters = {"process_id": processID, "status": status}
-        sort_key, sort_dir = utils.parse_sortby(sortby.name)
+        sort_key, sort_dir = crud.parse_sortby(sortby.name)
         statement = sqlalchemy.select(self.job_table)
-        statement = utils.apply_metadata_filters(
+        statement = crud.apply_metadata_filters(
             statement, self.job_table, metadata_filters
         )
-        statement = utils.apply_job_filters(statement, self.job_table, job_filters)
+        statement = crud.apply_job_filters(statement, self.job_table, job_filters)
         if cursor:
-            statement = utils.apply_bookmark(
+            statement = crud.apply_bookmark(
                 statement,
                 self.job_table,
                 cursor,
@@ -281,19 +294,21 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 sort_key,
                 sort_dir,
             )
-        statement = utils.apply_sorting(
+        statement = crud.apply_sorting(
             statement, self.job_table, back, sort_key, sort_dir
         )
-        statement = utils.apply_limit(statement, limit)
+        statement = crud.apply_limit(statement, limit)
         job_entries = compute_session.scalars(statement).all()
         if back:
             job_entries = reversed(job_entries)
         jobs = [
-            utils.make_status_info(job=utils.dictify_job(job), session=compute_session)
+            response.make_status_info(
+                job=crud.dictify_job(job), session=compute_session
+            )
             for job in job_entries
         ]
         job_list = models.JobList(jobs=jobs)
-        pagination_qs = utils.make_pagination_qs(jobs, sort_key=sortby.lstrip("-"))
+        pagination_qs = response.make_pagination_qs(jobs, sort_key=sortby.lstrip("-"))
         job_list._pagination_qs = pagination_qs
 
         return job_list
@@ -302,10 +317,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         user_auth_requirements: dict[str, str] = fastapi.Depends(
-            dependencies.get_user_auth_requirements
+            auth.get_user_auth_requirements
         ),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
-            dependencies.get_compute_session
+            crud.get_compute_session
         ),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
@@ -329,20 +344,20 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
-        user = utils.authenticate_user(user_auth_requirements)
-        job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
-        utils.verify_permission(user, job)
-        status_info = utils.make_status_info(job=job, session=compute_session)
+        user = auth.authenticate_user(user_auth_requirements)
+        job = crud.get_job_from_broker_db(job_id=job_id, session=compute_session)
+        auth.verify_permission(user, job)
+        status_info = response.make_status_info(job=job, session=compute_session)
         return status_info
 
     def get_job_results(
         self,
         job_id: str = fastapi.Path(...),
         user_auth_requirements: dict[str, str] = fastapi.Depends(
-            dependencies.get_user_auth_requirements
+            auth.get_user_auth_requirements
         ),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
-            dependencies.get_compute_session
+            crud.get_compute_session
         ),
     ) -> ogc_api_processes_fastapi.models.Results:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
@@ -370,20 +385,20 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.JobResultsFailed
             If job `job_id` results preparation failed.
         """
-        user = utils.authenticate_user(user_auth_requirements)
-        job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
-        utils.verify_permission(user, job)
-        results = utils.get_results_from_broker_db(job=job, session=compute_session)
+        user = auth.authenticate_user(user_auth_requirements)
+        job = crud.get_job_from_broker_db(job_id=job_id, session=compute_session)
+        auth.verify_permission(user, job)
+        results = crud.get_results_from_broker_db(job=job, session=compute_session)
         return results
 
     def delete_job(
         self,
         job_id: str = fastapi.Path(...),
         user_auth_requirements: dict[str, str] = fastapi.Depends(
-            dependencies.get_user_auth_requirements
+            auth.get_user_auth_requirements
         ),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
-            dependencies.get_compute_session
+            crud.get_compute_session
         ),
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `DELETE /jobs/{job_id}` endpoint.
@@ -407,14 +422,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
-        user = utils.authenticate_user(user_auth_requirements)
-        job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
-        utils.verify_permission(user, job)
+        user = auth.authenticate_user(user_auth_requirements)
+        job = crud.get_job_from_broker_db(job_id=job_id, session=compute_session)
+        auth.verify_permission(user, job)
         job = cads_broker.database.delete_request_in_session(
             request_uid=job_id, session=compute_session
         )
-        job = utils.dictify_job(job)
-        status_info = utils.make_status_info(
+        job = crud.dictify_job(job)
+        status_info = response.make_status_info(
             job, session=compute_session, add_results=False
         )
         return status_info

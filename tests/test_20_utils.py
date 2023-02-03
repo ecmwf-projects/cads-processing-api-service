@@ -1,5 +1,3 @@
-"""General utility functions."""
-
 # Copyright 2022, European Union.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,18 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import base64
+from cads_processing_api_service import utils
 
 
-def encode_base64(decoded: str) -> str:
-    decoded_bytes = decoded.encode("ascii")
-    encoded_bytes = base64.b64encode(decoded_bytes)
-    encoded_str = encoded_bytes.decode("ascii")
-    return encoded_str
-
-
-def decode_base64(encoded: str) -> str:
-    encoded_bytes = encoded.encode("ascii")
-    decoded_bytes = base64.b64decode(encoded_bytes)
-    decoded_str = decoded_bytes.decode("ascii")
-    return decoded_str
+def test_encode_decode_base64() -> None:
+    exp_decoded = "2022-10-24T12:24:29.919877"
+    encoded = utils.encode_base64(exp_decoded)
+    decoded = utils.decode_base64(encoded)
+    assert decoded == exp_decoded

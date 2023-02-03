@@ -14,18 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-import uuid
-from typing import Any, Awaitable, Callable
-
 import fastapi
 import fastapi.middleware.cors
 import ogc_api_processes_fastapi
 import starlette_exporter
 import structlog
 
-from . import clients, config, constraints, exceptions, metrics
+from . import clients, constraints, exceptions, metrics, tracing
 
-config.configure_logger()
+tracing.configure_logger()
 logger = structlog.get_logger(__name__)
 
 app = ogc_api_processes_fastapi.instantiate_app(
@@ -44,17 +41,7 @@ app.router.add_api_route(
 app.router.add_api_route("/metrics", metrics.handle_metrics)
 app.add_middleware(starlette_exporter.middleware.PrometheusMiddleware)
 
-
-@app.middleware("http")
-async def initialize_logger(
-    request: fastapi.Request, call_next: Callable[[fastapi.Request], Awaitable[Any]]
-) -> Any:
-    structlog.contextvars.clear_contextvars()
-    trace_id = str(uuid.uuid4())
-    structlog.contextvars.bind_contextvars(trace_id=trace_id)
-    response = await call_next(request)
-    return response
-
+app.add_middleware(tracing.LoggerInitializationMiddleware)
 
 # FIXME: temporary workaround
 app.add_middleware(
