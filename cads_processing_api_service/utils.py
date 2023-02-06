@@ -317,8 +317,7 @@ def get_stored_accepted_licences(auth_header: dict[str, str]) -> set[tuple[str, 
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}/account/licences",
     )
-    headers = add_request_id_header(auth_header)
-    response = requests.get(request_url, headers=headers)
+    response = requests.get(request_url, headers=auth_header)
     response.raise_for_status()
     licences = response.json()["licences"]
     accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}
@@ -444,16 +443,6 @@ def submit_job(
     return status_info
 
 
-def add_request_id_header(headers: Mapping[str, str]) -> Mapping[str, str]:
-    structlog_contextvars = structlog.contextvars.get_contextvars()
-    request_id = structlog_contextvars.get("trace_id", None)
-    enriched_headers = {
-        **headers,
-        "X-Trace-ID": request_id,
-    }
-    return enriched_headers
-
-
 def authenticate_user(
     user_auth_reqs: dict[str, str]
 ) -> dict[str, str | int | Mapping[str, str | int]]:
@@ -466,8 +455,7 @@ def authenticate_user(
     auth_header = {
         user_auth_reqs["auth_header_name"]: user_auth_reqs["auth_header_value"]
     }
-    headers = add_request_id_header(auth_header)
-    response = requests.post(request_url, headers=headers)
+    response = requests.post(request_url, headers=auth_header)
     if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
         raise exceptions.PermissionDenied(
             status_code=response.status_code, detail=response.json()["detail"]
