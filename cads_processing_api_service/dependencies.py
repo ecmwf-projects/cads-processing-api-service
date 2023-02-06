@@ -15,7 +15,6 @@
 # limitations under the License
 
 import functools
-import os
 from typing import Iterator
 
 import cads_broker.config
@@ -32,7 +31,7 @@ def get_compute_session_maker() -> sqlalchemy.orm.sessionmaker:
     broker_engine = sqlalchemy.create_engine(
         broker_settings.connection_string,
         pool_timeout=0.1,
-        pool_recycle=int(os.environ.get("POOL_RECYCLE")),  # type: ignore
+        pool_recycle=broker_settings.pool_recycle,
     )
     return sqlalchemy.orm.sessionmaker(broker_engine)
 
@@ -51,7 +50,7 @@ def get_catalogue_session_maker() -> sqlalchemy.orm.sessionmaker:
     catalogue_settings = cads_catalogue.config.ensure_settings()
     catalogue_engine = sqlalchemy.create_engine(
         catalogue_settings.connection_string,
-        pool_recycle=int(os.environ.get("POOL_RECYCLE")),  # type: ignore
+        pool_recycle=catalogue_settings.pool_recycle,
     )
     return sqlalchemy.orm.sessionmaker(catalogue_engine)
 
