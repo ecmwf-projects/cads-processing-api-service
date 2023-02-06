@@ -66,8 +66,7 @@ def authenticate_user(
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}{verification_endpoint}",
     )
-    headers = utils.add_request_id_header(auth_header)
-    response = requests.post(request_url, headers=headers)
+    response = requests.post(request_url, headers=auth_header)
     if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
         raise exceptions.PermissionDenied(
             status_code=response.status_code, detail=response.json()["detail"]
@@ -102,8 +101,7 @@ def get_stored_accepted_licences(auth_header: dict[str, str]) -> set[tuple[str, 
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}/account/licences",
     )
-    headers = utils.add_request_id_header(auth_header)
-    response = requests.get(request_url, headers=headers)
+    response = requests.get(request_url, headers=auth_header)
     response.raise_for_status()
     licences = response.json()["licences"]
     accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}
