@@ -28,6 +28,7 @@ def get_compute_session_maker() -> sqlalchemy.orm.sessionmaker:
     broker_engine = sqlalchemy.create_engine(
         broker_settings.connection_string,
         pool_timeout=0.1,
+        pool_recycle=broker_settings.pool_recycle,
     )
     return sqlalchemy.orm.sessionmaker(broker_engine)
 
@@ -44,7 +45,10 @@ def get_compute_session() -> Iterator[sqlalchemy.orm.Session]:
 @functools.lru_cache()
 def get_catalogue_session_maker() -> sqlalchemy.orm.sessionmaker:
     catalogue_settings = cads_catalogue.config.ensure_settings()
-    catalogue_engine = sqlalchemy.create_engine(catalogue_settings.connection_string)
+    catalogue_engine = sqlalchemy.create_engine(
+        catalogue_settings.connection_string,
+        pool_recycle=catalogue_settings.pool_recycle,
+    )
     return sqlalchemy.orm.sessionmaker(catalogue_engine)
 
 

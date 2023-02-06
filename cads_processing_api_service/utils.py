@@ -355,16 +355,6 @@ def submit_job(
     return status_info
 
 
-def add_request_id_header(headers: Mapping[str, str]) -> Mapping[str, str]:
-    structlog_contextvars = structlog.contextvars.get_contextvars()
-    request_id = structlog_contextvars.get("trace_id", None)
-    enriched_headers = {
-        **headers,
-        "X-Trace-ID": request_id,
-    }
-    return enriched_headers
-
-
 def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
     job: dict[str, Any] = {
         column.key: getattr(request, column.key)
