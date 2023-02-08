@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import threading
 
 import attrs
 import cacholote.extra_encoders
@@ -160,9 +161,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
-        user_auth_reqs: auth.AuthReqs = fastapi.Depends(
-            auth.get_user_auth_requirements
-        ),
+        auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         catalogue_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_catalogue_session
         ),
@@ -193,19 +192,23 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        user = auth.authenticate_user(**user_auth_reqs)
-        execution_content = execution_content.dict()
+        user = auth.authenticate_user(auth_header)
+        structlog.contextvars.bind_contextvars(user_id=user["id"])
         logger.info(
-            "Posting process execution",
-            execution_content=execution_content,
+            "User authenticated",
+            cache_info=auth.authenticate_user.cache_info(),
+            thread=threading.current_thread().ident,
         )
-        resource = auth.validate_request(
-            process_id,
-            execution_content,
-            user_auth_reqs["auth_header"],
-            catalogue_session,
-            self.process_table,
+        execution_content = execution_content.dict()
+        resource = utils.lookup_resource_by_id(
+            id=process_id, record=self.process_table, session=catalogue_session
         )
+        logger.info(
+            "Resource retrieved",
+            cache_info=utils.lookup_resource_by_id.cache_info(),
+            thread=threading.current_thread().ident,
+        )
+        auth.validate_licences(execution_content, auth_header, resource)
         status_info = utils.submit_job(
             user.get("id", None),
             process_id,
@@ -224,9 +227,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         | None = fastapi.Query(utils.JobSortCriterion.created_at_desc),
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
-        user_auth_reqs: auth.AuthReqs = fastapi.Depends(
-            auth.get_user_auth_requirements
-        ),
+        auth_header: dict[str, str] = fastapi.Depends(auth.get_auth_header),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_compute_session
         ),
@@ -262,7 +263,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             Information on the status of the job.
         """
-        user = auth.authenticate_user(**user_auth_reqs)
+        user = auth.authenticate_user(auth_header)
         user_id = user.get("id", None)
         metadata_filters = {"user_id": [str(user_id)] if user_id else []}
         job_filters = {"process_id": processID, "status": status}
@@ -301,9 +302,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_job(
         self,
         job_id: str = fastapi.Path(...),
-        user_auth_reqs: auth.AuthReqs = fastapi.Depends(
-            auth.get_user_auth_requirements
-        ),
+        auth_header: dict[str, str] = fastapi.Depends(auth.get_auth_header),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_compute_session
         ),
@@ -329,7 +328,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
-        user = auth.authenticate_user(**user_auth_reqs)
+        user = auth.authenticate_user(auth_header)
         job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
         auth.verify_permission(user, job)
         status_info = utils.make_status_info(job=job, session=compute_session)
@@ -338,9 +337,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_job_results(
         self,
         job_id: str = fastapi.Path(...),
-        user_auth_reqs: auth.AuthReqs = fastapi.Depends(
-            auth.get_user_auth_requirements
-        ),
+        auth_header: dict[str, str] = fastapi.Depends(auth.get_auth_header),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_compute_session
         ),
@@ -370,7 +367,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.JobResultsFailed
             If job `job_id` results preparation failed.
         """
-        user = auth.authenticate_user(**user_auth_reqs)
+        user = auth.authenticate_user(auth_header)
         job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
         auth.verify_permission(user, job)
         results = utils.get_results_from_broker_db(job=job, session=compute_session)
@@ -379,9 +376,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def delete_job(
         self,
         job_id: str = fastapi.Path(...),
-        user_auth_reqs: dict[str, str] = fastapi.Depends(
-            auth.get_user_auth_requirements
-        ),
+        auth_header: dict[str, str] = fastapi.Depends(auth.get_auth_header),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_compute_session
         ),
@@ -407,7 +402,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
-        user = auth.authenticate_user(**user_auth_reqs)
+        user = auth.authenticate_user(auth_header)
         job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
         auth.verify_permission(user, job)
         job = cads_broker.database.delete_request_in_session(

@@ -15,65 +15,61 @@
 # limitations under the License.
 
 import urllib.parse
-from typing import Any, Mapping, TypedDict
+from typing import Any, Mapping
 
+import cachetools
 import cads_catalogue.database
 import fastapi
 import requests
-import sqlalchemy.orm
-import structlog
 
-from . import config, exceptions, utils
+from . import config, exceptions
 
-
-class AuthReqs(TypedDict):
-    auth_header: dict[str, str]
-    verification_endpoint: str
+VERIFICATION_ENDPOINTS = {
+    "PRIVATE-TOKEN": "/account/verification/pat",
+    "Authorization": "/account/verification/oidc",
+}
 
 
-def get_user_auth_requirements(
+def get_auth_header(
     pat: str
     | None = fastapi.Header(
         None, description="Personal Access Token", alias="PRIVATE-TOKEN"
     ),
     jwt: str
     | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
-) -> AuthReqs:
+) -> tuple[str, str]:
+
     if not pat and not jwt:
         raise exceptions.PermissionDenied(
             status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
         )
     if pat:
-        auth_reqs = AuthReqs(
-            auth_header={"PRIVATE-TOKEN": pat},
-            verification_endpoint="/account/verification/pat",
-        )
+        auth_header = ("PRIVATE-TOKEN", pat)
+
     elif jwt:
-        auth_reqs = AuthReqs(
-            auth_header={"Authorization": jwt},
-            verification_endpoint="/account/verification/oidc",
-        )
+        auth_header = ("Authorization", jwt)
 
-    return auth_reqs
+    return auth_header
 
 
+@cachetools.cached(cache=cachetools.TTLCache(maxsize=128, ttl=10), info=True)
 def authenticate_user(
-    auth_header: dict[str, str], verification_endpoint: str
+    auth_header: tuple[str, str]
 ) -> dict[str, str | int | Mapping[str, str | int]]:
+    verification_endpoint = VERIFICATION_ENDPOINTS[auth_header[0]]
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}{verification_endpoint}",
     )
-    response = requests.post(request_url, headers=auth_header)
+    response = requests.post(request_url, headers={auth_header[0]: auth_header[1]})
     if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
         raise exceptions.PermissionDenied(
             status_code=response.status_code, detail=response.json()["detail"]
         )
     response.raise_for_status()
     user: dict[str, str | int | Mapping[str, str | int]] = response.json()
-    structlog.contextvars.bind_contextvars(user_id=user["id"])
     return user
 
 
@@ -95,13 +91,14 @@ def get_contextual_accepted_licences(
     return accepted_licences
 
 
-def get_stored_accepted_licences(auth_header: dict[str, str]) -> set[tuple[str, int]]:
+@cachetools.cached(cache=cachetools.TTLCache(maxsize=128, ttl=30), info=True)
+def get_stored_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}/account/licences",
     )
-    response = requests.get(request_url, headers=auth_header)
+    response = requests.get(request_url, headers={auth_header[0]: auth_header[1]})
     response.raise_for_status()
     licences = response.json()["licences"]
     accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}
@@ -126,40 +123,11 @@ def check_licences(
     return missing_licences
 
 
-def validate_request(
-    process_id: str,
+def validate_licences(
     execution_content: dict[str, Any],
-    auth_header: dict[str, str],
-    session: sqlalchemy.orm.Session,
-    process_table: type[cads_catalogue.database.Resource],
-) -> cads_catalogue.database.Resource:
-    """Validate retrieve process execution request.
-
-    Check if requested dataset exists and if execution content is valid.
-    In case the check is successful, returns the resource (dataset)
-    associated to the process request.
-
-    Parameters
-    ----------
-    process_id : str
-        Process ID
-    execution_content: dict[str, Any]
-        Content of the process execution request
-    auth_header: dict[str, str]
-        Authorization header sent with the request
-    session : sqlalchemy.orm.Session
-        SQLAlchemy ORM session
-    process_table: Type[cads_catalogue.database.Resource]
-        Resources table
-
-    Returns
-    -------
-    cads_catalogue.database.BaseModel
-        Resource (dataset) associated to the process request.
-    """
-    resource = utils.lookup_resource_by_id(
-        id=process_id, record=process_table, session=session
-    )
+    auth_header: tuple[str, str],
+    resource: cads_catalogue.database.Resource,
+) -> None:
     licences: list[cads_catalogue.database.Licence] = resource.licences  # type: ignore
     required_licences = {
         (licence.licence_uid, licence.revision) for licence in licences
@@ -168,5 +136,3 @@ def validate_request(
     stored_accepted_licences = get_stored_accepted_licences(auth_header)
     accepted_licences = contextual_accepted_licences.union(stored_accepted_licences)
     check_licences(required_licences, accepted_licences)
-
-    return resource
