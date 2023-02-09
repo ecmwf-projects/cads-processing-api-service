@@ -47,7 +47,7 @@ def get_catalogue_session_maker() -> sqlalchemy.orm.sessionmaker:
     catalogue_settings = cads_catalogue.config.ensure_settings()
     catalogue_engine = sqlalchemy.create_engine(
         catalogue_settings.connection_string,
-        pool_timeout=0.2,
+        pool_timeout=0.1,
         pool_recycle=catalogue_settings.pool_recycle,
     )
     return sqlalchemy.orm.sessionmaker(catalogue_engine)
