@@ -17,7 +17,7 @@
 import urllib.parse
 from typing import Any, Mapping
 
-import cachetools
+# import cachetools
 import cads_catalogue.database
 import fastapi
 import requests
@@ -53,7 +53,7 @@ def get_auth_header(
     return auth_header
 
 
-@cachetools.cached(cache=cachetools.TTLCache(maxsize=128, ttl=10), info=True)
+# @cachetools.cached(cache=cachetools.TTLCache(maxsize=128, ttl=10), info=True)
 def authenticate_user(
     auth_header: tuple[str, str]
 ) -> dict[str, str | int | Mapping[str, str | int]]:
@@ -91,7 +91,7 @@ def get_contextual_accepted_licences(
     return accepted_licences
 
 
-@cachetools.cached(cache=cachetools.TTLCache(maxsize=128, ttl=30), info=True)
+# @cachetools.cached(cache=cachetools.TTLCache(maxsize=128, ttl=30), info=True)
 def get_stored_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(

@@ -19,8 +19,8 @@ import enum
 import uuid
 from typing import Any, Callable, Mapping
 
-import cachetools
-import cachetools.keys
+# import cachetools
+# import cachetools.keys
 import cads_broker.database
 import cads_catalogue.database
 import fastapi
@@ -48,11 +48,11 @@ class JobSortCriterion(str, enum.Enum):
     created_at_desc: str = "-created"
 
 
-@cachetools.cached(
-    cache=cachetools.TTLCache(maxsize=128, ttl=30),
-    key=lambda id, record, session: cachetools.keys.hashkey(id),
-    info=True,
-)
+# @cachetools.cached(
+#     cache=cachetools.TTLCache(maxsize=128, ttl=30),
+#     key=lambda id, record, session: cachetools.keys.hashkey(id),
+#     info=True,
+# )
 def lookup_resource_by_id(
     id: str,
     record: type[cads_catalogue.database.Resource],
