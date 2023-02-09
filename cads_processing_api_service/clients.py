@@ -200,7 +200,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         structlog.contextvars.bind_contextvars(user_id=user["id"])
         logger.info(
             "User authenticated",
-            cache_info=auth.authenticate_user.cache_info(),
+            # cache_info=auth.authenticate_user.cache_info(),
             thread=threading.current_thread().ident,
         )
         execution_content = execution_content.dict()
@@ -209,7 +209,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         logger.info(
             "Resource retrieved",
-            cache_info=utils.lookup_resource_by_id.cache_info(),
+            # cache_info=utils.lookup_resource_by_id.cache_info(),
             thread=threading.current_thread().ident,
         )
         auth.validate_licences(execution_content, auth_header, resource)
