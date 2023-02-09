@@ -39,8 +39,8 @@ class CacheControlMiddleware(starlette.middleware.base.BaseHTTPMiddleware):
             and request.method in CACHEABLE_HTTP_METHODS
         ):
             settings = config.ensure_settings()
-            if settings.private_cache_control:
-                response.headers["cache-control"] = settings.private_cache_control
-            if settings.private_vary:
-                response.headers["vary"] = settings.private_vary
+            if settings.default_cache_control:
+                response.headers["cache-control"] = settings.default_cache_control
+            if settings.default_vary:
+                response.headers["vary"] = settings.default_vary
         return response
