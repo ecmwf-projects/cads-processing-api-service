@@ -16,8 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-import threading
-
 import attrs
 import cacholote.extra_encoders
 import cads_broker.database
@@ -200,8 +198,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         structlog.contextvars.bind_contextvars(user_id=user["id"])
         logger.info(
             "User authenticated",
-            # cache_info=auth.authenticate_user.cache_info(),
-            thread=threading.current_thread().ident,
         )
         execution_content = execution_content.dict()
         resource = utils.lookup_resource_by_id(
@@ -209,8 +205,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         logger.info(
             "Resource retrieved",
-            # cache_info=utils.lookup_resource_by_id.cache_info(),
-            thread=threading.current_thread().ident,
         )
         auth.validate_licences(execution_content, auth_header, resource)
         status_info = utils.submit_job(
@@ -231,7 +225,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         | None = fastapi.Query(utils.JobSortCriterion.created_at_desc),
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
-        auth_header: dict[str, str] = fastapi.Depends(auth.get_auth_header),
+        auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_compute_session
         ),
@@ -306,7 +300,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_job(
         self,
         job_id: str = fastapi.Path(...),
-        auth_header: dict[str, str] = fastapi.Depends(auth.get_auth_header),
+        auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_compute_session
         ),
@@ -341,7 +335,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_job_results(
         self,
         job_id: str = fastapi.Path(...),
-        auth_header: dict[str, str] = fastapi.Depends(auth.get_auth_header),
+        auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_compute_session
         ),
@@ -380,7 +374,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def delete_job(
         self,
         job_id: str = fastapi.Path(...),
-        auth_header: dict[str, str] = fastapi.Depends(auth.get_auth_header),
+        auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         compute_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_compute_session
         ),
