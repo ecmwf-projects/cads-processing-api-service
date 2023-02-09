@@ -91,7 +91,7 @@ def get_contextual_accepted_licences(
     return accepted_licences
 
 
-# @cachetools.cached(cache=cachetools.TTLCache(maxsize=128, ttl=30), info=True)
+@cachetools.cached(cache=cachetools.TTLCache(maxsize=1024, ttl=10), info=True)
 def get_stored_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
@@ -125,13 +125,12 @@ def check_licences(
 
 def validate_licences(
     execution_content: dict[str, Any],
-    auth_header: tuple[str, str],
+    stored_accepted_licences: set[tuple[str, str]],
     licences: list[cads_catalogue.database.Licence],
 ) -> None:
     required_licences = {
         (licence.licence_uid, licence.revision) for licence in licences
     }
     contextual_accepted_licences = get_contextual_accepted_licences(execution_content)
-    stored_accepted_licences = get_stored_accepted_licences(auth_header)
     accepted_licences = contextual_accepted_licences.union(stored_accepted_licences)
     check_licences(required_licences, accepted_licences)
