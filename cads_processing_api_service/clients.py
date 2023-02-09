@@ -164,8 +164,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
-        catalogue_session: sqlalchemy.orm.Session = fastapi.Depends(
-            dependencies.get_catalogue_session
+        catalogue_session_maker: sqlalchemy.orm.Session = fastapi.Depends(
+            dependencies.get_catalogue_session_maker
         ),
         compute_session_maker: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_compute_session_maker
@@ -201,9 +201,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             "User authenticated",
         )
         execution_content = execution_content.dict()
-        resource = utils.lookup_resource_by_id(
-            id=process_id, record=self.process_table, session=catalogue_session
-        )
+        with catalogue_session_maker() as catalogue_session:
+            resource = utils.lookup_resource_by_id(
+                id=process_id, record=self.process_table, session=catalogue_session
+            )
 
         logger.info(
             "Resource retrieved",
