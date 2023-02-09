@@ -59,7 +59,10 @@ def lookup_resource_by_id(
 ) -> cads_catalogue.database.Resource:
     try:
         row: cads_catalogue.database.Resource = (
-            session.query(record).filter(record.resource_uid == id).one()
+            session.query(record)
+            .options(sqlalchemy.orm.joinedload(record.licences))
+            .filter(record.resource_uid == id)
+            .one()
         )
     except sqlalchemy.orm.exc.NoResultFound as exc:
         logger.exception(repr(exc))

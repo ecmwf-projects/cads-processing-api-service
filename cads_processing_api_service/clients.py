@@ -202,10 +202,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         execution_content = execution_content.dict()
         resource = utils.lookup_resource_by_id(
-            id=process_id,
-            record=sqlalchemy.orm.Load(self.process_table).joinedload("licences"),
-            session=catalogue_session,
+            id=process_id, record=self.process_table, session=catalogue_session
         )
+
         logger.info(
             "Resource retrieved",
         )
