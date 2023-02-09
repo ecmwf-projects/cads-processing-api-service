@@ -338,7 +338,7 @@ def submit_job(
     job_kwargs = adaptors.make_system_job_kwargs(
         process_id, execution_content, resource
     )
-    # logger.info("Submitting job")
+    logger.info("Submitting job")
     job = cads_broker.database.create_request_in_session(
         session=compute_session,
         request_uid=job_id,
@@ -346,7 +346,7 @@ def submit_job(
         process_id=process_id,
         **job_kwargs,
     )
-    # logger.info("Job submitted")
+    logger.info("Job submitted")
     status_info = models.StatusInfo(
         processID=job["process_id"],
         type="process",
