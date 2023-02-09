@@ -36,7 +36,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import auth, dependencies, models, serializers, utils
+from . import auth, config, dependencies, models, serializers, utils
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -109,11 +109,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_list = ogc_api_processes_fastapi.models.ProcessList(processes=processes)
         pagination_qs = utils.make_pagination_qs(processes, sort_key=sortby.lstrip("-"))
         process_list._pagination_qs = pagination_qs
-
         return process_list
 
     def get_process(
         self,
+        response: fastapi.Response,
         process_id: str = fastapi.Path(...),
         catalgoue_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_catalogue_session
@@ -154,6 +154,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 ),
             ),
         }
+
+        response.headers[
+            "cache-control"
+        ] = config.ensure_settings().public_cache_control
 
         return process_description
 
