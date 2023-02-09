@@ -126,9 +126,8 @@ def check_licences(
 def validate_licences(
     execution_content: dict[str, Any],
     auth_header: tuple[str, str],
-    resource: cads_catalogue.database.Resource,
+    licences: list[cads_catalogue.database.Licence],
 ) -> None:
-    licences: list[cads_catalogue.database.Licence] = resource.licences  # type: ignore
     required_licences = {
         (licence.licence_uid, licence.revision) for licence in licences
     }

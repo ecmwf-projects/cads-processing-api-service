@@ -206,7 +206,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         logger.info(
             "Resource retrieved",
         )
-        auth.validate_licences(execution_content, auth_header, resource)
+        auth.validate_licences(execution_content, auth_header, resource.licences)
         status_info = utils.submit_job(
             user.get("id", None),
             process_id,
