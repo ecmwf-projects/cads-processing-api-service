@@ -167,8 +167,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         catalogue_session: sqlalchemy.orm.Session = fastapi.Depends(
             dependencies.get_catalogue_session
         ),
-        compute_session: sqlalchemy.orm.Session = fastapi.Depends(
-            dependencies.get_compute_session
+        compute_session_maker: sqlalchemy.orm.Session = fastapi.Depends(
+            dependencies.get_compute_session_maker
         ),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
@@ -210,13 +210,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         auth.validate_licences(
             execution_content, stored_accepted_licences, resource.licences
         )
-        status_info = utils.submit_job(
-            user.get("id", None),
-            process_id,
-            execution_content,
-            resource,
-            compute_session,
-        )
+        with compute_session_maker() as compute_session:
+            status_info = utils.submit_job(
+                user.get("id", None),
+                process_id,
+                execution_content,
+                resource,
+                compute_session,
+            )
         return status_info
 
     def get_jobs(
