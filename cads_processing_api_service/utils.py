@@ -64,6 +64,7 @@ def lookup_resource_by_id(
     except sqlalchemy.orm.exc.NoResultFound as exc:
         logger.exception(repr(exc))
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
+    session.expunge(row)
     return row
 
 
