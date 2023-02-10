@@ -19,6 +19,7 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 
 import json
 import logging
+import sys
 from typing import Any, Callable, Mapping, MutableMapping
 
 import pydantic
@@ -93,6 +94,8 @@ def configure_logger() -> None:
     """
     logging.basicConfig(
         level=logging.INFO,
+        format="%(message)s",
+        stream=sys.stdout,
     )
 
     structlog.configure(

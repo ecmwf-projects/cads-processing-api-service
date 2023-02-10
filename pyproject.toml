@@ -19,14 +19,16 @@ classifiers = [
 dynamic = ["version"]
 dependencies = [
   "attrs",
-  "fastapi",
-  "fastapi-utils",
+  "cacholote",
   "cads-broker",
   "cads-catalogue",
-  "cacholote",
+  "fastapi",
   "ogc-api-processes-fastapi",
+  "prometheus_client",
+  "requests",
   "sqlalchemy",
-  "structlog"
+  "starlette_exporter",
+  "structlog",
 ]
 
 [tool.coverage.run]
