@@ -51,8 +51,10 @@ def make_system_job_kwargs(
     resource: cads_catalogue.database.Resource,
 ) -> dict[str, Any]:
 
-    config: dict[str, Any] = resource.adaptor_configuration  # type: ignore
-    if config is None:
+    config: dict[str, Any] = resource.adaptor_configuration  # type:ignore
+    if config:
+        config = config.copy()
+    else:
         config = {}
 
     entry_point = config.pop("entry_point", FALLBACK_ENTRY_POINT)
