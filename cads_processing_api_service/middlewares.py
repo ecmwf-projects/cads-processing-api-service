@@ -33,7 +33,7 @@ class CacheControlMiddleware(starlette.middleware.base.BaseHTTPMiddleware):
         request: fastapi.Request,
         call_next: starlette.middleware.base.RequestResponseEndpoint,
     ) -> fastapi.Response:
-        response = await call_next(request)
+        response: fastapi.Response = await call_next(request)
         if (
             "cache-control" not in response.headers
             and request.method in CACHEABLE_HTTP_METHODS
