@@ -14,28 +14,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+from typing import Callable
+
 import cads_broker
 import fastapi
 import prometheus_client
-import sqlalchemy
 import starlette.requests
 import starlette.responses
 import starlette_exporter
 
-from . import dependencies
+from . import clients
 
 GAUGE = prometheus_client.Gauge(
     "broker_queue", "Number of accepted requests", labelnames=("queue",)
 )
 
 
-def handle_metrics(
-    request: starlette.requests.Request,
-    compute_session: sqlalchemy.orm.Session = fastapi.Depends(
-        dependencies.get_compute_session
-    ),
-) -> starlette.responses.Response:
-    GAUGE.labels("queue").set(
-        cads_broker.database.count_accepted_requests_in_session(compute_session)
-    )
-    return starlette_exporter.handle_metrics(request)
+def create_handle_metrics_endpoint(
+    client: clients.DatabaseClient,  # type:ignore
+) -> Callable[[fastapi.Request], starlette.responses.Response]:
+    def handle_metrics_endpoint(
+        request: starlette.requests.Request,
+    ) -> starlette.responses.Response:
+        compute_db_session_maker = client.compute_db_session_maker
+        with compute_db_session_maker() as compute_session:
+            GAUGE.labels("queue").set(
+                cads_broker.database.count_accepted_requests_in_session(compute_session)
+            )
+        return starlette_exporter.handle_metrics(request)
+
+    return handle_metrics_endpoint

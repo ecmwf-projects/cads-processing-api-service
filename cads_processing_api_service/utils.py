@@ -48,7 +48,7 @@ class JobSortCriterion(str, enum.Enum):
     created_at_desc: str = "-created"
 
 
-@cachetools.cached(
+@cachetools.cached(  # type: ignore
     cache=cachetools.TTLCache(maxsize=1024, ttl=60),
     key=lambda id, record, session: cachetools.keys.hashkey(id, record),
     info=True,
@@ -60,7 +60,7 @@ def lookup_resource_by_id(
 ) -> cads_catalogue.database.Resource:
     try:
         row: cads_catalogue.database.Resource = (
-            session.query(record)
+            session.query(record)  # type: ignore
             .options(sqlalchemy.orm.joinedload(record.licences))
             .filter(record.resource_uid == id)
             .one()
@@ -68,7 +68,7 @@ def lookup_resource_by_id(
     except sqlalchemy.orm.exc.NoResultFound as exc:
         logger.exception(repr(exc))
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
-    session.expunge(row)
+    session.expunge(row)  # type: ignore
     return row
 
 

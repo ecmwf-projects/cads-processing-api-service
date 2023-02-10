@@ -1,10 +1,8 @@
 """Main module of the request-constraints API."""
 import copy
-from typing import Any
+from typing import Any, Callable
 
-import cads_catalogue.database
-
-from . import exceptions, translators, utils
+from . import clients, exceptions, translators, utils
 
 SUPPORTED_CONSTRAINTS = [
     "StringListWidget",
@@ -311,28 +309,33 @@ def parse_form(raw_form: list[Any] | dict[str, Any] | None) -> dict[str, set[Any
     return form
 
 
-def validate_constraints(
-    process_id: str, body: dict[str, dict[str, Any]]
-) -> dict[str, list[str]]:
-    session_obj = cads_catalogue.database.ensure_session_obj(None)
-    record = cads_catalogue.database.Resource
-    with session_obj() as session:
-        dataset = utils.lookup_resource_by_id(process_id, record, session)
-
-    orig_form = dataset.form_data
-    form = parse_form(orig_form)
-    unsupported_vars = get_unsupported_vars(orig_form)
-
-    constraints = parse_constraints(dataset.constraints_data)
-    constraints = remove_unsupported_vars(constraints, unsupported_vars)
-
-    selection = parse_selection(body["inputs"])
-
-    return apply_constraints(form, selection, constraints)
-
-
 def get_keys(constraints: list[dict[str, Any]]) -> set[str]:
     keys = set()
     for constraint in constraints:
         keys |= set(constraint.keys())
     return keys
+
+
+def create_validate_constraints_endpoint(
+    client: clients.DatabaseClient,  # type:ignore
+) -> Callable[[str, dict[str, dict[str, Any]]], dict[str, list[str]]]:
+    def validate_constraints_endpoint(
+        process_id: str, body: dict[str, dict[str, Any]]
+    ) -> dict[str, list[str]]:
+        with client.compute_db_session_maker() as session:
+            dataset = utils.lookup_resource_by_id(
+                process_id, client.process_table, session
+            )
+
+        orig_form = dataset.form_data
+        form = parse_form(orig_form)
+        unsupported_vars = get_unsupported_vars(orig_form)
+
+        constraints = parse_constraints(dataset.constraints_data)
+        constraints = remove_unsupported_vars(constraints, unsupported_vars)
+
+        selection = parse_selection(body["inputs"])
+
+        return apply_constraints(form, selection, constraints)
+
+    return validate_constraints_endpoint

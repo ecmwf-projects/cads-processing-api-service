@@ -138,7 +138,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        with self.catalogue_db_session_maker as catalogue_session:
+        with self.catalogue_db_session_maker() as catalogue_session:
             resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
             )
