@@ -164,12 +164,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
-        catalogue_session_maker: sqlalchemy.orm.Session = fastapi.Depends(
-            dependencies.get_catalogue_session_maker
-        ),
-        compute_session_maker: sqlalchemy.orm.Session = fastapi.Depends(
-            dependencies.get_compute_session_maker
-        ),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
 
@@ -201,18 +195,17 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             "User authenticated",
         )
         execution_content = execution_content.dict()
-        with catalogue_session_maker() as catalogue_session:
+        with dependencies.get_catalogue_session_maker() as catalogue_session:
             resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
             )
-
         logger.info(
             "Resource retrieved",
         )
         auth.validate_licences(
             execution_content, stored_accepted_licences, resource.licences
         )
-        with compute_session_maker() as compute_session:
+        with dependencies.get_compute_session_maker() as compute_session:
             status_info = utils.submit_job(
                 user.get("id", None),
                 process_id,
@@ -307,9 +300,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
-        compute_session_maker: sqlalchemy.orm.Session = fastapi.Depends(
-            dependencies.get_compute_session_maker
-        ),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -333,7 +323,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the job `job_id` is not found.
         """
         user = auth.authenticate_user(auth_header)
-        with compute_session_maker() as compute_session:
+        with dependencies.get_compute_session_maker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             status_info = utils.make_status_info(job=job, session=compute_session)
         auth.verify_permission(user, job)
