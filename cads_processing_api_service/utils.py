@@ -16,23 +16,24 @@
 
 import base64
 import enum
-import urllib.parse
 import uuid
 from typing import Any, Callable, Mapping
 
+import cachetools
+import cachetools.keys
 import cads_broker.database
 import cads_catalogue.database
 import fastapi
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
-import requests
+import sqlalchemy.exc
 import sqlalchemy.orm
 import sqlalchemy.orm.attributes
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import adaptors, config, exceptions, models
+from . import adaptors, models
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -47,6 +48,11 @@ class JobSortCriterion(str, enum.Enum):
     created_at_desc: str = "-created"
 
 
+@cachetools.cached(  # type: ignore
+    cache=cachetools.TTLCache(maxsize=1024, ttl=60),
+    key=lambda id, record, session: cachetools.keys.hashkey(id, record),
+    info=True,
+)
 def lookup_resource_by_id(
     id: str,
     record: type[cads_catalogue.database.Resource],
@@ -54,11 +60,15 @@ def lookup_resource_by_id(
 ) -> cads_catalogue.database.Resource:
     try:
         row: cads_catalogue.database.Resource = (
-            session.query(record).filter(record.resource_uid == id).one()
+            session.query(record)  # type: ignore
+            .options(sqlalchemy.orm.joinedload(record.licences))
+            .filter(record.resource_uid == id)
+            .one()
         )
     except sqlalchemy.orm.exc.NoResultFound as exc:
         logger.exception(repr(exc))
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
+    session.expunge(row)  # type:ignore
     return row
 
 
@@ -301,93 +311,6 @@ def make_pagination_qs(
     return pagination_qs
 
 
-def get_contextual_accepted_licences(
-    execution_content: dict[str, Any]
-) -> set[tuple[str, int]]:
-    licences = execution_content.get("acceptedLicences")
-    if not licences:
-        licences = []
-    accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}
-    return accepted_licences
-
-
-def get_stored_accepted_licences(auth_header: dict[str, str]) -> set[tuple[str, int]]:
-    settings = config.ensure_settings()
-    request_url = urllib.parse.urljoin(
-        settings.internal_proxy_url,
-        f"{settings.profiles_base_url}/account/licences",
-    )
-    response = requests.get(request_url, headers=auth_header)
-    response.raise_for_status()
-    licences = response.json()["licences"]
-    accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}
-    return accepted_licences
-
-
-def check_licences(
-    required_licences: set[tuple[str, int]], accepted_licences: set[tuple[str, int]]
-) -> set[tuple[str, int]]:
-    missing_licences = required_licences - accepted_licences
-    if not len(missing_licences) == 0:
-        missing_licences_detail = [
-            {"id": licence[0], "revision": licence[1]} for licence in missing_licences
-        ]
-        raise exceptions.PermissionDenied(
-            title="required licences not accepted",
-            detail=(
-                "please accept the following licences to proceed: "
-                f"{missing_licences_detail}"
-            ),
-        )
-    return missing_licences
-
-
-def validate_request(
-    process_id: str,
-    execution_content: dict[str, Any],
-    auth_header: dict[str, str],
-    session: sqlalchemy.orm.Session,
-    process_table: type[cads_catalogue.database.Resource],
-) -> cads_catalogue.database.Resource:
-    """Validate retrieve process execution request.
-
-    Check if requested dataset exists and if execution content is valid.
-    In case the check is successful, returns the resource (dataset)
-    associated to the process request.
-
-    Parameters
-    ----------
-    process_id : str
-        Process ID
-    execution_content: dict[str, Any]
-        Content of the process execution request
-    auth_header: dict[str, str]
-        Authorization header sent with the request
-    session : sqlalchemy.orm.Session
-        SQLAlchemy ORM session
-    process_table: Type[cads_catalogue.database.Resource]
-        Resources table
-
-    Returns
-    -------
-    cads_catalogue.database.BaseModel
-        Resource (dataset) associated to the process request.
-    """
-    resource = lookup_resource_by_id(
-        id=process_id, record=process_table, session=session
-    )
-    licences: list[cads_catalogue.database.Licence] = resource.licences  # type: ignore
-    required_licences = {
-        (licence.licence_uid, licence.revision) for licence in licences
-    }
-    contextual_accepted_licences = get_contextual_accepted_licences(execution_content)
-    stored_accepted_licences = get_stored_accepted_licences(auth_header)
-    accepted_licences = contextual_accepted_licences.union(stored_accepted_licences)
-    check_licences(required_licences, accepted_licences)
-
-    return resource
-
-
 def submit_job(
     user_id: int,
     process_id: str,
@@ -443,30 +366,6 @@ def submit_job(
     return status_info
 
 
-def authenticate_user(
-    user_auth_reqs: dict[str, str]
-) -> dict[str, str | int | Mapping[str, str | int]]:
-    settings = config.ensure_settings()
-    verification_endpoint = user_auth_reqs["verification_endpoint"]
-    request_url = urllib.parse.urljoin(
-        settings.internal_proxy_url,
-        f"{settings.profiles_base_url}{verification_endpoint}",
-    )
-    auth_header = {
-        user_auth_reqs["auth_header_name"]: user_auth_reqs["auth_header_value"]
-    }
-    response = requests.post(request_url, headers=auth_header)
-    if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
-        raise exceptions.PermissionDenied(
-            status_code=response.status_code, detail=response.json()["detail"]
-        )
-    response.raise_for_status()
-    user: dict[str, str | int | Mapping[str, str | int]] = response.json()
-    user["authentication_header"] = auth_header
-    structlog.contextvars.bind_contextvars(user_id=user["id"])
-    return user
-
-
 def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
     job: dict[str, Any] = {
         column.key: getattr(request, column.key)
@@ -492,14 +391,6 @@ def get_job_from_broker_db(
         )
     job = dictify_job(request)
     return job
-
-
-def verify_permission(
-    user: Mapping[str, str | int | Mapping[str, str | int]], job: dict[str, Any]
-) -> None:
-    user_id = user.get("id", None)
-    if job["request_metadata"]["user_id"] != user_id:
-        raise exceptions.PermissionDenied(detail="Operation not permitted")
 
 
 def get_results_from_broker_db(

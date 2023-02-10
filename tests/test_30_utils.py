@@ -23,7 +23,7 @@ import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
-from cads_processing_api_service import exceptions, models, utils
+from cads_processing_api_service import models, utils
 
 
 def test_parse_sortby() -> None:
@@ -188,48 +188,6 @@ def test_make_pagination_qs() -> None:
         prev={"cursor": utils.encode_base64(str(jobs[0].created)), "back": True},
     )
     assert pagination_qs == exp_qs
-
-
-def test_get_contextual_accepted_licences() -> None:
-    execution_content: dict[str, list[dict[str, str | int]] | None] = {
-        "acceptedLicences": [
-            {"id": "licence", "revision": 0},
-            {"id": "licence", "revision": 0},
-        ]
-    }
-    licences = utils.get_contextual_accepted_licences(execution_content)
-    exp_licences = {("licence", 0)}
-    assert licences == exp_licences
-
-    execution_content = {"acceptedLicences": None}
-    licences = utils.get_contextual_accepted_licences(execution_content)
-    exp_licences = set()
-    assert licences == exp_licences
-
-
-def test_check_licences() -> None:
-    required_licences = {("licence_1", 1), ("licence_2", 2)}
-    accepted_licences = {("licence_1", 1), ("licence_2", 2), ("licence_3", 3)}
-    missing_licences = utils.check_licences(required_licences, accepted_licences)
-    assert len(missing_licences) == 0
-
-    required_licences = {("licence_1", 1), ("licence_2", 2)}
-    accepted_licences = {("licence_1", 1), ("licence_2", 1)}
-    with pytest.raises(exceptions.PermissionDenied):
-        missing_licences = utils.check_licences(required_licences, accepted_licences)
-
-
-def test_verify_permission() -> None:
-    job = {"request_metadata": {"user_id": 0}}
-    user = {"id": 0}
-    try:
-        utils.verify_permission(user, job)
-    except exceptions.PermissionDenied as exc:
-        assert False, f"'{user} / {job}' raised an exception {exc}"
-
-    user = {"id": 1}
-    with pytest.raises(exceptions.PermissionDenied):
-        utils.verify_permission(user, job)
 
 
 def test_dictify_job() -> None:

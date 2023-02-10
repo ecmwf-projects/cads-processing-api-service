@@ -34,6 +34,10 @@ class Settings(pydantic.BaseSettings):
     internal_proxy_url: str = "http://proxy"
     profiles_base_url: str = "/api/profiles/"
 
+    default_cache_control: str = "max-age=2"
+    default_vary: str = "PRIVATE-TOKEN, Authorization"
+    public_cache_control: str = "public, max-age=60"
+
 
 def ensure_settings(
     settings: Settings | None = None,
