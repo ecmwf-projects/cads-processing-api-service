@@ -133,4 +133,4 @@ def validate_licences(
     }
     contextual_accepted_licences = get_contextual_accepted_licences(execution_content)
     accepted_licences = contextual_accepted_licences.union(stored_accepted_licences)
-    check_licences(required_licences, accepted_licences)
+    check_licences(required_licences, accepted_licences)  # type: ignore
