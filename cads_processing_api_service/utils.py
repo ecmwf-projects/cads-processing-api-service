@@ -20,6 +20,7 @@ import uuid
 from typing import Any, Callable, Mapping
 
 import cachetools
+import cachetools.keys
 import cads_broker.database
 import cads_catalogue.database
 import fastapi
