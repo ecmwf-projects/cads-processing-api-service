@@ -1,9 +1,10 @@
 """Main module of the request-constraints API."""
 import copy
+import re
+from datetimerange import DateTimeRange
 from typing import Any
 
 import cads_catalogue.database
-
 from . import db_utils, exceptions, translators, utils
 
 SUPPORTED_CONSTRAINTS = [
@@ -167,19 +168,27 @@ def get_possible_values(
     result: dict[str, set[Any]] = {key: set() for key in form}
     for combination in constraints:
         ok = True
-        for keys, values in selection.items():
-            if keys in combination.keys():
-                if len(values & combination[keys]) == 0:
-                    ok = False
-                    break
-            elif keys in form.keys():
+        for key, values in selection.items():
+            if key in combination.keys():
+                if key != "date":
+                    if len(values & combination[key]) == 0:
+                        ok = False
+                        break
+                else:
+                    selected = gen_time_range_from_string(values.copy().pop())
+                    valids = [gen_time_range_from_string(valid) for valid in combination[key]]
+                    if not temporal_intersection_between(selected, valids):
+                        ok = False
+                        break
+
+            elif key in form.keys():
                 ok = False
                 break
             else:
-                raise exceptions.ParameterError(f"Error: invalid param '{keys}'")
+                raise exceptions.ParameterError(f"Error: invalid param '{key}'")
         if ok:
-            for keys, values in combination.items():
-                result[keys] |= set(values)
+            for key, values in combination.items():
+                result[key] |= set(values)
 
     return result
 
@@ -299,3 +308,41 @@ def get_keys(constraints: list[dict[str, Any]]) -> set[str]:
     for constraint in constraints:
         keys |= set(constraint.keys())
     return keys
+
+
+def temporal_intersection_between(
+    selected: DateTimeRange,
+    valids: list[DateTimeRange]
+)-> bool :
+    for valid in valids:
+        if selected.intersection(valid).is_valid_timerange():
+            return True
+    return False
+
+
+def gen_time_range_from_string(string: str) -> DateTimeRange:
+    dates = re.split('[;/]', string)
+    if len(dates) == 1:
+        dates *= 2
+    time_range = DateTimeRange(dates[0], dates[1])
+    time_range.start_time_format = "%Y-%m-%d"
+    time_range.end_time_format = "%Y-%m-%d"
+    if time_range.is_valid_timerange():
+        return time_range
+    else:
+        raise ValueError('Start date must be before end date')
+
+
+def get_bounds(ranges: set[DateTimeRange]) -> str:
+    ranges = [gen_time_range_from_string(_range) for _range in ranges]
+    _min = ranges[0].start_datetime
+    _max = ranges[0].end_datetime
+    if len(ranges) > 0:
+        for _range in ranges[1:]:
+            if _range.start_datetime < _min:
+                _min = _range.start_datetime
+            if _range.end_datetime > _max:
+                _max = _range.end_datetime
+
+    return f"{_min.strftime('%Y-%m-%d')}/{_max.strftime('%Y-%m-%d')}"
+
