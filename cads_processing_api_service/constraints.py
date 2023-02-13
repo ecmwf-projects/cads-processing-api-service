@@ -316,7 +316,7 @@ def validate_constraints(
     body: dict[str, dict[str, Any]],
 ) -> dict[str, list[str]]:
     record = cads_catalogue.database.Resource
-    catalogue_sessionmaker = dependencies.get_compute_session_maker()
+    catalogue_sessionmaker = dependencies.get_catalogue_session_maker()
     with catalogue_sessionmaker() as catalogue_session:
         dataset = utils.lookup_resource_by_id(process_id, record, catalogue_session)
     orig_form = dataset.form_data
