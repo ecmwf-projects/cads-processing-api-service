@@ -34,7 +34,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import auth, config, dependencies, models, serializers, utils
+from . import auth, config, db_utils, models, serializers, utils
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -94,7 +94,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.process_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
-        catalogue_sessionmaker = dependencies.get_catalogue_session_maker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with catalogue_sessionmaker() as catalogue_session:
             processes_entries = catalogue_session.scalars(statement).all()
         processes = [
@@ -132,7 +132,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        catalogue_sessionmaker = dependencies.get_catalogue_session_maker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with catalogue_sessionmaker() as catalogue_session:
             resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
@@ -193,7 +193,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             "User authenticated",
         )
         execution_content = execution_content.dict()
-        catalogue_sessionmaker = dependencies.get_catalogue_session_maker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with catalogue_sessionmaker() as catalogue_session:
             resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
@@ -205,7 +205,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         auth.validate_licences(
             execution_content, stored_accepted_licences, resource.licences
         )
-        compute_sessionmaker = dependencies.get_compute_session_maker()
+        compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             status_info = utils.submit_job(
                 user.get("id", None),
@@ -281,7 +281,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.job_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
-        compute_sessionmaker = dependencies.get_compute_session_maker()
+        compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job_entries = compute_session.scalars(statement).all()
             if back:
@@ -325,7 +325,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the job `job_id` is not found.
         """
         user = auth.authenticate_user(auth_header)
-        compute_sessionmaker = dependencies.get_compute_session_maker()
+        compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             status_info = utils.make_status_info(job=job, session=compute_session)
@@ -363,7 +363,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If job `job_id` results preparation failed.
         """
         user = auth.authenticate_user(auth_header)
-        compute_sessionmaker = dependencies.get_compute_session_maker()
+        compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             auth.verify_permission(user, job)
@@ -397,7 +397,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the job `job_id` is not found.
         """
         user = auth.authenticate_user(auth_header)
-        compute_sessionmaker = dependencies.get_compute_session_maker()
+        compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             auth.verify_permission(user, job)

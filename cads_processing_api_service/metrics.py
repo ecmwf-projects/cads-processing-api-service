@@ -20,7 +20,7 @@ import starlette.requests
 import starlette.responses
 import starlette_exporter
 
-from . import dependencies
+from . import db_utils
 
 GAUGE = prometheus_client.Gauge(
     "broker_queue", "Number of accepted requests", labelnames=("queue",)
@@ -30,7 +30,7 @@ GAUGE = prometheus_client.Gauge(
 def handle_metrics(
     request: starlette.requests.Request,
 ) -> starlette.responses.Response:
-    compute_sessionmaker = dependencies.get_compute_session_maker()
+    compute_sessionmaker = db_utils.get_compute_sessionmaker()
     with compute_sessionmaker() as compute_session:
         GAUGE.labels("queue").set(
             cads_broker.database.count_accepted_requests_in_session(compute_session)

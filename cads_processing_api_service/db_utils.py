@@ -22,7 +22,7 @@ import sqlalchemy
 
 
 @functools.lru_cache()
-def get_compute_session_maker() -> sqlalchemy.orm.sessionmaker:
+def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker:
     broker_settings = cads_broker.config.ensure_settings()
     broker_engine = sqlalchemy.create_engine(
         broker_settings.connection_string,
@@ -33,7 +33,7 @@ def get_compute_session_maker() -> sqlalchemy.orm.sessionmaker:
 
 
 @functools.lru_cache()
-def get_catalogue_session_maker() -> sqlalchemy.orm.sessionmaker:
+def get_catalogue_sessionmaker() -> sqlalchemy.orm.sessionmaker:
     catalogue_settings = cads_catalogue.config.ensure_settings()
     catalogue_engine = sqlalchemy.create_engine(
         catalogue_settings.connection_string,
