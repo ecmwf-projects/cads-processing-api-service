@@ -3,8 +3,10 @@ import copy
 from typing import Any
 
 import cads_catalogue.database
+import fastapi
+import sqlalchemy.orm
 
-from . import exceptions, translators, utils
+from . import dependencies, exceptions, translators, utils
 
 SUPPORTED_CONSTRAINTS = [
     "StringListWidget",
@@ -312,20 +314,20 @@ def parse_form(raw_form: list[Any] | dict[str, Any] | None) -> dict[str, set[Any
 
 
 def validate_constraints(
-    process_id: str, body: dict[str, dict[str, Any]]
+    process_id: str,
+    body: dict[str, dict[str, Any]],
+    catalogue_session_maker: sqlalchemy.orm.sessionmaker = fastapi.Depends(
+        dependencies.get_catalogue_session_maker
+    ),
 ) -> dict[str, list[str]]:
-    session_obj = cads_catalogue.database.ensure_session_obj(None)
     record = cads_catalogue.database.Resource
-    with session_obj() as session:
-        dataset = utils.lookup_resource_by_id(process_id, record, session)
-
+    with catalogue_session_maker() as catalogue_session:
+        dataset = utils.lookup_resource_by_id(process_id, record, catalogue_session)
     orig_form = dataset.form_data
     form = parse_form(orig_form)
     unsupported_vars = get_unsupported_vars(orig_form)
-
     constraints = parse_constraints(dataset.constraints_data)
     constraints = remove_unsupported_vars(constraints, unsupported_vars)
-
     selection = parse_selection(body["inputs"])
 
     return apply_constraints(form, selection, constraints)
