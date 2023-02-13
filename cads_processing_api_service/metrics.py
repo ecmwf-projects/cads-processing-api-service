@@ -15,9 +15,7 @@
 # limitations under the License
 
 import cads_broker
-import fastapi
 import prometheus_client
-import sqlalchemy
 import starlette.requests
 import starlette.responses
 import starlette_exporter
@@ -31,11 +29,9 @@ GAUGE = prometheus_client.Gauge(
 
 def handle_metrics(
     request: starlette.requests.Request,
-    compute_session_maker: sqlalchemy.orm.sessionmaker = fastapi.Depends(
-        dependencies.get_compute_session_maker
-    ),
 ) -> starlette.responses.Response:
-    with compute_session_maker() as compute_session:
+    compute_sessionmaker = dependencies.get_compute_session_maker()
+    with compute_sessionmaker() as compute_session:
         GAUGE.labels("queue").set(
             cads_broker.database.count_accepted_requests_in_session(compute_session)
         )
