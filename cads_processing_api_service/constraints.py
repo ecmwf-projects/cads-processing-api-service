@@ -1,10 +1,11 @@
 """Main module of the request-constraints API."""
 import copy
 import re
-from datetimerange import DateTimeRange
 from typing import Any
 
 import cads_catalogue.database
+from datetimerange import DateTimeRange
+
 from . import db_utils, exceptions, translators, utils
 
 SUPPORTED_CONSTRAINTS = [
@@ -100,7 +101,7 @@ def apply_constraints(
     :return: a dictionary containing all values that should be left
     active for selection, in JSON format
     """
-    #always_valid = get_always_valid_params(form, constraints)
+    # always_valid = get_always_valid_params(form, constraints)
     always_valid = dict()
 
     form = copy.deepcopy(form)
@@ -176,7 +177,9 @@ def get_possible_values(
                         break
                 else:
                     selected = gen_time_range_from_string(values.copy().pop())
-                    valid = [gen_time_range_from_string(valid) for valid in combination[key]]
+                    valid = [
+                        gen_time_range_from_string(valid) for valid in combination[key]
+                    ]
                     if not temporal_intersection_between(selected, valid):
                         ok = False
                         break
@@ -311,9 +314,8 @@ def get_keys(constraints: list[dict[str, Any]]) -> set[str]:
 
 
 def temporal_intersection_between(
-    selected: DateTimeRange,
-    ranges: list[DateTimeRange]
-)-> bool :
+    selected: DateTimeRange, ranges: list[DateTimeRange]
+) -> bool:
     for valid in ranges:
         if selected.intersection(valid).is_valid_timerange():
             return True
@@ -321,7 +323,7 @@ def temporal_intersection_between(
 
 
 def gen_time_range_from_string(string: str) -> DateTimeRange:
-    dates = re.split('[;/]', string)
+    dates = re.split("[;/]", string)
     if len(dates) == 1:
         dates *= 2
     time_range = DateTimeRange(dates[0], dates[1])
@@ -330,7 +332,7 @@ def gen_time_range_from_string(string: str) -> DateTimeRange:
     if time_range.is_valid_timerange():
         return time_range
     else:
-        raise ValueError('Start date must be before end date')
+        raise ValueError("Start date must be before end date")
 
 
 def get_bounds(ranges: set[DateTimeRange]) -> str:
@@ -345,4 +347,3 @@ def get_bounds(ranges: set[DateTimeRange]) -> str:
                 _max = _range.end_datetime
 
     return f"{_min.strftime('%Y-%m-%d')}/{_max.strftime('%Y-%m-%d')}"
-

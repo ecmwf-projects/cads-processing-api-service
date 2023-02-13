@@ -1,5 +1,6 @@
-from datetimerange import DateTimeRange
 from typing import Any
+
+from datetimerange import DateTimeRange
 
 from cads_processing_api_service import constraints
 
@@ -184,10 +185,12 @@ def test_temporal_intersection_between() -> None:
 
 
 def test_gen_time_range_from_string() -> None:
-    assert constraints.gen_time_range_from_string("1990-01-01;1999-12-31") == DateTimeRange(
-        start_datetime="1990-01-01", end_datetime='1999-12-31')
-    assert constraints.gen_time_range_from_string("2000-01-01;2000-01-01") == DateTimeRange(
-        start_datetime="2000-01-01", end_datetime='2000-01-01')
+    assert constraints.gen_time_range_from_string(
+        "1990-01-01;1999-12-31"
+    ) == DateTimeRange(start_datetime="1990-01-01", end_datetime="1999-12-31")
+    assert constraints.gen_time_range_from_string(
+        "2000-01-01;2000-01-01"
+    ) == DateTimeRange(start_datetime="2000-01-01", end_datetime="2000-01-01")
 
 
 def test_get_bounds() -> None:
@@ -195,4 +198,4 @@ def test_get_bounds() -> None:
         "1980-01-01;1999-12-31",
         "1990-01-01;2011-12-31",
     }
-    assert constraints.get_bounds(ranges) == '1980-01-01/2011-12-31'
+    assert constraints.get_bounds(ranges) == "1980-01-01/2011-12-31"
