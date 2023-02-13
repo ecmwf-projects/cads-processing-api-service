@@ -176,8 +176,8 @@ def get_possible_values(
                         break
                 else:
                     selected = gen_time_range_from_string(values.copy().pop())
-                    valids = [gen_time_range_from_string(valid) for valid in combination[key]]
-                    if not temporal_intersection_between(selected, valids):
+                    valid = [gen_time_range_from_string(valid) for valid in combination[key]]
+                    if not temporal_intersection_between(selected, valid):
                         ok = False
                         break
 
@@ -312,9 +312,9 @@ def get_keys(constraints: list[dict[str, Any]]) -> set[str]:
 
 def temporal_intersection_between(
     selected: DateTimeRange,
-    valids: list[DateTimeRange]
+    ranges: list[DateTimeRange]
 )-> bool :
-    for valid in valids:
+    for valid in ranges:
         if selected.intersection(valid).is_valid_timerange():
             return True
     return False
