@@ -15,7 +15,6 @@
 # limitations under the License
 
 import functools
-from typing import Iterator
 
 import cads_broker.config
 import cads_catalogue.config
@@ -33,15 +32,6 @@ def get_compute_session_maker() -> sqlalchemy.orm.sessionmaker:
     return sqlalchemy.orm.sessionmaker(broker_engine)
 
 
-def get_compute_session() -> Iterator[sqlalchemy.orm.Session]:
-    session_maker = get_compute_session_maker()
-    session: sqlalchemy.orm.Session = session_maker()
-    try:
-        yield session
-    finally:
-        session.close()
-
-
 @functools.lru_cache()
 def get_catalogue_session_maker() -> sqlalchemy.orm.sessionmaker:
     catalogue_settings = cads_catalogue.config.ensure_settings()
@@ -51,12 +41,3 @@ def get_catalogue_session_maker() -> sqlalchemy.orm.sessionmaker:
         pool_recycle=catalogue_settings.pool_recycle,
     )
     return sqlalchemy.orm.sessionmaker(catalogue_engine)
-
-
-def get_catalogue_session() -> Iterator[sqlalchemy.orm.Session]:
-    session_maker = get_catalogue_session_maker()
-    session: sqlalchemy.orm.Session = session_maker()
-    try:
-        yield session
-    finally:
-        session.close()
