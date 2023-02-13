@@ -34,7 +34,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import auth, config, dependencies, models, serializers, utils
+from . import auth, config, db_utils, models, serializers, utils
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -63,9 +63,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         | None = fastapi.Query(utils.ProcessSortCriterion.resource_uid_asc),
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
-        catalogue_session_maker: sqlalchemy.orm.sessionmaker = fastapi.Depends(
-            dependencies.get_catalogue_session_maker
-        ),
     ) -> ogc_api_processes_fastapi.models.ProcessList:
         """Implement OGC API - Processes `GET /processes` endpoint.
 
@@ -97,7 +94,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.process_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
-        with catalogue_session_maker() as catalogue_session:
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+        with catalogue_sessionmaker() as catalogue_session:
             processes_entries = catalogue_session.scalars(statement).all()
         processes = [
             serializers.serialize_process_summary(process)
@@ -114,9 +112,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         response: fastapi.Response,
         process_id: str = fastapi.Path(...),
-        catalogue_session_maker: sqlalchemy.orm.sessionmaker = fastapi.Depends(
-            dependencies.get_catalogue_session_maker
-        ),
     ) -> ogc_api_processes_fastapi.models.ProcessDescription:
         """Implement OGC API - Processes `GET /processes/{process_id}` endpoint.
 
@@ -137,7 +132,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        with catalogue_session_maker() as catalogue_session:
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+        with catalogue_sessionmaker() as catalogue_session:
             resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
             )
@@ -166,12 +162,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
-        catalogue_session_maker: sqlalchemy.orm.sessionmaker = fastapi.Depends(
-            dependencies.get_catalogue_session_maker
-        ),
-        compute_session_maker: sqlalchemy.orm.sessionmaker = fastapi.Depends(
-            dependencies.get_compute_session_maker
-        ),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
 
@@ -203,7 +193,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             "User authenticated",
         )
         execution_content = execution_content.dict()
-        with catalogue_session_maker() as catalogue_session:
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+        with catalogue_sessionmaker() as catalogue_session:
             resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
             )
@@ -214,7 +205,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         auth.validate_licences(
             execution_content, stored_accepted_licences, resource.licences
         )
-        with compute_session_maker() as compute_session:
+        compute_sessionmaker = db_utils.get_compute_sessionmaker()
+        with compute_sessionmaker() as compute_session:
             status_info = utils.submit_job(
                 user.get("id", None),
                 process_id,
@@ -234,9 +226,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
-        compute_session_maker: sqlalchemy.orm.sessionmaker = fastapi.Depends(
-            dependencies.get_compute_session_maker
-        ),
     ) -> models.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
 
@@ -292,7 +281,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.job_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
-        with compute_session_maker() as compute_session:
+        compute_sessionmaker = db_utils.get_compute_sessionmaker()
+        with compute_sessionmaker() as compute_session:
             job_entries = compute_session.scalars(statement).all()
             if back:
                 job_entries = reversed(job_entries)
@@ -312,9 +302,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
-        compute_session_maker: sqlalchemy.orm.sessionmaker = fastapi.Depends(
-            dependencies.get_compute_session_maker
-        ),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -338,7 +325,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the job `job_id` is not found.
         """
         user = auth.authenticate_user(auth_header)
-        with compute_session_maker() as compute_session:
+        compute_sessionmaker = db_utils.get_compute_sessionmaker()
+        with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             status_info = utils.make_status_info(job=job, session=compute_session)
         auth.verify_permission(user, job)
@@ -348,9 +336,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
-        compute_session_maker: sqlalchemy.orm.sessionmaker = fastapi.Depends(
-            dependencies.get_compute_session_maker
-        ),
     ) -> ogc_api_processes_fastapi.models.Results:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
 
@@ -378,7 +363,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If job `job_id` results preparation failed.
         """
         user = auth.authenticate_user(auth_header)
-        with compute_session_maker() as compute_session:
+        compute_sessionmaker = db_utils.get_compute_sessionmaker()
+        with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             auth.verify_permission(user, job)
             results = utils.get_results_from_broker_db(job=job, session=compute_session)
@@ -388,9 +374,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
-        compute_session_maker: sqlalchemy.orm.sessionmaker = fastapi.Depends(
-            dependencies.get_compute_session_maker
-        ),
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `DELETE /jobs/{job_id}` endpoint.
 
@@ -414,7 +397,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the job `job_id` is not found.
         """
         user = auth.authenticate_user(auth_header)
-        with compute_session_maker() as compute_session:
+        compute_sessionmaker = db_utils.get_compute_sessionmaker()
+        with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             auth.verify_permission(user, job)
             job = cads_broker.database.delete_request_in_session(
