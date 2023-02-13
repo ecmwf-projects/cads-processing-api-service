@@ -31,11 +31,12 @@ GAUGE = prometheus_client.Gauge(
 
 def handle_metrics(
     request: starlette.requests.Request,
-    compute_session: sqlalchemy.orm.Session = fastapi.Depends(
-        dependencies.get_compute_session
+    compute_session_maker: sqlalchemy.orm.sessionmaker = fastapi.Depends(
+        dependencies.get_compute_session_maker
     ),
 ) -> starlette.responses.Response:
-    GAUGE.labels("queue").set(
-        cads_broker.database.count_accepted_requests_in_session(compute_session)
-    )
+    with compute_session_maker() as compute_session:
+        GAUGE.labels("queue").set(
+            cads_broker.database.count_accepted_requests_in_session(compute_session)
+        )
     return starlette_exporter.handle_metrics(request)
