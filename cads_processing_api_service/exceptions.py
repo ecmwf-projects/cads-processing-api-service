@@ -17,7 +17,9 @@
 import attrs
 import fastapi
 import ogc_api_processes_fastapi.exceptions
+import ogc_api_processes_fastapi.models
 import requests
+import structlog
 
 
 @attrs.define
@@ -49,6 +51,22 @@ def parameter_error_handler(
     )
 
 
+def exception_handler(
+    request: fastapi.Request, exc: ogc_api_processes_fastapi.exceptions.OGCAPIException
+) -> fastapi.responses.JSONResponse:
+    return fastapi.responses.JSONResponse(
+        status_code=exc.status_code,
+        content=ogc_api_processes_fastapi.models.Exception(
+            type=exc.type,
+            title=exc.title,
+            status=exc.status_code,
+            detail=exc.detail,
+            instance=str(request.url),
+            trace_id=structlog.contextvars.get_contextvars().get("trace_id", None),
+        ).dict(exclude_none=True),
+    )
+
+
 def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     """Add CADS Processes API exceptions handlers to a FastAPI application.
 
@@ -63,9 +81,7 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     fastapi.FastAPI
         FastAPI application including CADS Processes API exceptions handlers.
     """
-    app.add_exception_handler(
-        PermissionDenied, ogc_api_processes_fastapi.exceptions.ogc_api_exception_handler
-    )
+    app.add_exception_handler(PermissionDenied, exception_handler)
     app.add_exception_handler(
         requests.exceptions.ReadTimeout, request_readtimeout_handler
     )
