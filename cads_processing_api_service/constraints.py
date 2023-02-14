@@ -347,3 +347,39 @@ def get_bounds(ranges: set[DateTimeRange]) -> str:
                 _max = _range.end_datetime
 
     return f"{_min.strftime('%Y-%m-%d')}/{_max.strftime('%Y-%m-%d')}"
+
+
+def get_always_valid_params(
+    form: dict[str, set[Any]],
+    constraints: list[dict[str, set[Any]]],
+) -> dict[str, set[Any]]:
+    """
+    Get always valid field and values.
+
+    :param form: a dict of all selectable fields and values
+    e.g. form = {
+        "level": {"500", "850", "1000"},
+        "param": {"Z", "T"},
+        "step": {"24", "36", "48"},
+        "number": {"1", "2", "3"}
+    }
+    :type: dict[str, set[Any]]:
+
+    :param constraints: a list of dictionaries representing
+    all constraints for a specific dataset
+    e.g. constraints = [
+        {"level": {"500"}, "param": {"Z", "T"}, "step": {"24", "36", "48"}},
+        {"level": {"1000"}, "param": {"Z"}, "step": {"24", "48"}},
+        {"level": {"850"}, "param": {"T"}, "step": {"36", "48"}},
+    ]
+    :type: list[dict[str, set[Any]]]:
+
+    :rtype: dict[str, set[Any]]
+    :return: A dictionary containing fields and values that are not constrained (i.e. they are always valid)
+
+    """
+    result: dict[str, set[Any]] = {}
+    for key, values in form.items():
+        if key not in get_keys(constraints):
+            result.setdefault(key, values)
+    return result
