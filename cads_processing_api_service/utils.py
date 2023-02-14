@@ -386,9 +386,7 @@ def get_job_from_broker_db(
         sqlalchemy.orm.exc.NoResultFound,
     ) as exc:
         logger.exception(repr(exc))
-        raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
-            detail=f"can't find the job {job_id}"
-        )
+        raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
     job = dictify_job(request)
     return job
 
