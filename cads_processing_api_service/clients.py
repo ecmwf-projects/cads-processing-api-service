@@ -390,14 +390,19 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
+        structlog.contextvars.bind_contextvars(job_id=job_id)
         user = auth.authenticate_user(auth_header)
+        structlog.contextvars.bind_contextvars(user_id=user["id"])
+        logger.info("User authenticated")
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             auth.verify_permission(user, job)
+            logger.info("Deleting job from the broker")
             job = cads_broker.database.delete_request_in_session(
                 request_uid=job_id, session=compute_session
             )
+            logger.info("Job deleted from the broker")
             job = utils.dictify_job(job)
             status_info = utils.make_status_info(
                 job, session=compute_session, add_results=False
