@@ -26,7 +26,7 @@ import structlog
 class PermissionDenied(ogc_api_processes_fastapi.exceptions.OGCAPIException):
     type: str = "permission denied"
     status_code: int = fastapi.status.HTTP_403_FORBIDDEN
-    title: str = "operation not permitted"
+    title: str = "permission denied"
 
 
 @attrs.define

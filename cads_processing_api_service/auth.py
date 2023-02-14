@@ -42,7 +42,7 @@ def get_auth_header(
     if not pat and not jwt:
         raise exceptions.PermissionDenied(
             status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
+            detail="authentication required",
         )
     if pat:
         auth_header = ("PRIVATE-TOKEN", pat)
@@ -78,7 +78,7 @@ def verify_permission(
 ) -> None:
     user_id = user.get("id", None)
     if job["request_metadata"]["user_id"] != user_id:
-        raise exceptions.PermissionDenied(detail="Operation not permitted")
+        raise exceptions.PermissionDenied()
 
 
 def get_contextual_accepted_licences(
