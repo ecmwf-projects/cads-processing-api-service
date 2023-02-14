@@ -29,8 +29,11 @@ class PermissionDenied(ogc_api_processes_fastapi.exceptions.OGCAPIException):
     title: str = "operation not permitted"
 
 
-class ParameterError(KeyError):
-    pass
+@attrs.define
+class ParameterError(ogc_api_processes_fastapi.exceptions.OGCAPIException):
+    type: str = "parameter error"
+    status_code: int = fastapi.status.HTTP_422_UNPROCESSABLE_ENTITY
+    title: str = "invalid parameters"
 
 
 def request_readtimeout_handler(
@@ -82,8 +85,6 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
         FastAPI application including CADS Processes API exceptions handlers.
     """
     app.add_exception_handler(PermissionDenied, exception_handler)
-    app.add_exception_handler(
-        requests.exceptions.ReadTimeout, request_readtimeout_handler
-    )
-    app.add_exception_handler(ParameterError, parameter_error_handler)
+    app.add_exception_handler(requests.exceptions.ReadTimeout, exception_handler)
+    app.add_exception_handler(ParameterError, exception_handler)
     return app
