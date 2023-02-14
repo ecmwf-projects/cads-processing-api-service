@@ -22,9 +22,9 @@ import requests
 
 @attrs.define
 class PermissionDenied(ogc_api_processes_fastapi.exceptions.OGCAPIException):
-
     type: str = "permission denied"
     status_code: int = fastapi.status.HTTP_403_FORBIDDEN
+    title: str = "operation not permitted"
 
 
 class ParameterError(KeyError):
@@ -35,7 +35,9 @@ def request_readtimeout_handler(
     request: fastapi.Request, exc: requests.exceptions.ReadTimeout
 ) -> fastapi.responses.JSONResponse:
     """Catch ReadTimeout exceptions to properly trigger an HTTP 504."""
-    out = fastapi.responses.JSONResponse(status_code=504, content={"message": str(exc)})
+    out = fastapi.responses.JSONResponse(
+        status_code=504, content={"message": str(exc), "title": "ReadTimeout error"}
+    )
     return out
 
 
@@ -43,7 +45,7 @@ def parameter_error_handler(
     request: fastapi.Request, exc: ParameterError
 ) -> fastapi.Response:
     return fastapi.responses.JSONResponse(
-        status_code=422, content={"message": str(exc)}
+        status_code=422, content={"message": str(exc), "title": "invalid parameters"}
     )
 
 
