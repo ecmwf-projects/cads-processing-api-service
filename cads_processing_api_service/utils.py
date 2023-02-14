@@ -342,7 +342,7 @@ def submit_job(
     job_kwargs = adaptors.make_system_job_kwargs(
         process_id, execution_content, resource
     )
-    logger.info("Submitting job to the broker")
+    logger.info(f"Submitting job {job_id} to the broker")
     job = cads_broker.database.create_request_in_session(
         session=compute_session,
         request_uid=job_id,

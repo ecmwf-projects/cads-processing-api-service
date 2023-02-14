@@ -187,21 +187,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the process `process_id` is not found.
         """
         user = auth.authenticate_user(auth_header)
-        stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
         structlog.contextvars.bind_contextvars(user_id=user["id"])
-        logger.info(
-            "User authenticated",
-        )
+        logger.info("User authenticated")
+        stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
         execution_content = execution_content.dict()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with catalogue_sessionmaker() as catalogue_session:
             resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
             )
-
-        logger.info(
-            "Resource retrieved",
-        )
         auth.validate_licences(
             execution_content, stored_accepted_licences, resource.licences
         )
