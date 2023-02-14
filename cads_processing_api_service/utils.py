@@ -440,11 +440,15 @@ def make_status_info(
         try:
             results = get_results_from_broker_db(job=job, session=session)
         except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
-            results = {
-                "type": exc.type,
-                "title": exc.title,
-                "detail": exc.detail,
-            }
+            results = ogc_api_processes_fastapi.models.Exception(
+                type=exc.type,
+                title=exc.title,
+                status=exc.status_code,
+                detail=exc.detail,
+                trace_id=structlog.contextvars.get_contextvars().get(
+                    "trace_id", "unset"
+                ),
+            ).dict(exclude_none=True)
         except ogc_api_processes_fastapi.exceptions.ResultsNotReady:
             results = None
         status_info.results = results
