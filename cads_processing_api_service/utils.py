@@ -386,9 +386,7 @@ def get_job_from_broker_db(
         sqlalchemy.orm.exc.NoResultFound,
     ) as exc:
         logger.exception(repr(exc))
-        raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
-            f"Can't find the job {job_id}."
-        )
+        raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
     job = dictify_job(request)
     return job
 
@@ -408,14 +406,12 @@ def get_results_from_broker_db(
             results = {}
     elif job_status == "failed":
         job_results_failed_exc = ogc_api_processes_fastapi.exceptions.JobResultsFailed(
-            type="RuntimeError",
-            detail=job["response_traceback"],
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
         )
         raise job_results_failed_exc
     elif job_status in ("accepted", "running"):
         results_not_ready_exc = ogc_api_processes_fastapi.exceptions.ResultsNotReady(
-            f"Status of {job_id} is {job_status}."
+            f"status of {job_id} is '{job_status}'"
         )
         raise results_not_ready_exc
     return results
@@ -444,11 +440,15 @@ def make_status_info(
         try:
             results = get_results_from_broker_db(job=job, session=session)
         except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
-            results = {
-                "type": exc.type,
-                "title": exc.title,
-                "detail": exc.detail,
-            }
+            results = ogc_api_processes_fastapi.models.Exception(
+                type=exc.type,
+                title=exc.title,
+                status=exc.status_code,
+                detail=exc.detail,
+                trace_id=structlog.contextvars.get_contextvars().get(
+                    "trace_id", "unset"
+                ),
+            ).dict(exclude_none=True)
         except ogc_api_processes_fastapi.exceptions.ResultsNotReady:
             results = None
         status_info.results = results

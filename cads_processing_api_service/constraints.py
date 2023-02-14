@@ -175,7 +175,7 @@ def get_possible_values(
                 ok = False
                 break
             else:
-                raise exceptions.ParameterError(f"Error: invalid param '{field_name}'")
+                raise exceptions.ParameterError(detail=f"invalid param '{field_name}'")
         if ok:
             for field_name, valid_values in combination.items():
                 result[field_name] |= set(valid_values)
