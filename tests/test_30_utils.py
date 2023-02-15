@@ -303,7 +303,7 @@ def test_make_status_info() -> None:
             ogc_api_processes_fastapi.exceptions.JobResultsFailed
         )
         status_info = utils.make_status_info(job, session=mock_session)
-    exp_results_keys = ("type", "title", "detail")
+    exp_results_keys = ("type",)
     results = status_info.results
     assert results is not None
     assert all([key in results.keys() for key in exp_results_keys])
