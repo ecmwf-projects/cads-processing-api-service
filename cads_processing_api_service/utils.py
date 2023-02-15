@@ -16,7 +16,6 @@
 
 import base64
 import enum
-import uuid
 from typing import Any, Callable, Mapping
 
 import cachetools
@@ -33,7 +32,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import adaptors, models
+from . import models
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -309,61 +308,6 @@ def make_pagination_qs(
         cursor_prev = make_cursor(entries, sort_key, "prev")
         pagination_qs.prev = {"cursor": cursor_prev, "back": "True"}
     return pagination_qs
-
-
-def submit_job(
-    user_id: int,
-    process_id: str,
-    execution_content: dict[str, Any],
-    resource: cads_catalogue.database.Resource,
-    compute_session: sqlalchemy.orm.Session,
-) -> ogc_api_processes_fastapi.models.StatusInfo:
-    """Submit new job.
-
-    Parameters
-    ----------
-    user_id: int,
-        User identifier.
-    process_id: str
-        Process ID.
-    execution_content: ogc_api_processes_fastapi.models.Execute
-        Body of the process execution request.
-    resource: cads_catalogue.database.Resource,
-        Catalogue resource corresponding to the requested retrieve process.
-
-
-    Returns
-    -------
-    ogc_api_processes_fastapi.models.StatusInfo
-        Sumbitted job status info.
-    """
-    job_id = str(uuid.uuid4())
-    structlog.contextvars.bind_contextvars(job_id=job_id)
-    job_kwargs = adaptors.make_system_job_kwargs(
-        process_id, execution_content, resource
-    )
-    logger.info("Submitting job to the broker")
-    job = cads_broker.database.create_request_in_session(
-        session=compute_session,
-        request_uid=job_id,
-        user_id=user_id,
-        process_id=process_id,
-        **job_kwargs,
-    )
-    logger.info("Job submitted to the broker")
-    status_info = models.StatusInfo(
-        processID=job["process_id"],
-        type="process",
-        jobID=job["request_uid"],
-        status=job["status"],
-        created=job["created_at"],
-        started=job["started_at"],
-        finished=job["finished_at"],
-        updated=job["updated_at"],
-        request=job["request_body"]["kwargs"]["request"],
-    )
-
-    return status_info
 
 
 def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
