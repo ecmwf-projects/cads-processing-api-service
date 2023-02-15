@@ -16,6 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import uuid
+
 import attrs
 import cacholote.extra_encoders
 import cads_broker.database
@@ -34,7 +36,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import auth, config, db_utils, models, serializers, utils
+from . import adaptors, auth, config, db_utils, models, serializers, utils
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -187,7 +189,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             If the process `process_id` is not found.
         """
         user = auth.authenticate_user(auth_header)
-        structlog.contextvars.bind_contextvars(user_id=user["id"])
+        user_id = user["id"]
+        structlog.contextvars.bind_contextvars(user_id=user_id)
         logger.info("User authenticated")
         stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
         execution_content = execution_content.dict()
@@ -199,15 +202,31 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         auth.validate_licences(
             execution_content, stored_accepted_licences, resource.licences
         )
+        job_id = str(uuid.uuid4())
+        structlog.contextvars.bind_contextvars(job_id=job_id)
+        job_kwargs = adaptors.make_system_job_kwargs(
+            process_id, execution_content, resource
+        )
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
-            status_info = utils.submit_job(
-                user.get("id", None),
-                process_id,
-                execution_content,
-                resource,
-                compute_session,
+            job = cads_broker.database.create_request_in_session(
+                session=compute_session,
+                request_uid=job_id,
+                user_id=user_id,
+                process_id=process_id,
+                **job_kwargs,
             )
+        status_info = models.StatusInfo(
+            processID=job["process_id"],
+            type="process",
+            jobID=job["request_uid"],
+            status=job["status"],
+            created=job["created_at"],
+            started=job["started_at"],
+            finished=job["finished_at"],
+            updated=job["updated_at"],
+            request=job["request_body"]["kwargs"]["request"],
+        )
         return status_info
 
     def get_jobs(
