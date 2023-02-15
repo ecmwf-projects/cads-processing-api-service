@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import urllib.parse
-from typing import Any, Mapping
+from typing import Any
 
 import cachetools
 import cads_catalogue.database
@@ -54,9 +54,7 @@ def get_auth_header(
 
 
 @cachetools.cached(cache=cachetools.TTLCache(maxsize=1024, ttl=10), info=True)
-def authenticate_user(
-    auth_header: tuple[str, str]
-) -> dict[str, str | int | Mapping[str, str | int]]:
+def authenticate_user(auth_header: tuple[str, str]) -> str | None:
     verification_endpoint = VERIFICATION_ENDPOINTS[auth_header[0]]
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
@@ -69,15 +67,13 @@ def authenticate_user(
             status_code=response.status_code, detail=response.json()["detail"]
         )
     response.raise_for_status()
-    user: dict[str, str | int | Mapping[str, str | int]] = response.json()
-    return user
+    user: dict[str, Any] = response.json()
+    user_uid: str | None = user.get("sub", None)
+    return user_uid
 
 
-def verify_permission(
-    user: Mapping[str, str | int | Mapping[str, str | int]], job: dict[str, Any]
-) -> None:
-    user_id = user.get("id", None)
-    if job["request_metadata"]["user_id"] != user_id:
+def verify_permission(user_uid: str, job: dict[str, Any]) -> None:
+    if job["request_metadata"]["user_uid"] != user_uid:
         raise exceptions.PermissionDenied()
 
 
