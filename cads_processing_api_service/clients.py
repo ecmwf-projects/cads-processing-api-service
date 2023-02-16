@@ -208,7 +208,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
-            job = cads_broker.database.create_request_in_session(
+            job = cads_broker.database.create_request(
                 session=compute_session,
                 request_uid=job_id,
                 user_uid=user_uid,
@@ -416,7 +416,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             auth.verify_permission(user_uid, job)
             logger.info("Deleting job from the broker")
-            job = cads_broker.database.delete_request_in_session(
+            job = cads_broker.database.delete_request(
                 request_uid=job_id, session=compute_session
             )
             logger.info("Job deleted from the broker")

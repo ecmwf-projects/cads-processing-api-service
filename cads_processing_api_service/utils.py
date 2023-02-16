@@ -322,7 +322,7 @@ def get_job_from_broker_db(
     job_id: str, session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
     try:
-        request = cads_broker.database.get_request_in_session(
+        request = cads_broker.database.get_request(
             request_uid=job_id, session=session
         )
     except cads_broker.database.NoResultFound as exc:
@@ -339,7 +339,7 @@ def get_results_from_broker_db(
     job_id = job["request_uid"]
     if job_status == "successful":
         try:
-            asset_value = cads_broker.database.get_request_result_in_session(
+            asset_value = cads_broker.database.get_request_result(
                 request_uid=job_id, session=session
             )["args"][0]
             results = {"asset": {"value": asset_value}}
