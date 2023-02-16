@@ -325,10 +325,7 @@ def get_job_from_broker_db(
         request = cads_broker.database.get_request_in_session(
             request_uid=job_id, session=session
         )
-    except (
-        sqlalchemy.exc.StatementError,
-        sqlalchemy.orm.exc.NoResultFound,
-    ) as exc:
+    except cads_broker.database.NoResultFound as exc:
         logger.exception(repr(exc))
         raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
     job = dictify_job(request)
