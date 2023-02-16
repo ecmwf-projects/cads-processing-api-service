@@ -33,6 +33,6 @@ def handle_metrics(
     compute_sessionmaker = db_utils.get_compute_sessionmaker()
     with compute_sessionmaker() as compute_session:
         GAUGE.labels("queue").set(
-            cads_broker.database.count_accepted_requests_in_session(compute_session)
+            cads_broker.database.count_accepted_requests(compute_session)
         )
     return starlette_exporter.handle_metrics(request)
