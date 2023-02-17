@@ -190,7 +190,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         user_uid = auth.authenticate_user(auth_header)
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
-        logger.info("User authenticated")
         stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
         execution_content = execution_content.dict()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
@@ -373,7 +372,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.JobResultsFailed
             If job `job_id` results preparation failed.
         """
+        structlog.contextvars.bind_contextvars(job_id=job_id)
         user_uid = auth.authenticate_user(auth_header)
+        structlog.contextvars.bind_contextvars(user_id=user_uid)
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
@@ -410,7 +411,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         structlog.contextvars.bind_contextvars(job_id=job_id)
         user_uid = auth.authenticate_user(auth_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
-        logger.info("User authenticated")
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
