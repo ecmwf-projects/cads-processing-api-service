@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import traceback
 
 import attrs
 import fastapi
@@ -74,6 +75,10 @@ def request_readtimeout_handler(
 def general_exception_handler(
     request: fastapi.Request, exc: Exception
 ) -> fastapi.responses.JSONResponse:
+    logger.error(
+        "internal server error",
+        exception="".join(traceback.TracebackException.from_exception(exc).format()),
+    )
     return fastapi.responses.JSONResponse(
         status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=ogc_api_processes_fastapi.models.Exception(
