@@ -14,12 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import traceback
+
 import attrs
 import fastapi
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
 import requests
 import structlog
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 @attrs.define
@@ -39,6 +43,10 @@ class ParameterError(ogc_api_processes_fastapi.exceptions.OGCAPIException):
 def exception_handler(
     request: fastapi.Request, exc: ogc_api_processes_fastapi.exceptions.OGCAPIException
 ) -> fastapi.responses.JSONResponse:
+    logger.error(
+        exc.title,
+        exception="".join(traceback.TracebackException.from_exception(exc).format()),
+    )
     return fastapi.responses.JSONResponse(
         status_code=exc.status_code,
         content=ogc_api_processes_fastapi.models.Exception(
@@ -56,6 +64,10 @@ def request_readtimeout_handler(
     request: fastapi.Request, exc: requests.exceptions.ReadTimeout
 ) -> fastapi.responses.JSONResponse:
     """Catch ReadTimeout exceptions to properly trigger an HTTP 504."""
+    logger.error(
+        "exception",
+        exception="".join(traceback.TracebackException.from_exception(exc).format()),
+    )
     out = fastapi.responses.JSONResponse(
         status_code=fastapi.status.HTTP_502_BAD_GATEWAY,
         content=ogc_api_processes_fastapi.models.Exception(
@@ -71,6 +83,10 @@ def request_readtimeout_handler(
 def general_exception_handler(
     request: fastapi.Request, exc: Exception
 ) -> fastapi.responses.JSONResponse:
+    logger.error(
+        "exception",
+        exception="".join(traceback.TracebackException.from_exception(exc).format()),
+    )
     return fastapi.responses.JSONResponse(
         status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=ogc_api_processes_fastapi.models.Exception(

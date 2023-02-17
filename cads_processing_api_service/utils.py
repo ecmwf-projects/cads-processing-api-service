@@ -64,8 +64,7 @@ def lookup_resource_by_id(
             .filter(record.resource_uid == id)
             .one()
         )
-    except sqlalchemy.orm.exc.NoResultFound as exc:
-        logger.exception(repr(exc))
+    except sqlalchemy.orm.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     session.expunge(row)  # type:ignore
     return row
@@ -323,8 +322,7 @@ def get_job_from_broker_db(
 ) -> dict[str, Any]:
     try:
         request = cads_broker.database.get_request(request_uid=job_id, session=session)
-    except cads_broker.database.NoResultFound as exc:
-        logger.exception(repr(exc))
+    except cads_broker.database.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
     job = dictify_job(request)
     return job
