@@ -348,7 +348,7 @@ def get_results_from_broker_db(
         raise job_results_failed_exc
     elif job_status in ("accepted", "running"):
         results_not_ready_exc = ogc_api_processes_fastapi.exceptions.ResultsNotReady(
-            f"status of {job_id} is '{job_status}'"
+            detail=f"status of {job_id} is '{job_status}'"
         )
         raise results_not_ready_exc
     return results
