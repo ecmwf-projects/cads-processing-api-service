@@ -106,8 +106,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         if back:
             processes = list(reversed(processes))
         process_list = ogc_api_processes_fastapi.models.ProcessList(processes=processes)
-        pagination_qs = utils.make_pagination_qs(processes, sort_key=sortby.lstrip("-"))
-        process_list._pagination_qs = pagination_qs
+        pagination_query_params = utils.make_pagination_query_params(
+            processes, sort_key=sortby.lstrip("-")
+        )
+        process_list._pagination_query_params = pagination_query_params
         return process_list
 
     def get_process(
@@ -304,8 +306,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 for job in job_entries
             ]
         job_list = models.JobList(jobs=jobs)
-        pagination_qs = utils.make_pagination_qs(jobs, sort_key=sortby.lstrip("-"))
-        job_list._pagination_qs = pagination_qs
+        pagination_query_params = utils.make_pagination_query_params(
+            jobs, sort_key=sortby.lstrip("-")
+        )
+        job_list._pagination_query_params = pagination_query_params
 
         return job_list
 
