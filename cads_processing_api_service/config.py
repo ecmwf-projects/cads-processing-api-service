@@ -109,7 +109,6 @@ def configure_logger() -> None:
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.processors.JSONRenderer(
-                indent=2,
                 serializer=sorting_serializer_factory(["event", "user_id"]),
             ),
         ],
