@@ -47,13 +47,13 @@ def test_check_licences() -> None:
 
 
 def test_verify_permission() -> None:
-    job = {"request_metadata": {"user_id": 0}}
-    user = {"id": 0}
+    job = {"request_metadata": {"user_uid": "abc123"}}
+    user_uid = "abc123"
     try:
-        auth.verify_permission(user, job)
+        auth.verify_permission(user_uid, job)
     except exceptions.PermissionDenied as exc:
-        assert False, f"'{user} / {job}' raised an exception {exc}"
+        assert False, f"'{user_uid} / {job}' raised an exception {exc}"
 
-    user = {"id": 1}
+    user_uid = "def456"
     with pytest.raises(exceptions.PermissionDenied):
-        auth.verify_permission(user, job)
+        auth.verify_permission(user_uid, job)

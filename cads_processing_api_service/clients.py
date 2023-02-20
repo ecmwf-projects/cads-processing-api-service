@@ -16,6 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import uuid
+
 import attrs
 import cacholote.extra_encoders
 import cads_broker.database
@@ -34,7 +36,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import auth, config, db_utils, models, serializers, utils
+from . import adaptors, auth, config, db_utils, models, serializers, utils
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -186,34 +188,44 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchProcess
             If the process `process_id` is not found.
         """
-        user = auth.authenticate_user(auth_header)
+        user_uid = auth.authenticate_user(auth_header)
+        structlog.contextvars.bind_contextvars(user_uid=user_uid)
+        logger.info("User authenticated")
         stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
-        structlog.contextvars.bind_contextvars(user_id=user["id"])
-        logger.info(
-            "User authenticated",
-        )
         execution_content = execution_content.dict()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with catalogue_sessionmaker() as catalogue_session:
             resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
             )
-
-        logger.info(
-            "Resource retrieved",
-        )
         auth.validate_licences(
             execution_content, stored_accepted_licences, resource.licences
         )
+        job_id = str(uuid.uuid4())
+        structlog.contextvars.bind_contextvars(job_id=job_id)
+        job_kwargs = adaptors.make_system_job_kwargs(
+            process_id, execution_content, resource
+        )
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
-            status_info = utils.submit_job(
-                user.get("id", None),
-                process_id,
-                execution_content,
-                resource,
-                compute_session,
+            job = cads_broker.database.create_request(
+                session=compute_session,
+                request_uid=job_id,
+                user_uid=user_uid,
+                process_id=process_id,
+                **job_kwargs,
             )
+        status_info = models.StatusInfo(
+            processID=job["process_id"],
+            type="process",
+            jobID=job["request_uid"],
+            status=job["status"],
+            created=job["created_at"],
+            started=job["started_at"],
+            finished=job["finished_at"],
+            updated=job["updated_at"],
+            request=job["request_body"]["kwargs"]["request"],
+        )
         return status_info
 
     def get_jobs(
@@ -258,9 +270,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             Information on the status of the job.
         """
-        user = auth.authenticate_user(auth_header)
-        user_id = user.get("id", None)
-        metadata_filters = {"user_id": [str(user_id)] if user_id else []}
+        user_uid = auth.authenticate_user(auth_header)
+        metadata_filters = {"user_uid": [str(user_uid)] if user_uid else []}
         job_filters = {"process_id": processID, "status": status}
         sort_key, sort_dir = utils.parse_sortby(sortby.name)
         statement = sqlalchemy.select(self.job_table)
@@ -324,12 +335,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
-        user = auth.authenticate_user(auth_header)
+        user_uid = auth.authenticate_user(auth_header)
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             status_info = utils.make_status_info(job=job, session=compute_session)
-        auth.verify_permission(user, job)
+        auth.verify_permission(user_uid, job)
         return status_info
 
     def get_job_results(
@@ -362,11 +373,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.JobResultsFailed
             If job `job_id` results preparation failed.
         """
-        user = auth.authenticate_user(auth_header)
+        user_uid = auth.authenticate_user(auth_header)
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
-            auth.verify_permission(user, job)
+            auth.verify_permission(user_uid, job)
             results = utils.get_results_from_broker_db(job=job, session=compute_session)
         return results
 
@@ -396,14 +407,19 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.NoSuchJob
             If the job `job_id` is not found.
         """
-        user = auth.authenticate_user(auth_header)
+        structlog.contextvars.bind_contextvars(job_id=job_id)
+        user_uid = auth.authenticate_user(auth_header)
+        structlog.contextvars.bind_contextvars(user_id=user_uid)
+        logger.info("User authenticated")
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
-            auth.verify_permission(user, job)
-            job = cads_broker.database.delete_request_in_session(
+            auth.verify_permission(user_uid, job)
+            logger.info("Deleting job from the broker")
+            job = cads_broker.database.delete_request(
                 request_uid=job_id, session=compute_session
             )
+            logger.info("Job deleted from the broker")
             job = utils.dictify_job(job)
             status_info = utils.make_status_info(
                 job, session=compute_session, add_results=False

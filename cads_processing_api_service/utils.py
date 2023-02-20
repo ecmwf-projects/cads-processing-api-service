@@ -16,7 +16,6 @@
 
 import base64
 import enum
-import uuid
 from typing import Any, Callable, Mapping
 
 import cachetools
@@ -33,7 +32,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import adaptors, models
+from . import models
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -311,61 +310,6 @@ def make_pagination_qs(
     return pagination_qs
 
 
-def submit_job(
-    user_id: int,
-    process_id: str,
-    execution_content: dict[str, Any],
-    resource: cads_catalogue.database.Resource,
-    compute_session: sqlalchemy.orm.Session,
-) -> ogc_api_processes_fastapi.models.StatusInfo:
-    """Submit new job.
-
-    Parameters
-    ----------
-    user_id: int,
-        User identifier.
-    process_id: str
-        Process ID.
-    execution_content: ogc_api_processes_fastapi.models.Execute
-        Body of the process execution request.
-    resource: cads_catalogue.database.Resource,
-        Catalogue resource corresponding to the requested retrieve process.
-
-
-    Returns
-    -------
-    ogc_api_processes_fastapi.models.StatusInfo
-        Sumbitted job status info.
-    """
-    job_id = str(uuid.uuid4())
-    structlog.contextvars.bind_contextvars(job_id=job_id)
-    job_kwargs = adaptors.make_system_job_kwargs(
-        process_id, execution_content, resource
-    )
-    logger.info("Submitting job")
-    job = cads_broker.database.create_request_in_session(
-        session=compute_session,
-        request_uid=job_id,
-        user_id=user_id,
-        process_id=process_id,
-        **job_kwargs,
-    )
-    logger.info("Job submitted")
-    status_info = models.StatusInfo(
-        processID=job["process_id"],
-        type="process",
-        jobID=job["request_uid"],
-        status=job["status"],
-        created=job["created_at"],
-        started=job["started_at"],
-        finished=job["finished_at"],
-        updated=job["updated_at"],
-        request=job["request_body"]["kwargs"]["request"],
-    )
-
-    return status_info
-
-
 def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
     job: dict[str, Any] = {
         column.key: getattr(request, column.key)
@@ -378,17 +322,10 @@ def get_job_from_broker_db(
     job_id: str, session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
     try:
-        request = cads_broker.database.get_request_in_session(
-            request_uid=job_id, session=session
-        )
-    except (
-        sqlalchemy.exc.StatementError,
-        sqlalchemy.orm.exc.NoResultFound,
-    ) as exc:
+        request = cads_broker.database.get_request(request_uid=job_id, session=session)
+    except cads_broker.database.NoResultFound as exc:
         logger.exception(repr(exc))
-        raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
-            f"Can't find the job {job_id}."
-        )
+        raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
     job = dictify_job(request)
     return job
 
@@ -400,7 +337,7 @@ def get_results_from_broker_db(
     job_id = job["request_uid"]
     if job_status == "successful":
         try:
-            asset_value = cads_broker.database.get_request_result_in_session(
+            asset_value = cads_broker.database.get_request_result(
                 request_uid=job_id, session=session
             )["args"][0]
             results = {"asset": {"value": asset_value}}
@@ -408,14 +345,12 @@ def get_results_from_broker_db(
             results = {}
     elif job_status == "failed":
         job_results_failed_exc = ogc_api_processes_fastapi.exceptions.JobResultsFailed(
-            type="RuntimeError",
-            detail=job["response_traceback"],
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
         )
         raise job_results_failed_exc
     elif job_status in ("accepted", "running"):
         results_not_ready_exc = ogc_api_processes_fastapi.exceptions.ResultsNotReady(
-            f"Status of {job_id} is {job_status}."
+            f"status of {job_id} is '{job_status}'"
         )
         raise results_not_ready_exc
     return results
@@ -444,11 +379,15 @@ def make_status_info(
         try:
             results = get_results_from_broker_db(job=job, session=session)
         except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
-            results = {
-                "type": exc.type,
-                "title": exc.title,
-                "detail": exc.detail,
-            }
+            results = ogc_api_processes_fastapi.models.Exception(
+                type=exc.type,
+                title=exc.title,
+                status=exc.status_code,
+                detail=exc.detail,
+                trace_id=structlog.contextvars.get_contextvars().get(
+                    "trace_id", "unset"
+                ),
+            ).dict(exclude_none=True)
         except ogc_api_processes_fastapi.exceptions.ResultsNotReady:
             results = None
         status_info.results = results

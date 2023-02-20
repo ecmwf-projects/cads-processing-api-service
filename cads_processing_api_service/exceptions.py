@@ -17,33 +17,67 @@
 import attrs
 import fastapi
 import ogc_api_processes_fastapi.exceptions
+import ogc_api_processes_fastapi.models
 import requests
+import structlog
 
 
 @attrs.define
 class PermissionDenied(ogc_api_processes_fastapi.exceptions.OGCAPIException):
-
     type: str = "permission denied"
     status_code: int = fastapi.status.HTTP_403_FORBIDDEN
+    title: str = "permission denied"
 
 
-class ParameterError(KeyError):
-    pass
+@attrs.define
+class ParameterError(ogc_api_processes_fastapi.exceptions.OGCAPIException):
+    type: str = "parameter error"
+    status_code: int = fastapi.status.HTTP_422_UNPROCESSABLE_ENTITY
+    title: str = "invalid parameters"
+
+
+def exception_handler(
+    request: fastapi.Request, exc: ogc_api_processes_fastapi.exceptions.OGCAPIException
+) -> fastapi.responses.JSONResponse:
+    return fastapi.responses.JSONResponse(
+        status_code=exc.status_code,
+        content=ogc_api_processes_fastapi.models.Exception(
+            type=exc.type,
+            title=exc.title,
+            status=exc.status_code,
+            detail=exc.detail,
+            instance=str(request.url),
+            trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
+        ).dict(exclude_none=True),
+    )
 
 
 def request_readtimeout_handler(
     request: fastapi.Request, exc: requests.exceptions.ReadTimeout
 ) -> fastapi.responses.JSONResponse:
     """Catch ReadTimeout exceptions to properly trigger an HTTP 504."""
-    out = fastapi.responses.JSONResponse(status_code=504, content={"message": str(exc)})
+    out = fastapi.responses.JSONResponse(
+        status_code=fastapi.status.HTTP_502_BAD_GATEWAY,
+        content=ogc_api_processes_fastapi.models.Exception(
+            type="read timeout error",
+            title="read timeout error",
+            trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
+            detail=str(exc),
+        ),
+    )
     return out
 
 
-def parameter_error_handler(
-    request: fastapi.Request, exc: ParameterError
-) -> fastapi.Response:
+def general_exception_handler(
+    request: fastapi.Request, exc: Exception
+) -> fastapi.responses.JSONResponse:
     return fastapi.responses.JSONResponse(
-        status_code=422, content={"message": str(exc)}
+        status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content=ogc_api_processes_fastapi.models.Exception(
+            type="internal server error",
+            title="internal server error",
+            trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
+        ).dict(exclude_none=True),
     )
 
 
@@ -61,11 +95,8 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     fastapi.FastAPI
         FastAPI application including CADS Processes API exceptions handlers.
     """
-    app.add_exception_handler(
-        PermissionDenied, ogc_api_processes_fastapi.exceptions.ogc_api_exception_handler
-    )
-    app.add_exception_handler(
-        requests.exceptions.ReadTimeout, request_readtimeout_handler
-    )
-    app.add_exception_handler(ParameterError, parameter_error_handler)
+    app.add_exception_handler(PermissionDenied, exception_handler)
+    app.add_exception_handler(ParameterError, exception_handler)
+    app.add_exception_handler(requests.exceptions.ReadTimeout, exception_handler)
+    app.add_exception_handler(Exception, general_exception_handler)
     return app

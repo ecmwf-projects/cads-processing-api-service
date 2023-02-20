@@ -101,7 +101,6 @@ def apply_constraints(
     :return: a dictionary containing all values that should be left
     active for selection, in JSON format
     """
-    # always_valid = get_always_valid_params(form, constraints)
     always_valid = dict()
 
     form = copy.deepcopy(form)

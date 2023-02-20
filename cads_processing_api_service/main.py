@@ -29,11 +29,10 @@ config.configure_logger()
 logger = structlog.get_logger(__name__)
 
 app = ogc_api_processes_fastapi.instantiate_app(
-    clients.DatabaseClient()  # type: ignore
+    client=clients.DatabaseClient(),  # type: ignore
+    exception_handler=exceptions.exception_handler,
 )
-
-app = ogc_api_processes_fastapi.include_exception_handlers(app=app)
-app = exceptions.include_exception_handlers(app=app)
+app = exceptions.include_exception_handlers(app)
 
 app.router.add_api_route(
     "/processes/{process_id}/constraints",
