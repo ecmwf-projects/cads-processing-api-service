@@ -201,9 +201,7 @@ def test_dictify_job() -> None:
 def test_get_job_from_broker_db() -> None:
     test_job_id = "1234"
     mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
-    with unittest.mock.patch(
-        "cads_broker.database.get_request_in_session"
-    ) as mock_get_request:
+    with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
         mock_get_request.return_value = cads_broker.database.SystemRequest(
             request_uid=test_job_id
         )
@@ -211,19 +209,13 @@ def test_get_job_from_broker_db() -> None:
     assert isinstance(job, dict)
     assert job["request_uid"] == test_job_id
 
-    with unittest.mock.patch(
-        "cads_broker.database.get_request_in_session"
-    ) as mock_get_request:
-        mock_get_request.side_effect = sqlalchemy.exc.StatementError(
-            message=None, statement=None, params=None, orig=None
-        )
+    with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
+        mock_get_request.side_effect = cads_broker.database.NoResultFound()
         with pytest.raises(ogc_api_processes_fastapi.exceptions.NoSuchJob):
             job = utils.get_job_from_broker_db(test_job_id, session=mock_session)
 
-    with unittest.mock.patch(
-        "cads_broker.database.get_request_in_session"
-    ) as mock_get_request:
-        mock_get_request.side_effect = sqlalchemy.orm.exc.NoResultFound()
+    with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
+        mock_get_request.side_effect = cads_broker.database.NoResultFound()
         with pytest.raises(ogc_api_processes_fastapi.exceptions.NoSuchJob):
             job = utils.get_job_from_broker_db("1234", session=mock_session)
 
@@ -232,7 +224,7 @@ def test_get_results_from_broker_db() -> None:
     job = {"status": "successful", "request_uid": "1234"}
     mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
     with unittest.mock.patch(
-        "cads_broker.database.get_request_result_in_session"
+        "cads_broker.database.get_request_result"
     ) as mock_get_request_result:
         mock_get_request_result.return_value = {
             "args": [
