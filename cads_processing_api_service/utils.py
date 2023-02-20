@@ -293,7 +293,7 @@ def make_cursor(
     return cursor
 
 
-def make_pagination_qs(
+def make_pagination_query_params(
     entries: list[ogc_api_processes_fastapi.models.StatusInfo]
     | list[ogc_api_processes_fastapi.models.ProcessSummary],
     sort_key: str,
