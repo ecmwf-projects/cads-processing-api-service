@@ -109,7 +109,7 @@ def configure_logger() -> None:
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.processors.JSONRenderer(
-                serializer=sorting_serializer_factory(["event", "user_id"])
+                serializer=sorting_serializer_factory(["event", "user_id"]),
             ),
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
