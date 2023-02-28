@@ -20,6 +20,7 @@ import starlette.requests
 import starlette.responses
 import starlette_exporter
 
+# this import is needed so the metric is added to /metrics
 from . import db_utils
 
 GAUGE = prometheus_client.Gauge(
