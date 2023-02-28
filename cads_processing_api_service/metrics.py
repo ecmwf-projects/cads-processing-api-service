@@ -21,11 +21,15 @@ import starlette.responses
 import starlette_exporter
 
 # this import is needed so the metric is added to /metrics
+from cads_broker.metrics import GENERATED_BYTES_COUNTER
+
 from . import db_utils
 
 GAUGE = prometheus_client.Gauge(
     "broker_queue", "Number of accepted requests", labelnames=("queue",)
 )
+
+BROKER_BYTES_COUNTER = GENERATED_BYTES_COUNTER
 
 
 def handle_metrics(
