@@ -160,7 +160,7 @@ def test_make_cursor() -> None:
         cursor = utils.make_cursor(jobs, "created", "previous")
 
 
-def test_make_pagination_qs() -> None:
+def test_make_pagination_query_params() -> None:
     jobs = [
         ogc_api_processes_fastapi.models.StatusInfo(
             jobID="a0",
@@ -182,12 +182,12 @@ def test_make_pagination_qs() -> None:
         ),
     ]
 
-    pagination_qs = utils.make_pagination_qs(jobs, "created")
+    pagination_query_params = utils.make_pagination_query_params(jobs, "created")
     exp_qs = ogc_api_processes_fastapi.models.PaginationQueryParameters(
         next={"cursor": utils.encode_base64(str(jobs[-1].created)), "back": False},
         prev={"cursor": utils.encode_base64(str(jobs[0].created)), "back": True},
     )
-    assert pagination_qs == exp_qs
+    assert pagination_query_params == exp_qs
 
 
 def test_dictify_job() -> None:
@@ -201,9 +201,7 @@ def test_dictify_job() -> None:
 def test_get_job_from_broker_db() -> None:
     test_job_id = "1234"
     mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
-    with unittest.mock.patch(
-        "cads_broker.database.get_request_in_session"
-    ) as mock_get_request:
+    with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
         mock_get_request.return_value = cads_broker.database.SystemRequest(
             request_uid=test_job_id
         )
@@ -211,19 +209,13 @@ def test_get_job_from_broker_db() -> None:
     assert isinstance(job, dict)
     assert job["request_uid"] == test_job_id
 
-    with unittest.mock.patch(
-        "cads_broker.database.get_request_in_session"
-    ) as mock_get_request:
-        mock_get_request.side_effect = sqlalchemy.exc.StatementError(
-            message=None, statement=None, params=None, orig=None
-        )
+    with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
+        mock_get_request.side_effect = cads_broker.database.NoResultFound()
         with pytest.raises(ogc_api_processes_fastapi.exceptions.NoSuchJob):
             job = utils.get_job_from_broker_db(test_job_id, session=mock_session)
 
-    with unittest.mock.patch(
-        "cads_broker.database.get_request_in_session"
-    ) as mock_get_request:
-        mock_get_request.side_effect = sqlalchemy.orm.exc.NoResultFound()
+    with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
+        mock_get_request.side_effect = cads_broker.database.NoResultFound()
         with pytest.raises(ogc_api_processes_fastapi.exceptions.NoSuchJob):
             job = utils.get_job_from_broker_db("1234", session=mock_session)
 
@@ -232,7 +224,7 @@ def test_get_results_from_broker_db() -> None:
     job = {"status": "successful", "request_uid": "1234"}
     mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
     with unittest.mock.patch(
-        "cads_broker.database.get_request_result_in_session"
+        "cads_broker.database.get_request_result"
     ) as mock_get_request_result:
         mock_get_request_result.return_value = {
             "args": [

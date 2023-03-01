@@ -106,8 +106,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         if back:
             processes = list(reversed(processes))
         process_list = ogc_api_processes_fastapi.models.ProcessList(processes=processes)
-        pagination_qs = utils.make_pagination_qs(processes, sort_key=sortby.lstrip("-"))
-        process_list._pagination_qs = pagination_qs
+        pagination_query_params = utils.make_pagination_query_params(
+            processes, sort_key=sortby.lstrip("-")
+        )
+        process_list._pagination_query_params = pagination_query_params
         return process_list
 
     def get_process(
@@ -190,7 +192,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         user_uid = auth.authenticate_user(auth_header)
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
-        logger.info("User authenticated")
         stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
         execution_content = execution_content.dict()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
@@ -304,8 +305,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 for job in job_entries
             ]
         job_list = models.JobList(jobs=jobs)
-        pagination_qs = utils.make_pagination_qs(jobs, sort_key=sortby.lstrip("-"))
-        job_list._pagination_qs = pagination_qs
+        pagination_query_params = utils.make_pagination_query_params(
+            jobs, sort_key=sortby.lstrip("-")
+        )
+        job_list._pagination_query_params = pagination_query_params
 
         return job_list
 
@@ -373,7 +376,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.exceptions.JobResultsFailed
             If job `job_id` results preparation failed.
         """
+        structlog.contextvars.bind_contextvars(job_id=job_id)
         user_uid = auth.authenticate_user(auth_header)
+        structlog.contextvars.bind_contextvars(user_id=user_uid)
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
@@ -410,16 +415,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         structlog.contextvars.bind_contextvars(job_id=job_id)
         user_uid = auth.authenticate_user(auth_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
-        logger.info("User authenticated")
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             auth.verify_permission(user_uid, job)
-            logger.info("Deleting job from the broker")
             job = cads_broker.database.delete_request(
                 request_uid=job_id, session=compute_session
             )
-            logger.info("Job deleted from the broker")
             job = utils.dictify_job(job)
             status_info = utils.make_status_info(
                 job, session=compute_session, add_results=False
