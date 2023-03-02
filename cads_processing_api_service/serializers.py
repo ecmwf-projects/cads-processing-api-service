@@ -38,7 +38,6 @@ def serialize_process_summary(
     retval = ogc_api_processes_fastapi.models.ProcessSummary(
         title=db_model.title,
         description=db_model.abstract,
-        keywords=db_model.keywords,
         id=db_model.resource_uid,
         version="1.0.0",
         jobControlOptions=[
