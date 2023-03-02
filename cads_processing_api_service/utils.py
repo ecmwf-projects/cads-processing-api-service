@@ -57,6 +57,27 @@ def lookup_resource_by_id(
     record: type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
 ) -> cads_catalogue.database.Resource:
+    """Look for the resource identified by `id` into the Catalogue database.
+
+    Parameters
+    ----------
+    id : str
+        Resource identifier.
+    record : type[cads_catalogue.database.Resource]
+        Catalogue database table.
+    session : sqlalchemy.orm.Session
+        Catalogue database session.
+
+    Returns
+    -------
+    cads_catalogue.database.Resource
+        Found resource.
+
+    Raises
+    ------
+    ogc_api_processes_fastapi.exceptions.NoSuchProcess
+        Raised if no resource corresponding to the provided `id` is found.
+    """
     try:
         row: cads_catalogue.database.Resource = (
             session.query(record)  # type: ignore
@@ -82,22 +103,22 @@ def apply_metadata_filters(
     resource: type[cads_broker.database.SystemRequest],
     filters: dict[str, list[str]],
 ) -> sqlalchemy.sql.selectable.Select:
-    """Apply search filters to the running query.
+    """Apply search filters to the provided select statement.
 
     Parameters
     ----------
         statement: sqlalchemy.sql.selectable.Select
-            select statement
-        resource: cads_broker.database.SystemRequest
-            sqlalchemy declarative base
-        filters: dict[str, Optional[list[str]]],
-            filters as key-value pairs
+            Select statement.
+        resource: type[cads_broker.database.SystemRequest]
+            Broker database table.
+        filters: dict[str, list[str]],
+            Filters as key-value pairs.
 
 
     Returns
     -------
         sqlalchemy.sql.selectable.Select
-            updated select statement
+            Updated select statement.
     """
     for filter_key, filter_values in filters.items():
         if filter_values:
@@ -112,16 +133,16 @@ def apply_job_filters(
     resource: type[cads_broker.database.SystemRequest],
     filters: Mapping[str, list[str] | None],
 ) -> sqlalchemy.sql.selectable.Select:
-    """Apply search filters related to the job status to the running query.
+    """Apply search filters related to the job status to the provided select statement.
 
     Parameters
     ----------
         statement: sqlalchemy.sql.selectable.Select
-            select statement
-        resource: cads_broker.database.SystemRequest
-            sqlalchemy declarative base
-        filters: dict[str, Optional[list[str]]]
-            filters as key-value pairs
+            Select statement.
+        resource: type[ads_broker.database.SystemRequest]
+            Broker database table.
+        filters: Mapping[str, list[str] | None]
+            Filters as key-value pairs.
 
 
     Returns
@@ -180,27 +201,27 @@ def apply_bookmark(
     sort_key: str,
     sort_dir: str,
 ) -> sqlalchemy.sql.selectable.Select:
-    """Apply pagination bookmark to the running query.
+    """Apply pagination bookmark to the provided select statement.
 
     Parameters
     ----------
         statement: sqlalchemy.sql.selectable.Select
-            select statement
-        resource: Type[cads_catalogue.database.Resource] | Type[cads_broker.database.SystemRequest],
-            sqlalchemy declarative base
+            Select statement.
+        resource: type[cads_catalogue.database.Resource] | type[cads_broker.database.SystemRequest],
+            Catalogue or Broker database table.
         cursor: str
-            bookmark cursor
+            Bookmark cursor.
         back: bool
-            if True set bookmark for previous page, else set bookmark for next page
+            If True set bookmark for previous page, else set bookmark for next page.
         sort_key: str
-            key for sorting results
+            Key for sorting results.
         sort_dir: str
-            sorting direction
+            Sorting direction.
 
     Returns
     -------
         sqlalchemy.sql.selectable.Select
-            updated select statement
+            Updated select statement.
     """
     resource_attribute: sqlalchemy.orm.attributes.InstrumentedAttribute = getattr(
         resource, sort_key
@@ -223,25 +244,25 @@ def apply_sorting(
     sort_key: str,
     sort_dir: str,
 ) -> sqlalchemy.sql.selectable.Select:
-    """Apply sorting to the running query.
+    """Apply sorting to the provided select statement.
 
     Parameters
     ----------
         statement: sqlalchemy.sql.selectable.Select
-            select statement
-        resource: Type[cads_catalogue.database.Resource] | Type[cads_broker.database.SystemRequest],
-            sqlalchemy declarative base
+            Select statement.
+        resource: type[cads_catalogue.database.Resource] | type[cads_broker.database.SystemRequest],
+            Catalogue or Broker database table.
         back: bool
-            if True set bookmark for previous page, else set bookmark for next page
+            If True set bookmark for previous page, else set bookmark for next page.
         sort_key: str
-            key for sorting results
+            Key for sorting results.
         sort_dir: str
-            sorting direction
+            Sorting direction.
 
     Returns
     -------
         sqlalchemy.sql.selectable.Select
-            updated select statement
+            Updated select statement.
     """
     resource_attribute: sqlalchemy.orm.attributes.InstrumentedAttribute = getattr(
         resource, sort_key
@@ -259,19 +280,19 @@ def apply_limit(
     statement: sqlalchemy.sql.selectable.Select,
     limit: int | None,
 ) -> sqlalchemy.sql.selectable.Select:
-    """Apply limit to the running query.
+    """Apply limit to the provided select statement.
 
     Parameters
     ----------
         statement: sqlalchemy.sql.selectable.Select
-            select statement
-        limit: Optional[int]
-            requested number of results to be shown
+            Select statement.
+        limit: int | None
+            Requested number of results to be shown.
 
     Returns
     -------
         sqlalchemy.sql.selectable.Select
-            updated select statement
+            Updated select statement.
     """
     statement = statement.limit(limit)
     return statement
@@ -320,6 +341,25 @@ def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
 def get_job_from_broker_db(
     job_id: str, session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
+    """Get job description from the Broker database.
+
+    Parameters
+    ----------
+    job_id : str
+        Job identifer.
+    session : sqlalchemy.orm.Session
+        Broker database session.
+
+    Returns
+    -------
+    dict[str, Any]
+        Job description.
+
+    Raises
+    ------
+    ogc_api_processes_fastapi.exceptions.NoSuchJob
+        Raised if no job corresponding to the provided identifier is found.
+    """
     try:
         request = cads_broker.database.get_request(request_uid=job_id, session=session)
     except cads_broker.database.NoResultFound:
@@ -331,6 +371,27 @@ def get_job_from_broker_db(
 def get_results_from_broker_db(
     job: dict[str, Any], session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
+    """Get job results description from the Broker database.
+
+    Parameters
+    ----------
+    job : dict[str, Any]
+        Job status description.
+    session : sqlalchemy.orm.Session
+        Broker database session.
+
+    Returns
+    -------
+    dict[str, Any]
+        Job results description.
+
+    Raises
+    ------
+    ogc_api_processes_fastapi.exceptions.JobResultsFailed
+        Raised if the job for which results have been requested has status `failed`.
+    results_not_ready_exc
+        Raised if job's results are not yet ready.
+    """
     job_status = job["status"]
     job_id = job["request_uid"]
     if job_status == "successful":
@@ -359,6 +420,22 @@ def make_status_info(
     session: sqlalchemy.orm.Session,
     add_results: bool = True,
 ) -> models.StatusInfo:
+    """Compose job's status information.
+
+    Parameters
+    ----------
+    job : dict[str, Any]
+        Job description.
+    session : sqlalchemy.orm.Session
+        Broker database session.
+    add_results : bool, optional
+        Set to True (default) if results description should be added, False otherwise.
+
+    Returns
+    -------
+    models.StatusInfo
+        Job status information.
+    """
     job_status = job["status"]
     request_uid = job["request_uid"]
     status_info = models.StatusInfo(

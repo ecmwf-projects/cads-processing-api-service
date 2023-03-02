@@ -87,11 +87,7 @@ def sorting_serializer_factory(
 
 
 def configure_logger() -> None:
-    """
-    Configure the logging module.
-
-    This function configures the logging module to log in rfc5424 format.
-    """
+    """Configure the logger."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(message)s",

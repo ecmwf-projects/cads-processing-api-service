@@ -47,8 +47,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     Attributes
     ----------
-    process_table: Type[cads_catalogue.database.Resource]
-        Processes record/table.
+    process_table: type[cads_catalogue.database.Resource]
+        Process record/table.
+    job_table: type[cads_broker.database.SystemRequest]
+        Job record/table.
     """
 
     process_table: type[cads_catalogue.database.Resource] = attrs.field(
@@ -68,23 +70,19 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     ) -> ogc_api_processes_fastapi.models.ProcessList:
         """Implement OGC API - Processes `GET /processes` endpoint.
 
-        Get the list of available processes.
+        Get the list of available processes' summaries.
 
         Parameters
         ----------
-        limit : Optional[int]
-            Number of processes summaries to be returned.
-        sortby: Optional[ProcessSortCriterion]
-            Sorting criterion for request's results.
-        cursor: Optional[str]
-            Hash string used for pagination.
-        back: Optional[bool]
-            Boolean parameter used for pagination.
-
-        Returns
-        -------
-        ogc_api_processes_fastapi.models.ProcessList
-            List of available processes.
+        limit : int | None, optional
+            Specifies the number of process summaries to be included in the response.
+        sortby : utils.ProcessSortCriterion | None, optional
+            Specifies the sorting criterion for results. By default
+            results are sorted by resource (process) uid in ascending alphabetical order.
+        cursor : str | None, optional
+            Hash string representing the reference to a particular process, used for pagination.
+        back : bool | None, optional
+            Specifies in which sense the list of processes should be traversed, used for pagination.
         """
         statement = sqlalchemy.select(self.process_table)
         sort_key, sort_dir = utils.parse_sortby(sortby.name)
@@ -123,6 +121,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Parameters
         ----------
+        response : fastapi.Response
+            fastapi.Response object.
         process_id : str
             Process identifier.
 
@@ -130,11 +130,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         -------
         ogc_api_processes_fastapi.models.ProcessDescription
             Process description.
-
-        Raises
-        ------
-        ogc_api_processes_fastapi.exceptions.NoSuchProcess
-            If the process `process_id` is not found.
         """
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with catalogue_sessionmaker() as catalogue_session:
@@ -169,26 +164,21 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
 
-        Request execution of the process identified by `process_id`.
+        Request execution of a process.
 
         Parameters
         ----------
         process_id : str
             Process identifier.
         execution_content : models.Execute
-            Process execution details (e.g. inputs).
-        user: dict[str, str]
-            Authenticated user credentials.
+            Details needed for the process execution.
+        auth_header : tuple[str, str], optional
+            Authorization header.
 
         Returns
         -------
         models.StatusInfo
-            Information on the status of the job.
-
-        Raises
-        ------
-        ogc_api_processes_fastapi.exceptions.NoSuchProcess
-            If the process `process_id` is not found.
+            Submitted job's status information.
         """
         user_uid = auth.authenticate_user(auth_header)
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
@@ -242,34 +232,32 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     ) -> models.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
 
-        Get jobs' status information list.
+        Get the list of submitted jobs, alongside information on their status.
 
         Parameters
         ----------
-        processID: Optional[List[str]]
-            If the parameter is specified with the operation, only jobs that have a
-            value for the processID property that matches one of the values specified
-            for the processID nparameter shall be included in the response.
-        status: Optional[List[str]]
-            If the parameter is specified with the operation, only jobs that have a
-            value for the status property that matches one of the specified values of
-            the status parameter shall be included in the response.
-        limit: Optional[int]
-            The response shall not contain more jobs than specified by the optional
-            ``limit`` parameter.
-        sortby: Optional[JobSortCriterion]
-            Sorting criterion for request's results.
-        cursor: Optional[str] = fastapi.Query(None)
-            Hash string used for pagination.
-        back: Optional[bool] = fastapi.Query(None),
-            Boolean parameter used for pagination.
-        user: dict[str, str]
-            Authenticated user credentials.
+        processID : list[str] | None, optional
+            If specified, only jobs that have a value for the processID property
+            matching one of the specified values shall be included in the response.
+        status : list[str] | None, optional
+            If specified, only jobs that have a value for the status property matching
+            one of the specified values of shall be included in the response.
+        limit : int | None, optional
+            Specifies the number of jobs to be included in the response.
+        sortby : utils.JobSortCriterion | None, optional
+            Specifies the sorting criterion for results. By default results are sorted
+            by the job's creation date in descending order.
+        cursor : str | None, optional
+            Hash string representing the reference to a particular job, used for pagination.
+        back : bool | None, optional
+            Specifies in which sense the list of processes should be traversed, used for pagination.
+        auth_header : tuple[str, str], optional
+            Authorization header
 
         Returns
         -------
         models.JobList
-            Information on the status of the job.
+            List of jobs status information.
         """
         user_uid = auth.authenticate_user(auth_header)
         metadata_filters = {"user_uid": [str(user_uid)] if user_uid else []}
@@ -324,19 +312,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         Parameters
         ----------
         job_id : str
-            Identifier of the job.
-        user: dict[str, str]
-            Authenticated user credentials.
+            Job identifer.
+        auth_header : tuple[str, str], optional
+            Authorization header
 
         Returns
         -------
         models.StatusInfo
-            Information on the status of the job.
-
-        Raises
-        ------
-        ogc_api_processes_fastapi.exceptions.NoSuchJob
-            If the job `job_id` is not found.
+            Job status information.
         """
         user_uid = auth.authenticate_user(auth_header)
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
@@ -359,22 +342,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         job_id : str
             Identifier of the job.
-        user: dict[str, str]
-            Authenticated user credentials.
+        auth_header : tuple[str, str], optional
+            Authorization header
 
         Returns
         -------
         ogc_api_processes_fastapi.models.Results
             Job results.
-
-        Raises
-        ------
-        ogc_api_processes_fastapi.exceptions.NoSuchJob
-            If the job `job_id` is not found.
-        ogc_api_processes_fastapi.exceptions.ResultsNotReady
-            If job `job_id` results are not yet ready.
-        ogc_api_processes_fastapi.exceptions.JobResultsFailed
-            If job `job_id` results preparation failed.
         """
         structlog.contextvars.bind_contextvars(job_id=job_id)
         user_uid = auth.authenticate_user(auth_header)
@@ -399,18 +373,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         job_id : str
             Identifier of the job.
-        user: dict[str, str]
-            Authenticated user credentials.
+        auth_header : tuple[str, str], optional
+            Authorization header.
 
         Returns
         -------
         ogc_api_processes_fastapi.models.StatusInfo
-            Information on the status of the job.
-
-        Raises
-        ------
-        ogc_api_processes_fastapi.exceptions.NoSuchJob
-            If the job `job_id` is not found.
+            Job status information
         """
         structlog.contextvars.bind_contextvars(job_id=job_id)
         user_uid = auth.authenticate_user(auth_header)

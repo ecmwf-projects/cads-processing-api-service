@@ -23,6 +23,13 @@ import sqlalchemy
 
 @functools.lru_cache()
 def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+    """Get an sqlalchemy.orm.sessionmaker object bound to the Broker database.
+
+    Returns
+    -------
+    sqlalchemy.orm.sessionmaker
+        sqlalchemy.orm.sessionmaker object bound to the Broker database.
+    """
     broker_settings = cads_broker.config.ensure_settings()
     broker_engine = sqlalchemy.create_engine(
         broker_settings.connection_string,
@@ -34,6 +41,13 @@ def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker:
 
 @functools.lru_cache()
 def get_catalogue_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+    """Get an sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
+
+    Returns
+    -------
+    sqlalchemy.orm.sessionmaker
+        sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
+    """
     catalogue_settings = cads_catalogue.config.ensure_settings()
     catalogue_engine = sqlalchemy.create_engine(
         catalogue_settings.connection_string,
