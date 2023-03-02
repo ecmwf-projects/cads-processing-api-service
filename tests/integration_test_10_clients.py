@@ -208,7 +208,6 @@ def test_get_process(dev_env_proc_api_url: str) -> None:
     exp_keys = (
         "title",
         "description",
-        "keywords",
         "id",
         "version",
         "jobControlOptions",
