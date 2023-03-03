@@ -1,8 +1,8 @@
+import pytest
+
 from typing import Any
-
 from datetimerange import DateTimeRange
-
-from cads_processing_api_service import constraints
+from cads_processing_api_service import constraints, exceptions
 
 
 def test_get_possible_values() -> None:
@@ -53,6 +53,66 @@ def test_get_possible_values() -> None:
         "stat": {"mean"},
     }
 
+    form = {
+        "date": {},
+        "city": {"rome", "paris", "london"},
+        "level": {"1000", "850", "500"},
+        "param": {"Z", "T"},
+        "step": {"24", "36", "48"}
+    }
+
+    _constraints = [{
+        "date": {"1990-01-01;1999-12-31", "2010-10-10;2011-11-11"},
+        "city": {"rome", "paris", "london"},
+        "level": {"500"},
+        "param": {"Z", "T"},
+        "step": {"24", "36", "48"}
+    }, {
+        "date": {"1990-01-01;2011-12-31"},
+        "city": {"paris", "london"},
+        "level": {"1000"},
+        "param": {"Z"},
+        "step": {"24", "48"}
+    }, {
+        "date": {"1980-01-01;2011-12-31"},
+        "city": {"rome", "paris", "london"},
+        "level": {"850"},
+        "param": {"T"},
+        "step": {"36", "48"}
+    }]
+
+    selection = {
+        "level": {"1000", "850"},
+        "date": {"1990-01-01;2011-12-31"}
+    }
+
+    assert constraints.get_possible_values(form, selection, _constraints) == {
+        'date': {'1980-01-01;2011-12-31', '1990-01-01;2011-12-31'},
+        'city': {'london', 'paris', 'rome'},
+        'level': {'1000', '850'},
+        'param': {'T', 'Z'},
+        'step': {'24', '36', '48'}
+    }
+
+    selection = {
+        "invalid_param": {"value"},
+    }
+
+    with pytest.raises(exceptions.ParameterError):
+        constraints.get_possible_values(form, selection, _constraints)
+
+    selection = {
+        "date": {"1600-01-01;1600-12-31"}
+    }
+
+    assert constraints.get_possible_values(form, selection, _constraints) == {
+        'date': set(),
+        'city': set(),
+        'level': set(),
+        'param': set(),
+        'step': set()
+    }
+
 
 def test_get_form_state() -> None:
     form = {
@@ -68,6 +128,47 @@ def test_get_form_state() -> None:
     assert constraints.get_form_state(form, {"level": {"500"}}, raw_constraints) == {
         "level": {"500", "850"},
         "param": {"Z"},
+    }
+
+    form = {
+        "date": {},
+        "city": {"rome", "paris", "london"},
+        "level": {"1000", "850", "500"},
+        "param": {"Z", "T"},
+        "step": {"24", "36", "48"}
+    }
+
+    _constraints = [{
+        "date": {"1990-01-01;1999-12-31", "2010-10-10;2011-11-11"},
+        "city": {"rome", "paris", "london"},
+        "level": {"500"},
+        "param": {"Z", "T"},
+        "step": {"24", "36", "48"}
+    }, {
+        "date": {"1990-01-01;2011-12-31"},
+        "city": {"paris", "london"},
+        "level": {"1000"},
+        "param": {"Z"},
+        "step": {"24", "48"}
+    }, {
+        "date": {"1980-01-01;2011-12-31"},
+        "city": {"rome", "paris", "london"},
+        "level": {"850"},
+        "param": {"T"},
+        "step": {"36", "48"}
+    }]
+
+    selection = {
+        "level": {"1000", "850"},
+        "date": {"1990-01-01;2011-12-31"}
+    }
+
+    assert constraints.get_form_state(form, selection, _constraints) == {
+        'date': {'1980-01-01;2011-12-31', '1990-01-01;2011-12-31'},
+        'city': {'london', 'paris', 'rome'},
+        'level': {'1000', '850', '500'},
+        'param': {'T', 'Z'},
+        'step': {'24', '36', '48'}
     }
 
 
@@ -191,6 +292,11 @@ def test_gen_time_range_from_string() -> None:
     assert constraints.gen_time_range_from_string(
         "2000-01-01;2000-01-01"
     ) == DateTimeRange(start_datetime="2000-01-01", end_datetime="2000-01-01")
+    assert constraints.gen_time_range_from_string(
+        "2000-01-01"
+    ) == DateTimeRange(start_datetime="2000-01-01", end_datetime="2000-01-01")
+    with pytest.raises(ValueError):
+        constraints.gen_time_range_from_string("2000-01-01;1999-01-01")
 
 
 def test_get_bounds() -> None:
@@ -199,3 +305,17 @@ def test_get_bounds() -> None:
         "1990-01-01;2011-12-31",
     }
     assert constraints.get_bounds(ranges) == "1980-01-01/2011-12-31"
+
+    ranges = {
+        "1990-01-01;2011-12-31",
+        "1980-01-01;2022-12-31",
+    }
+    assert constraints.get_bounds(ranges) == "1980-01-01/2022-12-31"
+
+    ranges = {
+        "1990-01-01;2011-12-31",
+        "1980-01-01;2000-12-31",
+    }
+    assert constraints.get_bounds(ranges) == "1980-01-01/2011-12-31"
+
+    assert constraints.get_bounds({"1980-01-01;1999-12-31"}) == "1980-01-01/1999-12-31"

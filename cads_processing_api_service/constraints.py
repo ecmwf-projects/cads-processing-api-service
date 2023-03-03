@@ -334,11 +334,11 @@ def gen_time_range_from_string(string: str) -> DateTimeRange:
         raise ValueError("Start date must be before end date")
 
 
-def get_bounds(ranges: set[DateTimeRange]) -> str:
+def get_bounds(ranges: list[DateTimeRange] | set[DateTimeRange]) -> str:
     ranges = [gen_time_range_from_string(_range) for _range in ranges]
     _min = ranges[0].start_datetime
     _max = ranges[0].end_datetime
-    if len(ranges) > 0:
+    if len(ranges) > 1:
         for _range in ranges[1:]:
             if _range.start_datetime < _min:
                 _min = _range.start_datetime
