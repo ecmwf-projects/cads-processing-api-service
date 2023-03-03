@@ -43,6 +43,20 @@ class ParameterError(ogc_api_processes_fastapi.exceptions.OGCAPIException):
 def exception_handler(
     request: fastapi.Request, exc: ogc_api_processes_fastapi.exceptions.OGCAPIException
 ) -> fastapi.responses.JSONResponse:
+    """Handle all exceptions defined as OGC API Exceptions.
+
+    Parameters
+    ----------
+    request : fastapi.Request
+        HTTP request object.
+    exc : ogc_api_processes_fastapi.exceptions.OGCAPIException
+        Exception to be handled.
+
+    Returns
+    -------
+    fastapi.responses.JSONResponse
+        JSON response.
+    """
     return fastapi.responses.JSONResponse(
         status_code=exc.status_code,
         content=ogc_api_processes_fastapi.models.Exception(
@@ -59,9 +73,22 @@ def exception_handler(
 def request_readtimeout_handler(
     request: fastapi.Request, exc: requests.exceptions.ReadTimeout
 ) -> fastapi.responses.JSONResponse:
-    """Catch ReadTimeout exceptions to properly trigger an HTTP 504."""
+    """Handle ReadTimeout exceptions to properly trigger a 504 HTTP response.
+
+    Parameters
+    ----------
+    request : fastapi.Request
+        HTTP request object.
+    exc : requests.exceptions.ReadTimeout
+        Exception to be handled.
+
+    Returns
+    -------
+    fastapi.responses.JSONResponse
+        JSON response.
+    """
     out = fastapi.responses.JSONResponse(
-        status_code=fastapi.status.HTTP_502_BAD_GATEWAY,
+        status_code=fastapi.status.HTTP_504_GATEWAY_TIMEOUT,
         content=ogc_api_processes_fastapi.models.Exception(
             type="read timeout error",
             title="read timeout error",
@@ -75,6 +102,21 @@ def request_readtimeout_handler(
 def general_exception_handler(
     request: fastapi.Request, exc: Exception
 ) -> fastapi.responses.JSONResponse:
+    """Handle all uncaught exceptions to trigger a 500 HTTP response.
+
+    The function also add an ERROR message to the log with information on the raisd exception.
+
+    Parameters
+    ----------
+    request : fastapi.Request
+        HTTP request object.
+    exc : Exception
+        Exception to be handled.
+
+    Returns
+    -------
+    fastapi.responses.JSONResponse
+    """
     logger.error(
         "internal server error",
         exception="".join(traceback.TracebackException.from_exception(exc).format()),

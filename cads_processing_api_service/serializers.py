@@ -38,7 +38,6 @@ def serialize_process_summary(
     retval = ogc_api_processes_fastapi.models.ProcessSummary(
         title=db_model.title,
         description=db_model.abstract,
-        keywords=db_model.keywords,
         id=db_model.resource_uid,
         version="1.0.0",
         jobControlOptions=[
@@ -55,7 +54,7 @@ def serialize_process_summary(
 def serialize_process_description(
     db_model: cads_catalogue.database.Resource,
 ) -> ogc_api_processes_fastapi.models.ProcessDescription:
-    """Convert provided database entry into a representation of a process description.
+    """Convert provided database entry into a representation of the related process description.
 
     Parameters
     ----------

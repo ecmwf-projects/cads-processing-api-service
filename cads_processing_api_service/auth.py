@@ -38,7 +38,25 @@ def get_auth_header(
     jwt: str
     | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
 ) -> tuple[str, str]:
+    """Get authentication header from the incoming HTTP request.
 
+    Parameters
+    ----------
+    pat : str | None, optional
+        Personal Access Token
+    jwt : str | None, optional
+        JSON Web Token
+
+    Returns
+    -------
+    tuple[str, str]
+        Authentication header.
+
+    Raises
+    ------
+    exceptions.PermissionDenied
+        Raised if none of the expected authentication headers is provided.
+    """
     if not pat and not jwt:
         raise exceptions.PermissionDenied(
             status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
@@ -55,6 +73,27 @@ def get_auth_header(
 
 @cachetools.cached(cache=cachetools.TTLCache(maxsize=1024, ttl=10), info=True)
 def authenticate_user(auth_header: tuple[str, str]) -> str | None:
+    """Verify user authentication.
+
+    Verify if the provided authentication header corresponds to a registered user.
+    If so, returns the registered user identifier.
+
+    Parameters
+    ----------
+    auth_header : tuple[str, str]
+        Authentication header.
+
+    Returns
+    -------
+    str | None
+        Registerd user identifier.
+
+    Raises
+    ------
+    exceptions.PermissionDenied
+        Raised if the provided authentication header doesn't correspond to a
+        registered/authorized user.
+    """
     verification_endpoint = VERIFICATION_ENDPOINTS[auth_header[0]]
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
@@ -74,6 +113,20 @@ def authenticate_user(auth_header: tuple[str, str]) -> str | None:
 
 
 def verify_permission(user_uid: str, job: dict[str, Any]) -> None:
+    """Verify if a user has permission to interact with a job.
+
+    Parameters
+    ----------
+    user_uid : str
+        User identifier.
+    job : dict[str, Any]
+        Job description.
+
+    Raises
+    ------
+    exceptions.PermissionDenied
+        Raised if the user has no permission to interact with the job.
+    """
     if job["request_metadata"]["user_uid"] != user_uid:
         raise exceptions.PermissionDenied()
 
@@ -81,6 +134,18 @@ def verify_permission(user_uid: str, job: dict[str, Any]) -> None:
 def get_contextual_accepted_licences(
     execution_content: dict[str, Any]
 ) -> set[tuple[str, int]]:
+    """Get licences accepted in the context of a process execution request.
+
+    Parameters
+    ----------
+    execution_content : dict[str, Any]
+        Process execution request's payload.
+
+    Returns
+    -------
+    set[tuple[str, int]]
+        Accepted licences.
+    """
     licences = execution_content.get("acceptedLicences")
     if not licences:
         licences = []
@@ -90,6 +155,20 @@ def get_contextual_accepted_licences(
 
 @cachetools.cached(cache=cachetools.TTLCache(maxsize=1024, ttl=10), info=True)
 def get_stored_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
+    """Get licences accepted by a user stored in the Extended Profiles database.
+
+    The user is identified by the provided authentication header.
+
+    Parameters
+    ----------
+    auth_header : tuple[str, str]
+        Authentication header
+
+    Returns
+    -------
+    set[tuple[str, int]]
+        Accepted licences.
+    """
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
         settings.internal_proxy_url,
@@ -105,6 +184,25 @@ def get_stored_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str,
 def check_licences(
     required_licences: set[tuple[str, int]], accepted_licences: set[tuple[str, int]]
 ) -> set[tuple[str, int]]:
+    """Check if accepted licences satisfy required ones.
+
+    Parameters
+    ----------
+    required_licences : set[tuple[str, int]]
+        Required licences.
+    accepted_licences : set[tuple[str, int]]
+        Accepted licences.
+
+    Returns
+    -------
+    set[tuple[str, int]]
+        Required licences which have not been accepted.
+
+    Raises
+    ------
+    exceptions.PermissionDenied
+        Raised if not all required licences have been accepted.
+    """
     missing_licences = required_licences - accepted_licences
     if not len(missing_licences) == 0:
         missing_licences_detail = [
@@ -125,6 +223,17 @@ def validate_licences(
     stored_accepted_licences: set[tuple[str, str]],
     licences: list[cads_catalogue.database.Licence],
 ) -> None:
+    """Validate process execution request's payload in terms of required licences.
+
+    Parameters
+    ----------
+    execution_content : dict[str, Any]
+        Process execution request's payload.
+    stored_accepted_licences : set[tuple[str, str]]
+        Licences accepted by a user stored in the Extended Profiles database.
+    licences : list[cads_catalogue.database.Licence]
+        Licences bound to the required process/dataset.
+    """
     required_licences = {
         (licence.licence_uid, licence.revision) for licence in licences
     }

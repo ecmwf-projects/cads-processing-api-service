@@ -34,7 +34,6 @@ def translate_string_list(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
 def extract_groups_values(
     groups: list[Any], values: list[Any] | None = None
 ) -> list[Any]:
-
     if values is None:
         values = []
 
@@ -101,12 +100,12 @@ def translate_cds_form(
 
     Parameters
     ----------
-    cds_form : Optional[Union[list[Any], dict[str, Any]]]
+    cds_form : list[Any] | dict[str, Any]
         CDS form.
 
     Returns
     -------
-    dict[str, models.InputDescription]
+    dict[str, Any]
         Python object containing translated inputs information.
     """
     if not isinstance(cds_form, list):
