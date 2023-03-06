@@ -16,6 +16,7 @@
 
 from typing import Any
 
+import cachetools
 import cads_adaptors.adaptor
 import cads_adaptors.adaptor_utils
 import cads_catalogue.database
@@ -23,10 +24,13 @@ import cads_catalogue.database
 DEFAULT_ENTRY_POINT = "cads_adaptors:UrlCdsAdaptor"
 
 
+@cachetools.cached(
+    cache=cachetools.TTLCache(maxsize=1024, ttl=60),
+)
 def get_adaptor_parameters(
-    dataset: cads_catalogue.database.Resource,
+    dataset: type[cads_catalogue.database.Resource],
 ) -> dict[str, Any]:
-    config: dict[str, Any] = dataset.adaptor_configuration  # type:ignore
+    config: dict[str, Any] = dataset.adaptor_configuration
     if config:
         config = config.copy()
     else:
@@ -56,8 +60,11 @@ def get_adaptor_parameters(
     return adaptor_params
 
 
+@cachetools.cached(
+    cache=cachetools.TTLCache(maxsize=1024, ttl=60),
+)
 def instantiate_adaptor(
-    dataset: cads_catalogue.database.Resource,
+    dataset: type[cads_catalogue.database.Resource],
 ) -> cads_adaptors.adaptor.AbstractAdaptor:
     adaptor_params = get_adaptor_parameters(dataset)
     adaptor_class = cads_adaptors.adaptor_utils.get_adaptor_class(

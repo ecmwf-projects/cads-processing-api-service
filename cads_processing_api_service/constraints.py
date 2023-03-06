@@ -14,7 +14,6 @@ def apply_constraints(
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
     with catalogue_sessionmaker() as catalogue_session:
         dataset = utils.lookup_resource_by_id(process_id, record, catalogue_session)
-
     adaptor: cads_adaptors.adaptor.AbstractAdaptor = adaptors.instantiate_adaptor(
         dataset
     )
