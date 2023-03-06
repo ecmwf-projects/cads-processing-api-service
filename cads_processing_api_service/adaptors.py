@@ -58,6 +58,7 @@ def make_system_job_kwargs(
         config = {}
 
     entry_point = config.pop("entry_point", FALLBACK_ENTRY_POINT)
+    resources = config.pop("resources", {})
 
     setup_code = resource.adaptor
     if setup_code is None:
@@ -78,6 +79,7 @@ def make_system_job_kwargs(
     job_kwargs: dict[str, Any] = {
         "setup_code": setup_code,
         "entry_point": entry_point,
+        "resources": resources,
         "kwargs": kwargs,
     }
 
