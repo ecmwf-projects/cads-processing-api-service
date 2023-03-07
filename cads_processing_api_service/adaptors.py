@@ -16,7 +16,6 @@
 
 from typing import Any
 
-import cachetools
 import cads_adaptors.adaptor
 import cads_adaptors.adaptor_utils
 import cads_catalogue.database
@@ -26,9 +25,6 @@ from . import translators
 DEFAULT_ENTRY_POINT = "cads_adaptors:UrlCdsAdaptor"
 
 
-@cachetools.cached(
-    cache=cachetools.TTLCache(maxsize=1024, ttl=60),
-)
 def get_adaptor_properties(
     dataset: cads_catalogue.database.Resource,
 ) -> dict[str, Any]:
@@ -85,9 +81,6 @@ def make_system_job_kwargs(
     return system_job_kwargs
 
 
-@cachetools.cached(
-    cache=cachetools.TTLCache(maxsize=1024, ttl=60),
-)
 def instantiate_adaptor(
     dataset: cads_catalogue.database.Resource,
 ) -> cads_adaptors.adaptor.AbstractAdaptor:
