@@ -5,7 +5,7 @@ import cads_adaptors.adaptor_utils
 import cads_catalogue
 import fastapi
 
-from . import adaptors, db_utils, utils
+from . import adaptors, db_utils, exceptions, utils
 
 
 def apply_constraints(
@@ -19,6 +19,9 @@ def apply_constraints(
     adaptor: cads_adaptors.adaptor.AbstractAdaptor = adaptors.instantiate_adaptor(
         dataset
     )
-    constraints = adaptor.apply_constraints(request=request)
+    try:
+        constraints = adaptor.apply_constraints(request=request)
+    except TypeError as exc:
+        raise exceptions.ParameterError(detail=str(exc))
 
     return constraints
