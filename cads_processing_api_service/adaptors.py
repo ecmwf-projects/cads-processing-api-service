@@ -27,7 +27,7 @@ DEFAULT_ENTRY_POINT = "cads_adaptors:UrlCdsAdaptor"
 @cachetools.cached(
     cache=cachetools.TTLCache(maxsize=1024, ttl=60),
 )
-def get_adaptor_parameters(
+def get_adaptor_properties(
     dataset: type[cads_catalogue.database.Resource],
 ) -> dict[str, Any]:
     config: dict[str, Any] = dataset.adaptor_configuration
@@ -50,14 +50,14 @@ def get_adaptor_parameters(
     if licences is not None:
         config["licences"] = licences
 
-    adaptor_params: dict[str, Any] = {
+    adaptor_properties: dict[str, Any] = {
         "entry_point": entry_point,
         "setup_code": setup_code,
         "form": form,
         "config": config,
     }
 
-    return adaptor_params
+    return adaptor_properties
 
 
 @cachetools.cached(
@@ -66,11 +66,13 @@ def get_adaptor_parameters(
 def instantiate_adaptor(
     dataset: type[cads_catalogue.database.Resource],
 ) -> cads_adaptors.adaptor.AbstractAdaptor:
-    adaptor_params = get_adaptor_parameters(dataset)
+    adaptor_properties = get_adaptor_properties(dataset)
     adaptor_class = cads_adaptors.adaptor_utils.get_adaptor_class(
-        entry_point=adaptor_params["entry_point"],
-        setup_code=adaptor_params["setup_code"],
+        entry_point=adaptor_properties["entry_point"],
+        setup_code=adaptor_properties["setup_code"],
     )
-    adaptor = adaptor_class(form=adaptor_params["form"], **adaptor_params["config"])
+    adaptor = adaptor_class(
+        form=adaptor_properties["form"], **adaptor_properties["config"]
+    )
 
     return adaptor
