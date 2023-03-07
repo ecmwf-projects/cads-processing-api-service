@@ -48,9 +48,11 @@ def get_adaptor_properties(
     mapping = dataset.mapping
     if mapping is not None:
         config["mapping"] = mapping
-    licences = dataset.licences
+    licences: list[cads_catalogue.database.Licence] = dataset.licences
     if licences is not None:
-        config["licences"] = licences
+        config["licences"] = [
+            (licence.licence_uid, licence.revision) for licence in licences
+        ]
     form = dataset.form_data
     if form is not None:
         config["form"] = form
@@ -65,18 +67,18 @@ def get_adaptor_properties(
     return adaptor_properties
 
 
-@cachetools.cached(
-    cache=cachetools.TTLCache(maxsize=1024, ttl=60),
-)
 def make_system_job_kwargs(
     dataset: cads_catalogue.database.Resource, request: dict[str, Any]
 ) -> dict[str, Any]:
     adaptor_properties = get_adaptor_properties(dataset)
     system_job_kwargs = {
         "entry_point": adaptor_properties["entry_point"],
-        "setup_code": adaptor_properties["entry_point"],
+        "setup_code": adaptor_properties["setup_code"],
         "resources": adaptor_properties["resources"],
-        "kwargs": {"config": adaptor_properties["config"], "request": request},
+        "kwargs": {
+            "config": adaptor_properties["config"],
+            "request": request["inputs"],
+        },
     }
     return system_job_kwargs
 
