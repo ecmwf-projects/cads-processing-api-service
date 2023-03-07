@@ -1,14 +1,16 @@
+from typing import Any
+
 import cads_adaptors.adaptor
 import cads_adaptors.adaptor_utils
 import cads_catalogue
 import fastapi
 
-from . import adaptors, db_utils, models, utils
+from . import adaptors, db_utils, utils
 
 
 def apply_constraints(
     process_id: str = fastapi.Path(...),
-    request: models.Execute = fastapi.Body(...),
+    request: dict[str, Any] = fastapi.Body(...),
 ) -> dict[str, list[str]]:
     record = cads_catalogue.database.Resource
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
