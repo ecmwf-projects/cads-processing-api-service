@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cads_adaptors.translators
 import cads_catalogue.database
 import ogc_api_processes_fastapi.models
+
+from . import translators
 
 
 def serialize_process_summary(
@@ -69,7 +70,7 @@ def serialize_process_description(
     cds_form = db_model.form_data
     process_inputs = {}
     if cds_form:
-        process_inputs = cads_adaptors.translators.translate_cds_form(cds_form)
+        process_inputs = translators.translate_cds_form(cds_form)
     retval = ogc_api_processes_fastapi.models.ProcessDescription(
         **process_summary.dict(),
         inputs=process_inputs,

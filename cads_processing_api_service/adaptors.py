@@ -21,6 +21,8 @@ import cads_adaptors.adaptor
 import cads_adaptors.adaptor_utils
 import cads_catalogue.database
 
+from . import translators
+
 DEFAULT_ENTRY_POINT = "cads_adaptors:UrlCdsAdaptor"
 
 
@@ -53,14 +55,14 @@ def get_adaptor_properties(
         config["licences"] = [
             (licence.licence_uid, licence.revision) for licence in licences
         ]
-    form = dataset.form_data
-    if form is not None:
-        config["form"] = form
+    raw_form = dataset.form_data
+    form = translators.translate_cds_form(raw_form)
 
     adaptor_properties: dict[str, Any] = {
         "entry_point": entry_point,
         "setup_code": setup_code,
         "resources": resources,
+        "form": form,
         "config": config,
     }
 
@@ -94,6 +96,8 @@ def instantiate_adaptor(
         entry_point=adaptor_properties["entry_point"],
         setup_code=adaptor_properties["setup_code"],
     )
-    adaptor = adaptor_class(**adaptor_properties["config"])
+    adaptor = adaptor_class(
+        form=adaptor_properties["form"], **adaptor_properties["config"]
+    )
 
     return adaptor
