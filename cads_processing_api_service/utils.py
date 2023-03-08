@@ -403,15 +403,13 @@ def get_results_from_broker_db(
         except Exception:
             results = {}
     elif job_status == "failed":
-        job_results_failed_exc = ogc_api_processes_fastapi.exceptions.JobResultsFailed(
+        raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
         )
-        raise job_results_failed_exc
     elif job_status in ("accepted", "running"):
-        results_not_ready_exc = ogc_api_processes_fastapi.exceptions.ResultsNotReady(
+        raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
             detail=f"status of {job_id} is '{job_status}'"
         )
-        raise results_not_ready_exc
     return results
 
 
