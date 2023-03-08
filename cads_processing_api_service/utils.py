@@ -415,9 +415,29 @@ def get_results_from_broker_db(
     return results
 
 
+def parse_results_from_broker_db(
+    job: dict[str, Any], session: sqlalchemy.orm.Session
+) -> dict[str, Any]:
+    try:
+        results = get_results_from_broker_db(job=job, session=session)
+    except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
+        results = ogc_api_processes_fastapi.models.Exception(
+            type=exc.type,
+            title=exc.title,
+            status=exc.status_code,
+            detail=exc.detail,
+            trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
+        ).dict(exclude_none=True)
+    except ogc_api_processes_fastapi.exceptions.ResultsNotReady:
+        results = {}
+    return results
+
+
 def make_status_info(
     job: dict[str, Any],
-    session: sqlalchemy.orm.Session,
+    compute_session: sqlalchemy.orm.Session,
+    catalogue_session: sqlalchemy.orm.Session,
+    catalogue_table: type[cads_catalogue.database.Resource],
     add_results: bool = True,
 ) -> models.StatusInfo:
     """Compose job's status information.
@@ -426,8 +446,10 @@ def make_status_info(
     ----------
     job : dict[str, Any]
         Job description.
-    session : sqlalchemy.orm.Session
+    compute_session : sqlalchemy.orm.Session
         Broker database session.
+    catalogue_session : sqlalchemy.orm.Session
+        Catalogue database session.
     add_results : bool, optional
         Set to True (default) if results description should be added, False otherwise.
 
@@ -436,12 +458,13 @@ def make_status_info(
     models.StatusInfo
         Job status information.
     """
-    job_status = job["status"]
     request_uid = job["request_uid"]
+    process_id = job["process_id"]
+    job_status = job["status"]
     status_info = models.StatusInfo(
         type="process",
         jobID=request_uid,
-        processID=job["process_id"],
+        processID=process_id,
         status=job_status,
         created=job["created_at"],
         started=job["started_at"],
@@ -449,21 +472,9 @@ def make_status_info(
         updated=job["updated_at"],
         request=job["request_body"]["kwargs"]["request"],
     )
+    dataset = lookup_resource_by_id(process_id, catalogue_table, catalogue_session)
+    status_info.processDescription = {"title": dataset.title}
     if add_results:
-        results = None
-        try:
-            results = get_results_from_broker_db(job=job, session=session)
-        except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
-            results = ogc_api_processes_fastapi.models.Exception(
-                type=exc.type,
-                title=exc.title,
-                status=exc.status_code,
-                detail=exc.detail,
-                trace_id=structlog.contextvars.get_contextvars().get(
-                    "trace_id", "unset"
-                ),
-            ).dict(exclude_none=True)
-        except ogc_api_processes_fastapi.exceptions.ResultsNotReady:
-            results = None
+        results = parse_results_from_broker_db(job, compute_session)
         status_info.results = results
     return status_info
