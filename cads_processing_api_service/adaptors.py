@@ -34,10 +34,8 @@ def get_adaptor_properties(
     else:
         config = {}
 
-    # entry_point = config.pop("entry_point", DEFAULT_ENTRY_POINT)
-    # setup_code = dataset.adaptor
-    entry_point = DEFAULT_ENTRY_POINT
-    setup_code = None
+    entry_point = config.pop("entry_point", DEFAULT_ENTRY_POINT)
+    setup_code = dataset.adaptor
     resources = config.pop("resources", {})
 
     constraints = dataset.constraints_data
