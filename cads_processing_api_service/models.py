@@ -36,6 +36,7 @@ class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
         | list[ogc_api_processes_fastapi.models.InlineOrRefData],
     ]
     results: dict[str, Any] | None = None
+    processDescription: dict[str, Any] | None = None
 
 
 class JobList(ogc_api_processes_fastapi.models.JobList):
