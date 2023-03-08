@@ -20,8 +20,6 @@ import cads_adaptors.adaptor
 import cads_adaptors.adaptor_utils
 import cads_catalogue.database
 
-from . import translators
-
 DEFAULT_ENTRY_POINT = "cads_adaptors:UrlCdsAdaptor"
 
 
@@ -49,8 +47,7 @@ def get_adaptor_properties(
         config["licences"] = [
             (licence.licence_uid, licence.revision) for licence in licences
         ]
-    raw_form = dataset.form_data
-    form = translators.translate_cds_form(raw_form)
+    form = dataset.form_data
 
     adaptor_properties: dict[str, Any] = {
         "entry_point": entry_point,
