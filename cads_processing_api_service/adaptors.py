@@ -16,69 +16,77 @@
 
 from typing import Any
 
+import cads_adaptors.adaptor
+import cads_adaptors.adaptor_utils
 import cads_catalogue.database
 
-FALLBACK_SETUP_CODE = """
-import cacholote
-import cdsapi
+DEFAULT_ENTRY_POINT = "cads_adaptors:UrlCdsAdaptor"
 
 
-@cacholote.cacheable
-def adaptor(request, config, metadata):
-
-    # parse input options
-    collection_id = config.pop('collection_id', None)
-    if not collection_id:
-        raise ValueError(f'collection_id is required in request')
-
-    # retrieve data
-    client = cdsapi.Client(config["url"], config["key"], retry_max=1)
-    result_path = client.retrieve(collection_id, request).download()
-    return open(result_path, "rb")
-"""
-
-FALLBACK_ENTRY_POINT = "adaptor"
-
-FALLBACK_CONFIG: dict[str, str] = {
-    "url": "https://cds.climate.copernicus.eu/api/v2",
-    "key": "155265:cd60cf87-5f89-4ef4-8350-3817254b3884",
-}
-
-
-def make_system_job_kwargs(
-    process_id: str,
-    execution_content: dict[str, Any],
-    resource: cads_catalogue.database.Resource,
+def get_adaptor_properties(
+    dataset: cads_catalogue.database.Resource,
 ) -> dict[str, Any]:
-
-    config: dict[str, Any] = resource.adaptor_configuration  # type:ignore
+    config: dict[str, Any] = dataset.adaptor_configuration
     if config:
         config = config.copy()
     else:
         config = {}
 
-    entry_point = config.pop("entry_point", FALLBACK_ENTRY_POINT)
+    entry_point = config.pop("entry_point", DEFAULT_ENTRY_POINT)
+    setup_code = dataset.adaptor
+    resources = config.pop("resources", {})
 
-    setup_code = resource.adaptor
-    if setup_code is None:
-        setup_code = FALLBACK_SETUP_CODE
-        if not config:
-            config = FALLBACK_CONFIG.copy()
-        config["collection_id"] = process_id
-
-    mapping = resource.mapping
-    if resource.mapping is not None:
+    constraints = dataset.constraints_data
+    if constraints is not None:
+        config["constraints"] = constraints
+    mapping = dataset.mapping
+    if mapping is not None:
         config["mapping"] = mapping
+    licences: list[cads_catalogue.database.Licence] = dataset.licences
+    if licences is not None:
+        config["licences"] = [
+            (licence.licence_uid, licence.revision) for licence in licences
+        ]
+    form = dataset.form_data
 
-    kwargs = {
-        "request": execution_content["inputs"],
+    adaptor_properties: dict[str, Any] = {
+        "entry_point": entry_point,
+        "setup_code": setup_code,
+        "resources": resources,
+        "form": form,
         "config": config,
     }
 
-    job_kwargs: dict[str, Any] = {
-        "setup_code": setup_code,
-        "entry_point": entry_point,
-        "kwargs": kwargs,
-    }
+    return adaptor_properties
 
-    return job_kwargs
+
+def make_system_job_kwargs(
+    dataset: cads_catalogue.database.Resource, request: dict[str, Any]
+) -> dict[str, Any]:
+    adaptor_properties = get_adaptor_properties(dataset)
+    system_job_kwargs = {
+        "entry_point": adaptor_properties["entry_point"],
+        "setup_code": adaptor_properties["setup_code"],
+        "resources": adaptor_properties["resources"],
+        "kwargs": {
+            "form": adaptor_properties["form"],
+            "config": adaptor_properties["config"],
+            "request": request["inputs"],
+        },
+    }
+    return system_job_kwargs
+
+
+def instantiate_adaptor(
+    dataset: cads_catalogue.database.Resource,
+) -> cads_adaptors.adaptor.AbstractAdaptor:
+    adaptor_properties = get_adaptor_properties(dataset)
+    adaptor_class = cads_adaptors.adaptor_utils.get_adaptor_class(
+        entry_point=adaptor_properties["entry_point"],
+        setup_code=adaptor_properties["setup_code"],
+    )
+    adaptor = adaptor_class(
+        form=adaptor_properties["form"], **adaptor_properties["config"]
+    )
+
+    return adaptor
