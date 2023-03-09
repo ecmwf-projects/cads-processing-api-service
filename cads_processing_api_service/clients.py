@@ -280,16 +280,21 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         statement = utils.apply_limit(statement, limit)
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job_entries = compute_session.scalars(statement).all()
             if back:
                 job_entries = reversed(job_entries)
-            jobs = [
-                utils.make_status_info(
-                    job=utils.dictify_job(job), session=compute_session
-                )
-                for job in job_entries
-            ]
+            with catalogue_sessionmaker() as catalogue_session:
+                jobs = [
+                    utils.make_status_info(
+                        job=utils.dictify_job(job),
+                        compute_session=compute_session,
+                        catalogue_session=catalogue_session,
+                        catalogue_table=self.process_table,
+                    )
+                    for job in job_entries
+                ]
         job_list = models.JobList(jobs=jobs)
         pagination_query_params = utils.make_pagination_query_params(
             jobs, sort_key=sortby.lstrip("-")
@@ -321,9 +326,16 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         user_uid = auth.authenticate_user(auth_header)
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
-            status_info = utils.make_status_info(job=job, session=compute_session)
+            with catalogue_sessionmaker() as catalogue_session:
+                status_info = utils.make_status_info(
+                    job=job,
+                    compute_session=compute_session,
+                    catalogue_session=catalogue_session,
+                    catalogue_table=self.process_table,
+                )
         auth.verify_permission(user_uid, job)
         return status_info
 
@@ -383,6 +395,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         user_uid = auth.authenticate_user(auth_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             auth.verify_permission(user_uid, job)
@@ -390,7 +403,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 request_uid=job_id, session=compute_session
             )
             job = utils.dictify_job(job)
-            status_info = utils.make_status_info(
-                job, session=compute_session, add_results=False
-            )
+            with catalogue_sessionmaker() as catalogue_session:
+                status_info = utils.make_status_info(
+                    job,
+                    compute_session=compute_session,
+                    catalogue_session=catalogue_session,
+                    catalogue_table=self.process_table,
+                    add_results=False,
+                )
         return status_info
