@@ -40,6 +40,13 @@ class ParameterError(ogc_api_processes_fastapi.exceptions.OGCAPIException):
     title: str = "invalid parameters"
 
 
+@attrs.define
+class JobResultsExpired(ogc_api_processes_fastapi.exceptions.OGCAPIException):
+    type: str = "results expired"
+    status_code: int = fastapi.status.HTTP_404_NOT_FOUND
+    title: str = "results expired"
+
+
 def exception_handler(
     request: fastapi.Request, exc: ogc_api_processes_fastapi.exceptions.OGCAPIException
 ) -> fastapi.responses.JSONResponse:
@@ -147,6 +154,7 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     """
     app.add_exception_handler(PermissionDenied, exception_handler)
     app.add_exception_handler(ParameterError, exception_handler)
+    app.add_exception_handler(JobResultsExpired, exception_handler)
     app.add_exception_handler(requests.exceptions.ReadTimeout, exception_handler)
     app.add_exception_handler(Exception, general_exception_handler)
     return app

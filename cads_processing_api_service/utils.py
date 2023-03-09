@@ -32,7 +32,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import models
+from . import exceptions, models
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -401,7 +401,7 @@ def get_results_from_broker_db(
             )["args"][0]
             results = {"asset": {"value": asset_value}}
         except Exception:
-            results = {}
+            raise exceptions.JobResultsExpired()
     elif job_status == "failed":
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
