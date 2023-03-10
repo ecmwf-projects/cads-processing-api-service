@@ -36,7 +36,7 @@ app = exceptions.include_exception_handlers(app)
 
 app.router.add_api_route(
     "/processes/{process_id}/constraints",
-    constraints.validate_constraints,
+    constraints.apply_constraints,
     methods=["POST"],
 )
 

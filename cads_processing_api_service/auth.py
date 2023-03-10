@@ -18,7 +18,6 @@ import urllib.parse
 from typing import Any
 
 import cachetools
-import cads_catalogue.database
 import fastapi
 import requests
 
@@ -221,7 +220,7 @@ def check_licences(
 def validate_licences(
     execution_content: dict[str, Any],
     stored_accepted_licences: set[tuple[str, str]],
-    licences: list[cads_catalogue.database.Licence],
+    licences: list[tuple[str, int]],
 ) -> None:
     """Validate process execution request's payload in terms of required licences.
 
@@ -231,12 +230,10 @@ def validate_licences(
         Process execution request's payload.
     stored_accepted_licences : set[tuple[str, str]]
         Licences accepted by a user stored in the Extended Profiles database.
-    licences : list[cads_catalogue.database.Licence]
+    licences : list[tuple[str, int]]
         Licences bound to the required process/dataset.
     """
-    required_licences = {
-        (licence.licence_uid, licence.revision) for licence in licences
-    }
+    required_licences = set(licences)
     contextual_accepted_licences = get_contextual_accepted_licences(execution_content)
     accepted_licences = contextual_accepted_licences.union(stored_accepted_licences)
     check_licences(required_licences, accepted_licences)  # type: ignore

@@ -189,14 +189,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
             )
-        auth.validate_licences(
-            execution_content, stored_accepted_licences, resource.licences
-        )
+        adaptor = adaptors.instantiate_adaptor(resource)
+        licences = adaptor.get_licences(execution_content)
+        auth.validate_licences(execution_content, stored_accepted_licences, licences)
         job_id = str(uuid.uuid4())
         structlog.contextvars.bind_contextvars(job_id=job_id)
-        job_kwargs = adaptors.make_system_job_kwargs(
-            process_id, execution_content, resource
-        )
+        job_kwargs = adaptors.make_system_job_kwargs(resource, execution_content)
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = cads_broker.database.create_request(
