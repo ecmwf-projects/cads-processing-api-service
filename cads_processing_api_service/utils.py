@@ -418,7 +418,7 @@ def parse_results_from_broker_db(
 ) -> dict[str, Any]:
     try:
         results = get_results_from_broker_db(job=job, session=session)
-    except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
+    except ogc_api_processes_fastapi.exceptions.OGCAPIException as exc:
         results = ogc_api_processes_fastapi.models.Exception(
             type=exc.type,
             title=exc.title,
@@ -426,8 +426,6 @@ def parse_results_from_broker_db(
             detail=exc.detail,
             trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
         ).dict(exclude_none=True)
-    except ogc_api_processes_fastapi.exceptions.ResultsNotReady:
-        results = {}
     return results
 
 
