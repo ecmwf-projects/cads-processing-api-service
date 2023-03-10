@@ -220,7 +220,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_jobs(
         self,
         processID: list[str] | None = fastapi.Query(None),
-        status: list[str] | None = fastapi.Query(None),
+        status: list[ogc_api_processes_fastapi.models.StatusCode]
+        | None = fastapi.Query(None),
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
         sortby: utils.JobSortCriterion
         | None = fastapi.Query(utils.JobSortCriterion.created_at_desc),
@@ -237,7 +238,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         processID : list[str] | None, optional
             If specified, only jobs that have a value for the processID property
             matching one of the specified values shall be included in the response.
-        status : list[str] | None, optional
+        status : list[ogc_api_processes_fastapi.models.StatusCode] | None, optional
             If specified, only jobs that have a value for the status property matching
             one of the specified values of shall be included in the response.
         limit : int | None, optional
