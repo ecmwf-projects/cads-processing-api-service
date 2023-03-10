@@ -16,6 +16,7 @@ import unittest.mock
 from typing import Any
 
 import cads_broker
+import cads_catalogue.database
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
 import pytest
@@ -23,7 +24,7 @@ import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
 
-from cads_processing_api_service import models, utils
+from cads_processing_api_service import exceptions, models, utils
 
 
 def test_parse_sortby() -> None:
@@ -265,8 +266,21 @@ def test_make_status_info() -> None:
         "updated_at": "2023-01-01T16:20:12.175021",
         "request_body": {"kwargs": {"request": {"product_type": ["reanalysis"]}}},
     }
-    mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
-    status_info = utils.make_status_info(job, session=mock_session, add_results=False)
+    mock_compute_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
+    mock_catalogue_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
+    with unittest.mock.patch(
+        "cads_processing_api_service.utils.lookup_resource_by_id"
+    ) as mock_lookup_resource_by_id:
+        mock_lookup_resource_by_id.return_value = cads_catalogue.database.Resource(
+            title="Dataset title"
+        )
+        status_info = utils.make_status_info(
+            job,
+            compute_session=mock_compute_session,
+            catalogue_session=mock_catalogue_session,
+            catalogue_table=cads_catalogue.database.Resource,
+            add_results=False,
+        )
     exp_status_info = models.StatusInfo(
         type="process",
         jobID=job["request_uid"],
@@ -277,34 +291,49 @@ def test_make_status_info() -> None:
         finished=job["finished_at"],
         updated=job["updated_at"],
         request=job["request_body"]["kwargs"]["request"],
+        processDescription={"title": "Dataset title"},
     )
     assert status_info == exp_status_info
 
     exp_results = {"key": "value"}
     with unittest.mock.patch(
-        "cads_processing_api_service.utils.get_results_from_broker_db"
-    ) as mock_get_results_from_broker_db:
-        mock_get_results_from_broker_db.return_value = exp_results
-        status_info = utils.make_status_info(job, session=mock_session)
+        "cads_processing_api_service.utils.lookup_resource_by_id"
+    ) as mock_lookup_resource_by_id, unittest.mock.patch(
+        "cads_processing_api_service.utils.parse_results_from_broker_db"
+    ) as mock_parse_results_from_broker_db:
+        mock_lookup_resource_by_id.return_value = cads_catalogue.database.Resource(
+            title="Dataset title"
+        )
+        mock_parse_results_from_broker_db.return_value = exp_results
+        status_info = utils.make_status_info(
+            job,
+            compute_session=mock_compute_session,
+            catalogue_session=mock_catalogue_session,
+            catalogue_table=cads_catalogue.database.Resource,
+        )
     assert status_info.results == exp_results
 
-    with unittest.mock.patch(
-        "cads_processing_api_service.utils.get_results_from_broker_db"
-    ) as mock_get_results_from_broker_db:
-        mock_get_results_from_broker_db.side_effect = (
-            ogc_api_processes_fastapi.exceptions.JobResultsFailed
-        )
-        status_info = utils.make_status_info(job, session=mock_session)
-    exp_results_keys = ("type",)
-    results = status_info.results
-    assert results is not None
-    assert all([key in results.keys() for key in exp_results_keys])
-
-    with unittest.mock.patch(
-        "cads_processing_api_service.utils.get_results_from_broker_db"
-    ) as mock_get_results_from_broker_db:
-        mock_get_results_from_broker_db.side_effect = (
-            ogc_api_processes_fastapi.exceptions.ResultsNotReady
-        )
-        status_info = utils.make_status_info(job, session=mock_session)
-    assert status_info.results is None
+    for exception in [
+        ogc_api_processes_fastapi.exceptions.JobResultsFailed,
+        ogc_api_processes_fastapi.exceptions.ResultsNotReady,
+        exceptions.JobResultsExpired,
+    ]:
+        with unittest.mock.patch(
+            "cads_processing_api_service.utils.lookup_resource_by_id"
+        ) as mock_lookup_resource_by_id, unittest.mock.patch(
+            "cads_processing_api_service.utils.get_results_from_broker_db"
+        ) as mock_get_results_from_broker_db:
+            mock_lookup_resource_by_id.return_value = cads_catalogue.database.Resource(
+                title="Dataset title"
+            )
+            mock_get_results_from_broker_db.side_effect = exception
+            status_info = utils.make_status_info(
+                job,
+                compute_session=mock_compute_session,
+                catalogue_session=mock_catalogue_session,
+                catalogue_table=cads_catalogue.database.Resource,
+            )
+        exp_results_keys = ("type",)
+        results = status_info.results
+        assert results is not None
+        assert all([key in results.keys() for key in exp_results_keys])
