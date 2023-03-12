@@ -47,7 +47,7 @@ def test_check_licences() -> None:
 
 
 def test_verify_permission() -> None:
-    job = {"request_metadata": {"user_uid": "abc123"}}
+    job = {{"user_uid": "abc123"}
     user_uid = "abc123"
     try:
         auth.verify_permission(user_uid, job)
