@@ -19,7 +19,6 @@
 import uuid
 
 import attrs
-import cacholote.extra_encoders
 import cads_broker.database
 import cads_catalogue.config
 import cads_catalogue.database
@@ -35,6 +34,8 @@ import sqlalchemy.orm.decl_api
 import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
+
+import cacholote.extra_encoders
 
 from . import adaptors, auth, config, db_utils, models, serializers, utils
 
