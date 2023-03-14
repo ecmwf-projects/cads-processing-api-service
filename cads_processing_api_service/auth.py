@@ -126,7 +126,7 @@ def verify_permission(user_uid: str, job: dict[str, Any]) -> None:
     exceptions.PermissionDenied
         Raised if the user has no permission to interact with the job.
     """
-    if job["request_metadata"]["user_uid"] != user_uid:
+    if job["user_uid"] != user_uid:
         raise exceptions.PermissionDenied()
 
 
