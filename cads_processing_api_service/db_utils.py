@@ -33,7 +33,7 @@ def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker:
     broker_settings = cads_broker.config.ensure_settings()
     broker_engine = sqlalchemy.create_engine(
         broker_settings.connection_string,
-        pool_timeout=0.1,
+        pool_timeout=broker_settings.pool_timeout,
         pool_recycle=broker_settings.pool_recycle,
     )
     return sqlalchemy.orm.sessionmaker(broker_engine)
