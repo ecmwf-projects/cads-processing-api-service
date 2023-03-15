@@ -261,13 +261,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             List of jobs status information.
         """
         user_uid = auth.authenticate_user(auth_header)
-        metadata_filters = {"user_uid": [str(user_uid)] if user_uid else []}
-        job_filters = {"process_id": processID, "status": status}
+        job_filters = {
+            "process_id": processID,
+            "status": status,
+            "user_uid": [user_uid],
+        }
         sort_key, sort_dir = utils.parse_sortby(sortby.name)
         statement = sqlalchemy.select(self.job_table)
-        statement = utils.apply_metadata_filters(
-            statement, self.job_table, metadata_filters
-        )
         statement = utils.apply_job_filters(statement, self.job_table, job_filters)
         if cursor:
             statement = utils.apply_bookmark(
