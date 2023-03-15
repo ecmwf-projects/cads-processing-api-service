@@ -195,7 +195,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_id = str(uuid.uuid4())
         structlog.contextvars.bind_contextvars(job_id=job_id)
         job_kwargs = adaptors.make_system_job_kwargs(
-            adaptor, execution_content, adaptor.resources
+            resource, execution_content, adaptor.resources
         )
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
