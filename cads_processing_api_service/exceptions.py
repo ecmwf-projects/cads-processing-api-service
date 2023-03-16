@@ -64,6 +64,10 @@ def exception_handler(
     fastapi.responses.JSONResponse
         JSON response.
     """
+    logger.error(
+        exc.title,
+        exception="".join(traceback.TracebackException.from_exception(exc).format()),
+    )
     return fastapi.responses.JSONResponse(
         status_code=exc.status_code,
         content=ogc_api_processes_fastapi.models.Exception(
