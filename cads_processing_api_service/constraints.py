@@ -22,6 +22,9 @@ def apply_constraints(
     try:
         constraints = adaptor.apply_constraints(request=request)
     except TypeError as exc:
-        raise exceptions.ParameterError(detail=str(exc))
+        if "invalid parm" in str(exc):
+            raise exceptions.ParameterError(detail=str(exc))
+        else:
+            raise exc
 
     return constraints
