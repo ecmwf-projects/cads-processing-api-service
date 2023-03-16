@@ -70,7 +70,7 @@ def get_auth_header(
     return auth_header
 
 
-@cachetools.cached(cache=cachetools.TTLCache(maxsize=1024, ttl=10), info=True)
+@cachetools.cached(cache=cachetools.TTLCache(maxsize=2000, ttl=600), info=True)
 def authenticate_user(auth_header: tuple[str, str]) -> str | None:
     """Verify user authentication.
 
@@ -152,7 +152,7 @@ def get_contextual_accepted_licences(
     return accepted_licences
 
 
-@cachetools.cached(cache=cachetools.TTLCache(maxsize=1024, ttl=10), info=True)
+@cachetools.cached(cache=cachetools.TTLCache(maxsize=2000, ttl=10), info=True)
 def get_stored_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
     """Get licences accepted by a user stored in the Extended Profiles database.
 

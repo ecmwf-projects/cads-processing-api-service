@@ -48,7 +48,7 @@ class JobSortCriterion(str, enum.Enum):
 
 
 @cachetools.cached(  # type: ignore
-    cache=cachetools.TTLCache(maxsize=1024, ttl=60),
+    cache=cachetools.TTLCache(maxsize=1000, ttl=10),
     key=lambda id, record, session: cachetools.keys.hashkey(id, record),
     info=True,
 )
