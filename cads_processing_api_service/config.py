@@ -38,6 +38,11 @@ class Settings(pydantic.BaseSettings):
     default_vary: str = "PRIVATE-TOKEN, Authorization"
     public_cache_control: str = "public, max-age=60"
 
+    cache_users_maxsize: int = 2000
+    cache_users_ttl: int = 600
+    cache_resources_maxsize: int = 1000
+    cache_resources_ttl: int = 10
+
 
 def ensure_settings(
     settings: Settings | None = None,
