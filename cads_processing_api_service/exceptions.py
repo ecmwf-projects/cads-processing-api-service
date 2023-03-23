@@ -77,6 +77,7 @@ def exception_handler(
             detail=exc.detail,
             instance=str(request.url),
             trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
+            traceback=exc.traceback,
         ).dict(exclude_none=True),
     )
 
@@ -138,6 +139,9 @@ def general_exception_handler(
             type="internal server error",
             title="internal server error",
             trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
+            traceback="".join(
+                traceback.TracebackException.from_exception(exc).format()
+            ),
         ).dict(exclude_none=True),
     )
 
