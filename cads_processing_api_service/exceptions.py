@@ -67,6 +67,7 @@ def exception_handler(
     logger.error(
         exc.title,
         exception="".join(traceback.TracebackException.from_exception(exc).format()),
+        url=str(request.url),
     )
     return fastapi.responses.JSONResponse(
         status_code=exc.status_code,
