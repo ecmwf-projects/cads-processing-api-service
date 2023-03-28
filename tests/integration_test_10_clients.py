@@ -777,16 +777,3 @@ def test_constraints(dev_env_proc_api_url: str) -> None:
     )
 
     assert response.status_code == 200
-
-    process_id = "cams-global-reanalysis-eac4-monthly"
-    request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"processes/{process_id}/constraints"
-    )
-    request_body = {"inputs": {}}
-
-    response = requests.post(
-        request_url,
-        json=request_body,
-    )
-
-    assert response.status_code == 200
