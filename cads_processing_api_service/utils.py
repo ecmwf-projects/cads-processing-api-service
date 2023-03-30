@@ -33,7 +33,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import exceptions, models
+from . import config, exceptions, models
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -49,7 +49,10 @@ class JobSortCriterion(str, enum.Enum):
 
 
 @cachetools.cached(  # type: ignore
-    cache=cachetools.TTLCache(maxsize=1000, ttl=10),
+    cache=cachetools.TTLCache(
+        maxsize=config.ensure_settings().cache_resources_maxsize,
+        ttl=config.ensure_settings().cache_resources_ttl,
+    ),
     key=lambda id, record, session: cachetools.keys.hashkey(id, record),
     info=True,
 )
