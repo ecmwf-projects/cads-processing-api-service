@@ -109,7 +109,9 @@ def translate_cds_form(
         Python object containing translated inputs information.
     """
     if not isinstance(cds_form, list):
-        cds_form = list(cds_form)
+        cds_form = [
+            cds_form,
+        ]
     ogc_inputs = {}
     for cds_input_schema in cds_form:
         if cds_input_schema["type"] not in EXCLUDED_WIDGETS:
