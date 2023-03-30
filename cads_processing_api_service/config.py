@@ -17,10 +17,9 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import logging
 import sys
-from typing import Any, Callable, Mapping, MutableMapping
+from typing import Any, Mapping, MutableMapping
 
 import pydantic
 import structlog
@@ -75,22 +74,6 @@ def add_user_request_flag(
     return event_dict
 
 
-def sorting_serializer_factory(
-    sorted_keys: list[str],
-) -> Callable[[MutableMapping[str, Any]], str]:
-    def sorting_serializer(event_dict: MutableMapping[str, Any], **kw: Any) -> str:
-        sorted_dict = {}
-        for key in sorted_keys:
-            if key in event_dict:
-                sorted_dict[key] = event_dict[key]
-                event_dict.pop(key)
-        for key in event_dict:
-            sorted_dict[key] = event_dict[key]
-        return json.dumps(sorted_dict, **kw)
-
-    return sorting_serializer
-
-
 def configure_logger() -> None:
     """Configure the logger."""
     logging.basicConfig(
@@ -109,9 +92,7 @@ def configure_logger() -> None:
             structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M.%S"),
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
-            structlog.processors.JSONRenderer(
-                serializer=sorting_serializer_factory(["event", "user_id"]),
-            ),
+            structlog.processors.JSONRenderer(),
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),

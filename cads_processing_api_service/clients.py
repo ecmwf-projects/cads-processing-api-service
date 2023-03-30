@@ -338,6 +338,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     compute_session=compute_session,
                     catalogue_session=catalogue_session,
                     catalogue_table=self.process_table,
+                    add_results=False,
                 )
         auth.verify_permission(user_uid, job)
         return status_info
