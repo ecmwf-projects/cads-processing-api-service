@@ -20,10 +20,9 @@ from typing import Any, Awaitable, Callable
 import fastapi
 import fastapi.middleware.cors
 import ogc_api_processes_fastapi
-import starlette_exporter
 import structlog
 
-from . import clients, config, constraints, exceptions, metrics
+from . import clients, config, constraints, exceptions, metrics, middlewares
 
 config.configure_logger()
 logger = structlog.get_logger(__name__)
@@ -41,7 +40,7 @@ app.router.add_api_route(
 )
 
 app.router.add_api_route("/metrics", metrics.handle_metrics)
-app.add_middleware(starlette_exporter.middleware.PrometheusMiddleware)
+app.add_middleware(middlewares.ProcessingPrometheusMiddleware, group_paths=True)
 
 
 @app.middleware("http")

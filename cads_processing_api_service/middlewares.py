@@ -16,6 +16,7 @@
 
 import fastapi
 import starlette
+import starlette_exporter
 
 from . import config
 
@@ -44,3 +45,13 @@ class CacheControlMiddleware(starlette.middleware.base.BaseHTTPMiddleware):
             if settings.default_vary:
                 response.headers["vary"] = settings.default_vary
         return response
+
+
+class ProcessingPrometheusMiddleware(starlette_exporter.PrometheusMiddleware):
+    @staticmethod
+    def _get_router_path(scope: starlette.types.Scope) -> str | None:
+        path = scope.get("path", "")
+        if path.startswith("/jobs/") and path != "/jobs/":
+            return "/jobs/{job_id}"
+        else:
+            return None
