@@ -52,6 +52,6 @@ class ProcessingPrometheusMiddleware(starlette_exporter.PrometheusMiddleware):
     def _get_router_path(scope: starlette.types.Scope) -> str | None:
         path = scope.get("path", "")
         if path.startswith("/jobs/") and path != "/jobs/":
-            return "/jobs/{job_id}"
+            return "/jobs/(job_id)"
         else:
             return None
