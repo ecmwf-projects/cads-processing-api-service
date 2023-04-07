@@ -88,12 +88,11 @@ async def lookup_resource_by_id(
     # )
     statement = sqlalchemy.select(record)
     try:
-        row: cads_catalogue.database.Resource = (
-            await session.scalars(statement.where(record.resource_uid == id))
-        ).one()
+        results = await session.execute(statement.where(record.resource_uid == id))
+        resource = results.scalars().one()
     except sqlalchemy.orm.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
-    return row
+    return resource
 
 
 def parse_sortby(sortby: str) -> tuple[str, str]:

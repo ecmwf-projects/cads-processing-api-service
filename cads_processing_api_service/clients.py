@@ -99,7 +99,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         statement = utils.apply_limit(statement, limit)
         catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
         async with catalogue_sessionmaker() as catalogue_session:
-            processes_entries = (await catalogue_session.scalars(statement)).all()
+            results = await catalogue_session.execute(statement)
+            processes_entries = results.scalars().all()
         processes = [
             serializers.serialize_process_summary(process)
             for process in processes_entries
