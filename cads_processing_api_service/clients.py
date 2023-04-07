@@ -159,7 +159,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return process_description
 
-    def post_process_execution(
+    async def post_process_execution(
         self,
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
