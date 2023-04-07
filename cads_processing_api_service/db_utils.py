@@ -23,7 +23,7 @@ import sqlalchemy.ext.asyncio
 
 
 @functools.lru_cache()
-def get_compute_sync_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker:
     """Get a sync sqlalchemy.orm.sessionmaker object bound to the Broker database.
 
     Returns
@@ -62,7 +62,7 @@ def get_compute_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
 
 
 @functools.lru_cache()
-def get_catalogue_sync_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+def get_catalogue_sessionmaker() -> sqlalchemy.orm.sessionmaker:
     """Get a sync sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
 
     Returns
