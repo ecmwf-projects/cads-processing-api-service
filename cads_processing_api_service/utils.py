@@ -27,6 +27,7 @@ import fastapi
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
 import sqlalchemy.exc
+import sqlalchemy.ext.asyncio
 import sqlalchemy.orm
 import sqlalchemy.orm.attributes
 import sqlalchemy.orm.exc
@@ -59,7 +60,7 @@ class JobSortCriterion(str, enum.Enum):
 async def lookup_resource_by_id(
     id: str,
     record: type[cads_catalogue.database.Resource],
-    session: sqlalchemy.orm.Session,
+    session: sqlalchemy.ext.asyncio.AsyncSession,
 ) -> cads_catalogue.database.Resource:
     """Look for the resource identified by `id` into the Catalogue database.
 
@@ -82,11 +83,12 @@ async def lookup_resource_by_id(
     ogc_api_processes_fastapi.exceptions.NoSuchProcess
         Raised if no resource corresponding to the provided `id` is found.
     """
+    statement = sqlalchemy.select(record).options(
+        sqlalchemy.orm.joinedload(record.licences)
+    )
     try:
         row: cads_catalogue.database.Resource = (
-            await session.query(record)  # type: ignore
-            .options(sqlalchemy.orm.joinedload(record.licences))
-            .filter(record.resource_uid == id)
+            await session.execute(statement.where(record.resource_uid == id))
         ).one()
     except sqlalchemy.orm.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()

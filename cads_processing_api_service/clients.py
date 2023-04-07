@@ -189,10 +189,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         execution_content = execution_content.dict()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with catalogue_sessionmaker() as catalogue_session:
-            resource = LOOP.run_until_complete(
-                utils.lookup_resource_by_id(
-                    id=process_id, record=self.process_table, session=catalogue_session
-                )
+            resource = await utils.lookup_resource_by_id(
+                id=process_id, record=self.process_table, session=catalogue_session
             )
         adaptor = adaptors.instantiate_adaptor(resource)
         licences = adaptor.get_licences(execution_content)
