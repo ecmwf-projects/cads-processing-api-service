@@ -189,7 +189,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
         execution_content = execution_content.dict()
         catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
-        with catalogue_sessionmaker() as catalogue_session:
+        async with catalogue_sessionmaker() as catalogue_session:
             resource = await utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
             )
