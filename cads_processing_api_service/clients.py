@@ -60,7 +60,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         default=cads_broker.database.SystemRequest
     )
 
-    def get_processes(
+    async def get_processes(
         self,
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
         sortby: utils.ProcessSortCriterion
