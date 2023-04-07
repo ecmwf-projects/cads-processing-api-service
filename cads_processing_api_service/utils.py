@@ -88,7 +88,7 @@ async def lookup_resource_by_id(
     )
     try:
         row: cads_catalogue.database.Resource = (
-            await session.execute(statement.where(record.resource_uid == id))
+            await session.scalars(statement.where(record.resource_uid == id))
         ).one()
     except sqlalchemy.orm.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
