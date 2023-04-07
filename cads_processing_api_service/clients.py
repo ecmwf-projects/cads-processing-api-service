@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import asyncio
 import uuid
 
 import attrs
@@ -39,6 +40,8 @@ import structlog
 from . import adaptors, auth, config, db_utils, models, serializers, utils
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+LOOP = asyncio.get_event_loop()
 
 
 @attrs.define
@@ -110,7 +113,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_list._pagination_query_params = pagination_query_params
         return process_list
 
-    def get_process(
+    async def get_process(
         self,
         response: fastapi.Response,
         process_id: str = fastapi.Path(...),
@@ -131,9 +134,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.ProcessDescription
             Process description.
         """
-        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
-        with catalogue_sessionmaker() as catalogue_session:
-            resource = utils.lookup_resource_by_id(
+        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
+        async with catalogue_sessionmaker() as catalogue_session:
+            resource = await utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
             )
         process_description = serializers.serialize_process_description(resource)
@@ -186,8 +189,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         execution_content = execution_content.dict()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with catalogue_sessionmaker() as catalogue_session:
-            resource = utils.lookup_resource_by_id(
-                id=process_id, record=self.process_table, session=catalogue_session
+            resource = LOOP.run_until_complete(
+                utils.lookup_resource_by_id(
+                    id=process_id, record=self.process_table, session=catalogue_session
+                )
             )
         adaptor = adaptors.instantiate_adaptor(resource)
         licences = adaptor.get_licences(execution_content)

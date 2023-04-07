@@ -56,7 +56,7 @@ class JobSortCriterion(str, enum.Enum):
     key=lambda id, record, session: cachetools.keys.hashkey(id, record),
     info=True,
 )
-def lookup_resource_by_id(
+async def lookup_resource_by_id(
     id: str,
     record: type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
@@ -84,11 +84,10 @@ def lookup_resource_by_id(
     """
     try:
         row: cads_catalogue.database.Resource = (
-            session.query(record)  # type: ignore
+            await session.query(record)  # type: ignore
             .options(sqlalchemy.orm.joinedload(record.licences))
             .filter(record.resource_uid == id)
-            .one()
-        )
+        ).one()
     except sqlalchemy.orm.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     session.expunge(row)  # type:ignore
