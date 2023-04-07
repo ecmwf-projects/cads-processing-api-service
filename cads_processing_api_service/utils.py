@@ -84,12 +84,12 @@ async def lookup_resource_by_id(
     statement = sqlalchemy.select(record).options(
         sqlalchemy.orm.joinedload(record.licences)
     )
-    # statement = sqlalchemy.select(record)
     try:
         results = await session.execute(statement.where(record.resource_uid == id))
         resource = results.scalars().unique().one()
     except sqlalchemy.orm.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
+    session.expunge(resource)
     return resource
 
 
