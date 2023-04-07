@@ -81,10 +81,10 @@ async def lookup_resource_by_id(
     ogc_api_processes_fastapi.exceptions.NoSuchProcess
         Raised if no resource corresponding to the provided `id` is found.
     """
-    # statement = sqlalchemy.select(record).options(
-    #     sqlalchemy.orm.joinedload(record.licences)
-    # )
-    statement = sqlalchemy.select(record)
+    statement = sqlalchemy.select(record).options(
+        sqlalchemy.orm.joinedload(record.licences)
+    )
+    # statement = sqlalchemy.select(record)
     try:
         results = await session.execute(statement.where(record.resource_uid == id))
         resource = results.scalars().one()
