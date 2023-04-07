@@ -50,8 +50,11 @@ def get_compute_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
         sqlalchemy.orm.sessionmaker object bound to the Broker database.
     """
     broker_settings = cads_broker.config.ensure_settings()
+    connection_string = broker_settings.connection_string.replace(
+        "postgresql", "postgresql+asyncpg"
+    )
     broker_engine = sqlalchemy.ext.asyncio.create_async_engine(
-        broker_settings.connection_string,
+        connection_string,
         pool_timeout=broker_settings.pool_timeout,
         pool_recycle=broker_settings.pool_recycle,
     )
@@ -89,8 +92,11 @@ def get_catalogue_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
         sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
     """
     catalogue_settings = cads_catalogue.config.ensure_settings()
+    connection_string = catalogue_settings.connection_string.replace(
+        "postgresql", "postgresql+asyncpg"
+    )
     catalogue_engine = sqlalchemy.ext.asyncio.create_async_engine(
-        catalogue_settings.connection_string,
+        connection_string,
         pool_timeout=0.1,
         pool_recycle=catalogue_settings.pool_recycle,
     )
