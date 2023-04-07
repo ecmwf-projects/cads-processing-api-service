@@ -83,13 +83,14 @@ async def lookup_resource_by_id(
     ogc_api_processes_fastapi.exceptions.NoSuchProcess
         Raised if no resource corresponding to the provided `id` is found.
     """
-    statement = sqlalchemy.select(record).options(
-        sqlalchemy.orm.joinedload(record.licences)
-    )
+    # statement = sqlalchemy.select(record).options(
+    #     sqlalchemy.orm.joinedload(record.licences)
+    # )
+    statement = sqlalchemy.select(record)
     try:
         row: cads_catalogue.database.Resource = (
-            await session.execute(statement.where(record.resource_uid == id))
-        ).unique()
+            await session.scalars(statement.where(record.resource_uid == id))
+        ).one()
     except sqlalchemy.orm.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     return row
