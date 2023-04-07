@@ -19,11 +19,12 @@ import functools
 import cads_broker.config
 import cads_catalogue.config
 import sqlalchemy
+import sqlalchemy.ext.asyncio
 
 
 @functools.lru_cache()
-def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker:
-    """Get an sqlalchemy.orm.sessionmaker object bound to the Broker database.
+def get_compute_sync_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+    """Get a sync sqlalchemy.orm.sessionmaker object bound to the Broker database.
 
     Returns
     -------
@@ -40,8 +41,29 @@ def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker:
 
 
 @functools.lru_cache()
-def get_catalogue_sessionmaker() -> sqlalchemy.orm.sessionmaker:
-    """Get an sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
+def get_compute_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+    """Get an async sqlalchemy.orm.sessionmaker object bound to the Broker database.
+
+    Returns
+    -------
+    sqlalchemy.orm.sessionmaker
+        sqlalchemy.orm.sessionmaker object bound to the Broker database.
+    """
+    broker_settings = cads_broker.config.ensure_settings()
+    broker_engine = sqlalchemy.ext.asyncio.create_async_engine(
+        broker_settings.connection_string,
+        pool_timeout=broker_settings.pool_timeout,
+        pool_recycle=broker_settings.pool_recycle,
+    )
+    sessionmaker = sqlalchemy.orm.sessionmaker(
+        broker_engine, class_=sqlalchemy.ext.asyncio.AsyncSession
+    )
+    return sessionmaker
+
+
+@functools.lru_cache()
+def get_catalogue_sync_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+    """Get a sync sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
 
     Returns
     -------
@@ -55,3 +77,24 @@ def get_catalogue_sessionmaker() -> sqlalchemy.orm.sessionmaker:
         pool_recycle=catalogue_settings.pool_recycle,
     )
     return sqlalchemy.orm.sessionmaker(catalogue_engine)
+
+
+@functools.lru_cache()
+def get_catalogue_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+    """Get an async sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
+
+    Returns
+    -------
+    sqlalchemy.orm.sessionmaker
+        sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
+    """
+    catalogue_settings = cads_catalogue.config.ensure_settings()
+    catalogue_engine = sqlalchemy.ext.asyncio.create_async_engine(
+        catalogue_settings.connection_string,
+        pool_timeout=0.1,
+        pool_recycle=catalogue_settings.pool_recycle,
+    )
+    sessionmaker = sqlalchemy.orm.sessionmaker(
+        catalogue_engine, class_=sqlalchemy.ext.asyncio.AsyncSession
+    )
+    return sessionmaker
