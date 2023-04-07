@@ -19,8 +19,6 @@ import enum
 import traceback
 from typing import Any, Callable, Mapping
 
-import cachetools
-import cachetools.keys
 import cads_broker.database
 import cads_catalogue.database
 import fastapi
@@ -34,7 +32,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import config, exceptions, models
+from . import exceptions, models
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -49,14 +47,14 @@ class JobSortCriterion(str, enum.Enum):
     created_at_desc: str = "-created"
 
 
-@cachetools.cached(  # type: ignore
-    cache=cachetools.TTLCache(
-        maxsize=config.ensure_settings().cache_resources_maxsize,
-        ttl=config.ensure_settings().cache_resources_ttl,
-    ),
-    key=lambda id, record, session: cachetools.keys.hashkey(id, record),
-    info=True,
-)
+# @cachetools.cached(  # type: ignore
+#     cache=cachetools.TTLCache(
+#         maxsize=config.ensure_settings().cache_resources_maxsize,
+#         ttl=config.ensure_settings().cache_resources_ttl,
+#     ),
+#     key=lambda id, record, session: cachetools.keys.hashkey(id, record),
+#     info=True,
+# )
 async def lookup_resource_by_id(
     id: str,
     record: type[cads_catalogue.database.Resource],
