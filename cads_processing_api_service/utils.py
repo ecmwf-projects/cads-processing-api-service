@@ -92,7 +92,6 @@ async def lookup_resource_by_id(
         ).unique()
     except sqlalchemy.orm.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
-    session.expunge(row)
     return row
 
 
