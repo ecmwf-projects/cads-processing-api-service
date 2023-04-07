@@ -87,7 +87,7 @@ async def lookup_resource_by_id(
     # statement = sqlalchemy.select(record)
     try:
         results = await session.execute(statement.where(record.resource_uid == id))
-        resource = results.scalars().one()
+        resource = results.scalars().unique()
     except sqlalchemy.orm.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     return resource
