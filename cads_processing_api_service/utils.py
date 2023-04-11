@@ -439,12 +439,12 @@ def parse_results_from_broker_db(
     return results
 
 
-async def make_status_info(
+def make_status_info(
     job: dict[str, Any],
-    compute_session: sqlalchemy.orm.Session,
-    catalogue_session: sqlalchemy.orm.Session,
-    catalogue_table: type[cads_catalogue.database.Resource],
-    add_results: bool = True,
+    add_results: bool = False,
+    results: dict[str, Any] | None = None,
+    add_dataset_metadata: bool = False,
+    dataset_metadata: cads_catalogue.database.Resource | None = None,
 ) -> models.StatusInfo:
     """Compose job's status information.
 
@@ -452,12 +452,14 @@ async def make_status_info(
     ----------
     job : dict[str, Any]
         Job description.
-    compute_session : sqlalchemy.orm.Session
-        Broker database session.
-    catalogue_session : sqlalchemy.orm.Session
-        Catalogue database session.
     add_results : bool, optional
         Set to True (default) if results description should be added, False otherwise.
+    results : dict[str, Any] | None, optional
+        Results description, by default None
+    add_dataset_metadata : bool, optional
+        Set to True (default) if dataset metadata should be added, False otherwise.
+    dataset_metadata : cads_catalogue.database.Resource | None, optional
+        Dataset metadata, by default None
 
     Returns
     -------
@@ -478,11 +480,12 @@ async def make_status_info(
         updated=job["updated_at"],
         request=job["request_body"]["kwargs"]["request"],
     )
-    dataset = await lookup_resource_by_id(
-        process_id, catalogue_table, catalogue_session
-    )
-    status_info.processDescription = {"title": dataset.title}
     if add_results:
-        results = parse_results_from_broker_db(job, compute_session)
+        if results is None:
+            raise ValueError("results must be provided")
         status_info.results = results
+    if add_dataset_metadata:
+        if dataset_metadata is None:
+            raise ValueError("dataset_metadata must be provided")
+        status_info.processDescription = {"title": dataset_metadata.title}
     return status_info
