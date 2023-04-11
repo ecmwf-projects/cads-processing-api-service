@@ -220,7 +220,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         return status_info
 
-    def get_jobs(
+    async def get_jobs(
         self,
         processID: list[str] | None = fastapi.Query(None),
         status: list[ogc_api_processes_fastapi.models.StatusCode]
@@ -284,14 +284,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         statement = utils.apply_limit(statement, limit)
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
-        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job_entries = compute_session.scalars(statement).all()
             if back:
                 job_entries = reversed(job_entries)
-            with catalogue_sessionmaker() as catalogue_session:
+            async with catalogue_sessionmaker() as catalogue_session:
                 jobs = [
-                    utils.make_status_info(
+                    await utils.make_status_info(
                         job=utils.dictify_job(job),
                         compute_session=compute_session,
                         catalogue_session=catalogue_session,
@@ -307,7 +307,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return job_list
 
-    def get_job(
+    async def get_job(
         self,
         job_id: str = fastapi.Path(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
@@ -330,11 +330,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         user_uid = auth.authenticate_user(auth_header)
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
-        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
-            with catalogue_sessionmaker() as catalogue_session:
-                status_info = utils.make_status_info(
+            async with catalogue_sessionmaker() as catalogue_session:
+                status_info = await utils.make_status_info(
                     job=job,
                     compute_session=compute_session,
                     catalogue_session=catalogue_session,

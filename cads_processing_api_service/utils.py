@@ -439,7 +439,7 @@ def parse_results_from_broker_db(
     return results
 
 
-def make_status_info(
+async def make_status_info(
     job: dict[str, Any],
     compute_session: sqlalchemy.orm.Session,
     catalogue_session: sqlalchemy.orm.Session,
@@ -478,7 +478,9 @@ def make_status_info(
         updated=job["updated_at"],
         request=job["request_body"]["kwargs"]["request"],
     )
-    dataset = lookup_resource_by_id(process_id, catalogue_table, catalogue_session)
+    dataset = await lookup_resource_by_id(
+        process_id, catalogue_table, catalogue_session
+    )
     status_info.processDescription = {"title": dataset.title}
     if add_results:
         results = parse_results_from_broker_db(job, compute_session)
