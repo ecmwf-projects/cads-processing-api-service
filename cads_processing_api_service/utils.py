@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import base64
+import datetime
 import enum
 import traceback
 from typing import Any, Callable, Mapping
@@ -237,6 +238,10 @@ def apply_bookmark(
     ]
     compare_method: Callable = getattr(resource_attribute, compare_method_name)  # type: ignore
     bookmark_value: str = decode_base64(cursor)
+    if sort_key in ("created_at", "started_at", "finished_at", "updated_at"):
+        bookmark_value = datetime.datetime.strptime(
+            bookmark_value, "%Y-%m-%d %H:%M:%S.%f"
+        )
     statement = statement.where(compare_method(bookmark_value))
 
     return statement
