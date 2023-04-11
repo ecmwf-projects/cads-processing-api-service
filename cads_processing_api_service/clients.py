@@ -16,7 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-import asyncio
 import uuid
 
 import attrs
@@ -40,8 +39,6 @@ import structlog
 from . import adaptors, auth, config, db_utils, models, serializers, utils
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-
-LOOP = asyncio.get_event_loop()
 
 
 @attrs.define
