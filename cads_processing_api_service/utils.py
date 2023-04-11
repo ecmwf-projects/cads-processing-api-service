@@ -404,10 +404,10 @@ async def get_results_from_broker_db(
     job_id = job["request_uid"]
     if job_status == "successful":
         try:
-            asset_value = await cads_broker.database.get_request_result(
+            asset_value = await cads_broker.database.get_request_result_async(
                 request_uid=job_id, session=session
-            )["args"][0]
-            results = {"asset": {"value": asset_value}}
+            )
+            results = {"asset": {"value": asset_value["args"][0]}}
         except Exception:
             raise exceptions.JobResultsExpired()
     elif job_status == "failed":

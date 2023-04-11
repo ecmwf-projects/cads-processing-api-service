@@ -350,7 +350,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         return status_info
 
-    def get_job_results(
+    async def get_job_results(
         self,
         job_id: str = fastapi.Path(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
@@ -374,11 +374,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         structlog.contextvars.bind_contextvars(job_id=job_id)
         user_uid = auth.authenticate_user(auth_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
-        compute_sessionmaker = db_utils.get_compute_sessionmaker()
-        with compute_sessionmaker() as compute_session:
-            job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
+        compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
+        async with compute_sessionmaker() as compute_session:
+            job = await utils.get_job_from_broker_db(
+                job_id=job_id, session=compute_session
+            )
             auth.verify_permission(user_uid, job)
-            results = utils.get_results_from_broker_db(job=job, session=compute_session)
+            results = await utils.get_results_from_broker_db(
+                job=job, session=compute_session
+            )
         return results
 
     def delete_job(
