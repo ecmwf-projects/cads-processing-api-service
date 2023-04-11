@@ -344,7 +344,7 @@ def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
     return job
 
 
-def get_job_from_broker_db(
+async def get_job_from_broker_db(
     job_id: str, session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
     """Get job description from the Broker database.
@@ -367,7 +367,9 @@ def get_job_from_broker_db(
         Raised if no job corresponding to the provided identifier is found.
     """
     try:
-        request = cads_broker.database.get_request(request_uid=job_id, session=session)
+        request = await cads_broker.database.get_request_async(
+            request_uid=job_id, session=session
+        )
     except cads_broker.database.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
     job = dictify_job(request)
