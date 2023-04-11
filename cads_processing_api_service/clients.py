@@ -198,9 +198,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_kwargs = adaptors.make_system_job_kwargs(
             resource, execution_content, adaptor.resources
         )
-        compute_sessionmaker = db_utils.get_compute_sessionmaker()
-        with compute_sessionmaker() as compute_session:
-            job = cads_broker.database.create_request(
+        compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
+        async with compute_sessionmaker() as compute_session:
+            job = await cads_broker.database.create_request_async(
                 session=compute_session,
                 request_uid=job_id,
                 user_uid=user_uid,

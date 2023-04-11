@@ -59,7 +59,9 @@ def get_compute_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
         pool_recycle=broker_settings.pool_recycle,
     )
     sessionmaker = sqlalchemy.orm.sessionmaker(
-        broker_engine, class_=sqlalchemy.ext.asyncio.AsyncSession
+        broker_engine,
+        expire_on_commit=False,
+        class_=sqlalchemy.ext.asyncio.AsyncSession,
     )
     return sessionmaker
 
@@ -101,6 +103,8 @@ def get_catalogue_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
         pool_recycle=catalogue_settings.pool_recycle,
     )
     sessionmaker = sqlalchemy.orm.sessionmaker(
-        catalogue_engine, class_=sqlalchemy.ext.asyncio.AsyncSession
+        catalogue_engine,
+        expire_on_commit=False,
+        class_=sqlalchemy.ext.asyncio.AsyncSession,
     )
     return sessionmaker
