@@ -283,10 +283,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.job_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
-        compute_sessionmaker = db_utils.get_compute_sessionmaker()
+        compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
         catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
-        with compute_sessionmaker() as compute_session:
-            job_entries = compute_session.scalars(statement).all()
+        async with compute_sessionmaker() as compute_session:
+            result = await compute_session.execute(statement)
+            job_entries = result.scalars().all()
             if back:
                 job_entries = reversed(job_entries)
             async with catalogue_sessionmaker() as catalogue_session:
@@ -296,7 +297,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     dataset_metadata = await utils.lookup_resource_by_id(
                         job["process_id"], self.process_table, catalogue_session
                     )
-                    results = utils.parse_results_from_broker_db(job, compute_session)
+                    results = await utils.parse_results_from_broker_db(
+                        job, compute_session
+                    )
                     jobs.append(
                         utils.make_status_info(
                             job=job,

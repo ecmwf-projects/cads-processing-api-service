@@ -374,7 +374,7 @@ def get_job_from_broker_db(
     return job
 
 
-def get_results_from_broker_db(
+async def get_results_from_broker_db(
     job: dict[str, Any], session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
     """Get job results description from the Broker database.
@@ -402,7 +402,7 @@ def get_results_from_broker_db(
     job_id = job["request_uid"]
     if job_status == "successful":
         try:
-            asset_value = cads_broker.database.get_request_result(
+            asset_value = await cads_broker.database.get_request_result(
                 request_uid=job_id, session=session
             )["args"][0]
             results = {"asset": {"value": asset_value}}
@@ -420,11 +420,11 @@ def get_results_from_broker_db(
     return results
 
 
-def parse_results_from_broker_db(
+async def parse_results_from_broker_db(
     job: dict[str, Any], session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
     try:
-        results = get_results_from_broker_db(job=job, session=session)
+        results = await get_results_from_broker_db(job=job, session=session)
     except ogc_api_processes_fastapi.exceptions.OGCAPIException as exc:
         results = ogc_api_processes_fastapi.models.Exception(
             type=exc.type,
