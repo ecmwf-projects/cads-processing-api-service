@@ -17,8 +17,6 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import sys
 
 import pydantic
 
@@ -61,12 +59,3 @@ def ensure_settings(
     else:
         general_settings = Settings()
     return general_settings
-
-
-def configure_logger() -> None:
-    """Configure the logger."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(message)s",
-        stream=sys.stdout,
-    )

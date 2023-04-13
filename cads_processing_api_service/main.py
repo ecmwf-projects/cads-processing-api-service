@@ -25,7 +25,7 @@ import fastapi.middleware.cors
 import ogc_api_processes_fastapi
 import structlog
 
-from . import clients, config, constraints, exceptions, metrics, middlewares
+from . import clients, constraints, exceptions, metrics, middlewares
 
 
 def add_user_request_flag(
@@ -40,10 +40,10 @@ def add_user_request_flag(
 @asynccontextmanager
 async def lifespan(application: fastapi.FastAPI):
     cads_common.logging.config_logging([add_user_request_flag])
+    cads_common.logging.configure_logger()
     yield
 
 
-config.configure_logger()
 logger = structlog.get_logger(__name__)
 
 app = ogc_api_processes_fastapi.instantiate_app(
