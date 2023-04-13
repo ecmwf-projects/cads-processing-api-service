@@ -14,15 +14,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import logging
 import uuid
-from typing import Any, Awaitable, Callable
+from contextlib import asynccontextmanager
+from typing import Any, Awaitable, Callable, Mapping, MutableMapping
 
+import cads_common.logging
 import fastapi
 import fastapi.middleware.cors
 import ogc_api_processes_fastapi
 import structlog
 
 from . import clients, config, constraints, exceptions, metrics, middlewares
+
+
+def add_user_request_flag(
+    logger: logging.Logger, method_name: str, event_dict: MutableMapping[str, Any]
+) -> Mapping[str, Any]:
+    """Add user_request flag to log message."""
+    if "user_id" in event_dict:
+        event_dict["user_request"] = True
+    return event_dict
+
+
+@asynccontextmanager
+async def lifespan(application: fastapi.FastAPI):
+    cads_common.logging.config_logging([add_user_request_flag])
+    yield
+
 
 config.configure_logger()
 logger = structlog.get_logger(__name__)
@@ -32,7 +51,7 @@ app = ogc_api_processes_fastapi.instantiate_app(
     exception_handler=exceptions.exception_handler,
 )
 app = exceptions.include_exception_handlers(app)
-
+app.router.lifespan_context = lifespan
 app.router.add_api_route(
     "/processes/{process_id}/constraints",
     constraints.apply_constraints,

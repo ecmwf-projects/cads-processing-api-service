@@ -10,7 +10,7 @@ channels:
 dependencies:
 - attrs
 - cachetools
-- fastapi
+- fastapi>=0.93.0
 - pip
 - sqlalchemy==1.4*
 - structlog
