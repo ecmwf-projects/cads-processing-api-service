@@ -21,7 +21,6 @@ import traceback
 from typing import Any, Callable, Mapping
 
 import cachetools
-import cachetools.keys
 import cads_broker.database
 import cads_catalogue.database
 import fastapi
@@ -35,7 +34,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import cache, config, exceptions, models
+from . import config, exceptions, models
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -52,14 +51,15 @@ class JobSortCriterion(str, enum.Enum):
 
 # TODO: using cachetools with a coroutine function is tricy, see
 # https://stackoverflow.com/questions/34116942/how-to-cache-asyncio-coroutines
-@cache.async_cached(  # type: ignore
+@cachetools.cached(  # type: ignore
     cache=cachetools.TTLCache(
         maxsize=config.ensure_settings().cache_resources_maxsize,
         ttl=config.ensure_settings().cache_resources_ttl,
     ),
     key=lambda id, record, session: cachetools.keys.hashkey(id, record),
+    info=True,
 )
-async def lookup_resource_by_id(
+def lookup_resource_by_id(
     id: str,
     record: type[cads_catalogue.database.Resource],
     session: sqlalchemy.ext.asyncio.AsyncSession,
@@ -91,7 +91,7 @@ async def lookup_resource_by_id(
         .where(record.resource_uid == id)
     )
     try:
-        results = await session.execute(statement)
+        results = session.execute(statement)
         resource = results.scalars().unique().one()
     except sqlalchemy.orm.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()

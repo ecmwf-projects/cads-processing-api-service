@@ -60,7 +60,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         default=cads_broker.database.SystemRequest
     )
 
-    async def get_processes(
+    def get_processes(
         self,
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
         sortby: utils.ProcessSortCriterion
@@ -94,9 +94,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.process_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
-        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
-        async with catalogue_sessionmaker() as catalogue_session:
-            results = await catalogue_session.execute(statement)
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+        with catalogue_sessionmaker() as catalogue_session:
+            results = catalogue_session.execute(statement)
             processes_entries = results.scalars().all()
         processes = [
             serializers.serialize_process_summary(process)
@@ -111,7 +111,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_list._pagination_query_params = pagination_query_params
         return process_list
 
-    async def get_process(
+    def get_process(
         self,
         response: fastapi.Response,
         process_id: str = fastapi.Path(...),
@@ -132,9 +132,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.ProcessDescription
             Process description.
         """
-        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
-        async with catalogue_sessionmaker() as catalogue_session:
-            resource = await utils.lookup_resource_by_id(
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+        with catalogue_sessionmaker() as catalogue_session:
+            resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
             )
         process_description = serializers.serialize_process_description(resource)
@@ -185,9 +185,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
         stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
         execution_content = execution_content.dict()
-        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
-        async with catalogue_sessionmaker() as catalogue_session:
-            resource = await utils.lookup_resource_by_id(
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+        with catalogue_sessionmaker() as catalogue_session:
+            resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
             )
         adaptor = adaptors.instantiate_adaptor(resource)
@@ -284,17 +284,17 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         statement = utils.apply_limit(statement, limit)
         compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
-        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         async with compute_sessionmaker() as compute_session:
             result = await compute_session.execute(statement)
             job_entries = result.scalars().all()
             if back:
                 job_entries = reversed(job_entries)
-            async with catalogue_sessionmaker() as catalogue_session:
+            with catalogue_sessionmaker() as catalogue_session:
                 jobs = []
                 for job in job_entries:
                     job = utils.dictify_job(job)
-                    dataset_metadata = await utils.lookup_resource_by_id(
+                    dataset_metadata = utils.lookup_resource_by_id(
                         job["process_id"], self.process_table, catalogue_session
                     )
                     results = await utils.parse_results_from_broker_db(
