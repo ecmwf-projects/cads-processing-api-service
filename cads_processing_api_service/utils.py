@@ -58,7 +58,6 @@ class JobSortCriterion(str, enum.Enum):
         ttl=config.ensure_settings().cache_resources_ttl,
     ),
     key=lambda id, record, session: cachetools.keys.hashkey(id, record),
-    info=True,
 )
 async def lookup_resource_by_id(
     id: str,
