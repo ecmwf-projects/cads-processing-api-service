@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import base64
 import datetime
 import enum
@@ -58,6 +59,7 @@ class JobSortCriterion(str, enum.Enum):
         ttl=config.ensure_settings().cache_resources_ttl,
     ),
     key=lambda id, record, session: cachetools.keys.hashkey(id, record),
+    lock=asyncio.Lock(),
 )
 async def lookup_resource_by_id(
     id: str,
