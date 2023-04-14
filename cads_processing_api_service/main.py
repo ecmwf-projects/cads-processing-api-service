@@ -39,8 +39,8 @@ def add_user_request_flag(
 
 @asynccontextmanager
 async def lifespan(application: fastapi.FastAPI):
-    cads_common.logging.config_logging([add_user_request_flag])
-    cads_common.logging.configure_logger()
+    cads_common.logging.structlog_configure([add_user_request_flag])
+    cads_common.logging.logging_configure()
     yield
 
 
@@ -51,6 +51,7 @@ app = ogc_api_processes_fastapi.instantiate_app(
     exception_handler=exceptions.exception_handler,
 )
 app = exceptions.include_exception_handlers(app)
+# FIXME : "app.router.lifespan_context" is not officially supported and would likely break
 app.router.lifespan_context = lifespan
 app.router.add_api_route(
     "/processes/{process_id}/constraints",
