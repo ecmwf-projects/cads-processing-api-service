@@ -17,11 +17,12 @@
 import urllib.parse
 from typing import Any
 
-# import cachetools
+import cachetools
+import cachetools.keys
 import fastapi
 import httpx
 
-from . import config, exceptions
+from . import cache, config, exceptions
 
 VERIFICATION_ENDPOINTS = {
     "PRIVATE-TOKEN": "/account/verification/pat",
@@ -70,13 +71,12 @@ def get_auth_header(
     return auth_header
 
 
-# @cachetools.cached(
-#     cache=cachetools.TTLCache(
-#         maxsize=config.ensure_settings().cache_users_maxsize,
-#         ttl=config.ensure_settings().cache_users_ttl,
-#     ),
-#     info=True,
-# )
+@cache.async_cached(
+    cache=cachetools.TTLCache(
+        maxsize=config.ensure_settings().cache_users_maxsize,
+        ttl=config.ensure_settings().cache_users_ttl,
+    ),
+)
 async def authenticate_user(auth_header: tuple[str, str]) -> str | None:
     """Verify user authentication.
 
@@ -161,13 +161,12 @@ def get_contextual_accepted_licences(
     return accepted_licences
 
 
-# @cachetools.cached(
-#     cache=cachetools.TTLCache(
-#         maxsize=config.ensure_settings().cache_users_maxsize,
-#         ttl=config.ensure_settings().cache_users_ttl,
-#     ),
-#     info=True,
-# )
+@cache.async_cached(
+    cache=cachetools.TTLCache(
+        maxsize=config.ensure_settings().cache_users_maxsize,
+        ttl=config.ensure_settings().cache_users_ttl,
+    ),
+)
 async def get_stored_accepted_licences(
     auth_header: tuple[str, str]
 ) -> set[tuple[str, int]]:
