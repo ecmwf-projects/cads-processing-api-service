@@ -17,9 +17,9 @@
 import urllib.parse
 from typing import Any
 
-import cachetools
+# import cachetools
 import fastapi
-import requests
+import httpx
 
 from . import config, exceptions
 
@@ -70,14 +70,14 @@ def get_auth_header(
     return auth_header
 
 
-@cachetools.cached(
-    cache=cachetools.TTLCache(
-        maxsize=config.ensure_settings().cache_users_maxsize,
-        ttl=config.ensure_settings().cache_users_ttl,
-    ),
-    info=True,
-)
-def authenticate_user(auth_header: tuple[str, str]) -> str | None:
+# @cachetools.cached(
+#     cache=cachetools.TTLCache(
+#         maxsize=config.ensure_settings().cache_users_maxsize,
+#         ttl=config.ensure_settings().cache_users_ttl,
+#     ),
+#     info=True,
+# )
+async def authenticate_user(auth_header: tuple[str, str]) -> str | None:
     """Verify user authentication.
 
     Verify if the provided authentication header corresponds to a registered user.
@@ -105,7 +105,10 @@ def authenticate_user(auth_header: tuple[str, str]) -> str | None:
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}{verification_endpoint}",
     )
-    response = requests.post(request_url, headers={auth_header[0]: auth_header[1]})
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            request_url, headers={auth_header[0]: auth_header[1]}
+        )
     if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
         raise exceptions.PermissionDenied(
             status_code=response.status_code,
@@ -158,14 +161,16 @@ def get_contextual_accepted_licences(
     return accepted_licences
 
 
-@cachetools.cached(
-    cache=cachetools.TTLCache(
-        maxsize=config.ensure_settings().cache_users_maxsize,
-        ttl=config.ensure_settings().cache_users_ttl,
-    ),
-    info=True,
-)
-def get_stored_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
+# @cachetools.cached(
+#     cache=cachetools.TTLCache(
+#         maxsize=config.ensure_settings().cache_users_maxsize,
+#         ttl=config.ensure_settings().cache_users_ttl,
+#     ),
+#     info=True,
+# )
+async def get_stored_accepted_licences(
+    auth_header: tuple[str, str]
+) -> set[tuple[str, int]]:
     """Get licences accepted by a user stored in the Extended Profiles database.
 
     The user is identified by the provided authentication header.
@@ -185,7 +190,10 @@ def get_stored_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str,
         settings.internal_proxy_url,
         f"{settings.profiles_base_url}/account/licences",
     )
-    response = requests.get(request_url, headers={auth_header[0]: auth_header[1]})
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            request_url, headers={auth_header[0]: auth_header[1]}
+        )
     response.raise_for_status()
     licences = response.json()["licences"]
     accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}

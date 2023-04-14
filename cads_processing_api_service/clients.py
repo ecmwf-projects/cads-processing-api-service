@@ -181,9 +181,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Submitted job's status information.
         """
-        user_uid = auth.authenticate_user(auth_header)
+        user_uid = await auth.authenticate_user(auth_header)
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
-        stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
+        stored_accepted_licences = await auth.get_stored_accepted_licences(auth_header)
         execution_content = execution_content.dict()
         catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
         async with catalogue_sessionmaker() as catalogue_session:
@@ -261,7 +261,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             List of jobs status information.
         """
-        user_uid = auth.authenticate_user(auth_header)
+        user_uid = await auth.authenticate_user(auth_header)
         job_filters = {
             "process_id": processID,
             "status": status,
@@ -338,7 +338,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Job status information.
         """
-        user_uid = auth.authenticate_user(auth_header)
+        user_uid = await auth.authenticate_user(auth_header)
         compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
         async with compute_sessionmaker() as compute_session:
             job = await utils.get_job_from_broker_db(
@@ -372,7 +372,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job results.
         """
         structlog.contextvars.bind_contextvars(job_id=job_id)
-        user_uid = auth.authenticate_user(auth_header)
+        user_uid = await auth.authenticate_user(auth_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
         compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
         async with compute_sessionmaker() as compute_session:
@@ -407,7 +407,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job status information
         """
         structlog.contextvars.bind_contextvars(job_id=job_id)
-        user_uid = auth.authenticate_user(auth_header)
+        user_uid = await auth.authenticate_user(auth_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
         compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
         async with compute_sessionmaker() as compute_session:
