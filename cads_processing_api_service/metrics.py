@@ -15,6 +15,7 @@ import starlette.requests
 import starlette.responses
 import starlette_exporter
 from sqlalchemy.orm import session
+import datetime
 
 from . import db_utils
 
@@ -35,15 +36,22 @@ TOTAL_USERS_GAUGE = prometheus_client.Gauge(
     "total_users", "Total users", labelnames=("status", "dataset_id")
 )
 
+LAST_QUERY_TIME = None
+
 
 def handle_metrics(
     request: starlette.requests.Request,
 ) -> starlette.responses.Response:
-    compute_sessionmaker = db_utils.get_compute_sessionmaker()
-    with compute_sessionmaker() as compute_session:
-        set_request_metrics(compute_session)
-        set_user_metrics(compute_session)
-    return starlette_exporter.handle_metrics(request)
+    global LAST_QUERY_TIME
+    if LAST_QUERY_TIME is None or datetime.timedelta(minutes=5) > (
+        datetime.datetime.now() - LAST_QUERY_TIME
+    ):
+        compute_sessionmaker = db_utils.get_compute_sessionmaker()
+        with compute_sessionmaker() as compute_session:
+            set_request_metrics(compute_session)
+            set_user_metrics(compute_session)
+        LAST_QUERY_TIME = datetime.datetime.now()
+        return starlette_exporter.handle_metrics(request)
 
 
 def set_request_metrics(compute_session: session):
