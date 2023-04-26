@@ -26,6 +26,7 @@ import cads_catalogue.database
 import fastapi
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
+import sqlalchemy as sa
 import sqlalchemy.exc
 import sqlalchemy.orm
 import sqlalchemy.orm.attributes
@@ -83,12 +84,12 @@ def lookup_resource_by_id(
         Raised if no resource corresponding to the provided `id` is found.
     """
     try:
-        row: cads_catalogue.database.Resource = (
-            session.query(record)  # type: ignore
+        row: cads_catalogue.database.Resource = session.execute(
+            sa.select(record)  # type: ignore
             .options(sqlalchemy.orm.joinedload(record.licences))
+            .unique()
             .filter(record.resource_uid == id)
-            .one()
-        )
+        ).scalar_one()
     except sqlalchemy.orm.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     session.expunge(row)  # type:ignore

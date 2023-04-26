@@ -27,7 +27,7 @@ dependencies = [
   "ogc-api-processes-fastapi",
   "prometheus_client",
   "requests",
-  "sqlalchemy",
+  "sqlalchemy>=2.0.9",
   "starlette_exporter",
   "structlog",
 ]
@@ -37,7 +37,7 @@ branch = true
 
 [tool.mypy]
 strict = true
-plugins = ["sqlmypy"]
+plugins = ["sqlalchemy.ext.mypy.plugin"]
 
 [[tool.mypy.overrides]]
 module = [
