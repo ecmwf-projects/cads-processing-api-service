@@ -23,6 +23,7 @@ dependencies = [
   "cads-adaptors",
   "cads-broker",
   "cads-catalogue",
+  "cads-common",
   "fastapi",
   "ogc-api-processes-fastapi",
   "prometheus_client",

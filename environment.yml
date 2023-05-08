@@ -11,7 +11,7 @@ dependencies:
 - attrs
 - asyncpg
 - cachetools
-- fastapi
+- fastapi>=0.93.0
 - pip
 - sqlalchemy>=2.0.9
 - structlog
