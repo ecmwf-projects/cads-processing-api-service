@@ -443,10 +443,8 @@ def parse_results_from_broker_db(
 
 def make_status_info(
     job: dict[str, Any],
-    compute_session: sqlalchemy.orm.Session,
-    catalogue_session: sqlalchemy.orm.Session,
-    catalogue_table: type[cads_catalogue.database.Resource],
-    add_results: bool = True,
+    results: dict[str, Any] | None = None,
+    dataset_metadata: cads_catalogue.database.Resource | None = None,
 ) -> models.StatusInfo:
     """Compose job's status information.
 
@@ -454,12 +452,10 @@ def make_status_info(
     ----------
     job : dict[str, Any]
         Job description.
-    compute_session : sqlalchemy.orm.Session
-        Broker database session.
-    catalogue_session : sqlalchemy.orm.Session
-        Catalogue database session.
-    add_results : bool, optional
-        Set to True (default) if results description should be added, False otherwise.
+    results : dict[str, Any] | None, optional
+        Results description, by default None
+    dataset_metadata : cads_catalogue.database.Resource | None, optional
+        Dataset metadata, by default None
 
     Returns
     -------
@@ -480,9 +476,8 @@ def make_status_info(
         updated=job["updated_at"],
         request=job["request_body"]["kwargs"]["request"],
     )
-    dataset = lookup_resource_by_id(process_id, catalogue_table, catalogue_session)
-    status_info.processDescription = {"title": dataset.title}
-    if add_results:
-        results = parse_results_from_broker_db(job, compute_session)
+    if results:
         status_info.results = results
+    if dataset_metadata:
+        status_info.processDescription = {"title": dataset_metadata.title}
     return status_info
