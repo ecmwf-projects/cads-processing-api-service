@@ -14,8 +14,8 @@ dependencies:
 - sphinx-autoapi
 # DO NOT EDIT ABOVE THIS LINE, ADD DEPENDENCIES BELOW
 - pip
-- sqlalchemy-stubs
 - types-requests
 - pip:
+  - sqlalchemy[mypy]
   - git+https://github.com/ecmwf-projects/cacholote.git
   - git+https://github.com/ecmwf-projects/ogc-api-processes-fastapi.git

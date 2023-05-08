@@ -11,11 +11,10 @@ dependencies:
 - attrs
 - asyncpg
 - cachetools
-- fastapi
+- fastapi>=0.93.0
 - pip
-- sqlalchemy==1.4*
+- sqlalchemy>=2.0.9
 - structlog
 - uvicorn
 - pip:
-  - fastapi-utils
   - starlette-exporter

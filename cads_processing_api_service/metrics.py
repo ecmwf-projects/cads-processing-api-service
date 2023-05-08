@@ -19,7 +19,6 @@ import starlette.requests
 import starlette.responses
 import starlette_exporter
 from sqlalchemy.orm import session
-import datetime
 
 from . import db_utils
 
