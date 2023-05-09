@@ -19,6 +19,7 @@ import functools
 import cads_broker.config
 import cads_catalogue.config
 import sqlalchemy
+import sqlalchemy.ext.asyncio
 
 
 @functools.lru_cache()
@@ -55,3 +56,28 @@ def get_catalogue_sessionmaker() -> sqlalchemy.orm.sessionmaker:
         pool_recycle=catalogue_settings.pool_recycle,
     )
     return sqlalchemy.orm.sessionmaker(catalogue_engine)
+
+
+@functools.lru_cache()
+def get_compute_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+    """Get an async sqlalchemy.orm.sessionmaker object bound to the Broker database.
+
+    Returns
+    -------
+    sqlalchemy.orm.sessionmaker
+        sqlalchemy.orm.sessionmaker object bound to the Broker database.
+    """
+    broker_settings = cads_broker.config.ensure_settings()
+    connection_string = broker_settings.connection_string.replace(
+        "postgresql", "postgresql+asyncpg"
+    )
+    broker_engine = sqlalchemy.ext.asyncio.create_async_engine(
+        connection_string,
+        pool_timeout=broker_settings.pool_timeout,
+        pool_recycle=broker_settings.pool_recycle,
+    )
+    sessionmaker = sqlalchemy.ext.asyncio.async_sessionmaker(
+        broker_engine,
+        expire_on_commit=False,
+    )
+    return sessionmaker
