@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import asyncio
 import uuid
 
 import attrs
@@ -39,6 +40,8 @@ import structlog
 from . import adaptors, auth, config, db_utils, models, serializers, utils
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+semaphore = asyncio.Semaphore(20)
 
 
 @attrs.define
@@ -343,7 +346,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         # user_uid = auth.authenticate_user(auth_header)
         compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
-        async with compute_sessionmaker() as compute_session:
+        async with semaphore, compute_sessionmaker() as compute_session:
+            # async with compute_sessionmaker() as compute_session:
             job = await utils.get_job_from_broker_db_async(
                 job_id=job_id, session=compute_session
             )
