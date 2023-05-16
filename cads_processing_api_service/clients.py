@@ -41,7 +41,7 @@ from . import adaptors, auth, config, db_utils, models, serializers, utils
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-semaphore = asyncio.Semaphore(20)
+semaphore = asyncio.Semaphore(15)
 
 
 @attrs.define
