@@ -41,7 +41,7 @@ from . import adaptors, auth, config, db_utils, models, serializers, utils
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-semaphore = asyncio.Semaphore(15)
+compute_semaphore = asyncio.Semaphore(15)
 
 
 @attrs.define
@@ -344,14 +344,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Job status information.
         """
-        # user_uid = auth.authenticate_user(auth_header)
+        user_uid = await auth.authenticate_user_async(auth_header)
         compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
-        async with semaphore, compute_sessionmaker() as compute_session:
-            # async with compute_sessionmaker() as compute_session:
+        async with compute_semaphore, compute_sessionmaker() as compute_session:
             job = await utils.get_job_from_broker_db_async(
                 job_id=job_id, session=compute_session
             )
-        # auth.verify_permission(user_uid, job)
+        auth.verify_permission(user_uid, job)
         status_info = utils.make_status_info(job=job)
         return status_info
 
