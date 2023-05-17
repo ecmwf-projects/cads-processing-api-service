@@ -20,7 +20,6 @@ from typing import Any
 import cachetools
 import fastapi
 import httpx
-import requests
 
 from . import cache, config, exceptions
 
@@ -71,60 +70,13 @@ def get_auth_header(
     return auth_header
 
 
-@cachetools.cached(
-    cache=cachetools.TTLCache(
-        maxsize=config.ensure_settings().cache_users_maxsize,
-        ttl=config.ensure_settings().cache_users_ttl,
-    ),
-    info=True,
-)
-def authenticate_user(auth_header: tuple[str, str]) -> str | None:
-    """Verify user authentication.
-
-    Verify if the provided authentication header corresponds to a registered user.
-    If so, returns the registered user identifier.
-
-    Parameters
-    ----------
-    auth_header : tuple[str, str]
-        Authentication header.
-
-    Returns
-    -------
-    str | None
-        Registerd user identifier.
-
-    Raises
-    ------
-    exceptions.PermissionDenied
-        Raised if the provided authentication header doesn't correspond to a
-        registered/authorized user.
-    """
-    verification_endpoint = VERIFICATION_ENDPOINTS[auth_header[0]]
-    settings = config.ensure_settings()
-    request_url = urllib.parse.urljoin(
-        settings.internal_proxy_url,
-        f"{settings.profiles_base_url}{verification_endpoint}",
-    )
-    response = requests.post(request_url, headers={auth_header[0]: auth_header[1]})
-    if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
-        raise exceptions.PermissionDenied(
-            status_code=response.status_code,
-            title=response.json()["title"],
-        )
-    response.raise_for_status()
-    user: dict[str, Any] = response.json()
-    user_uid: str | None = user.get("sub", None)
-    return user_uid
-
-
 @cache.async_cached(
     cache=cachetools.TTLCache(
         maxsize=config.ensure_settings().cache_users_maxsize,
         ttl=config.ensure_settings().cache_users_ttl,
     ),
 )
-async def authenticate_user_async(auth_header: tuple[str, str]) -> str | None:
+async def authenticate_user(auth_header: tuple[str, str]) -> str | None:
     """Verify user authentication.
 
     Verify if the provided authentication header corresponds to a registered user.
@@ -208,47 +160,13 @@ def get_contextual_accepted_licences(
     return accepted_licences
 
 
-@cachetools.cached(
-    cache=cachetools.TTLCache(
-        maxsize=config.ensure_settings().cache_users_maxsize,
-        ttl=config.ensure_settings().cache_users_ttl,
-    ),
-    info=True,
-)
-def get_stored_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
-    """Get licences accepted by a user stored in the Extended Profiles database.
-
-    The user is identified by the provided authentication header.
-
-    Parameters
-    ----------
-    auth_header : tuple[str, str]
-        Authentication header
-
-    Returns
-    -------
-    set[tuple[str, int]]
-        Accepted licences.
-    """
-    settings = config.ensure_settings()
-    request_url = urllib.parse.urljoin(
-        settings.internal_proxy_url,
-        f"{settings.profiles_base_url}/account/licences",
-    )
-    response = requests.get(request_url, headers={auth_header[0]: auth_header[1]})
-    response.raise_for_status()
-    licences = response.json()["licences"]
-    accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}
-    return accepted_licences
-
-
 @cache.async_cached(
     cache=cachetools.TTLCache(
         maxsize=config.ensure_settings().cache_users_maxsize,
         ttl=config.ensure_settings().cache_users_ttl,
     ),
 )
-async def get_stored_accepted_licences_async(
+async def get_stored_accepted_licences(
     auth_header: tuple[str, str]
 ) -> set[tuple[str, int]]:
     """Get licences accepted by a user stored in the Extended Profiles database.

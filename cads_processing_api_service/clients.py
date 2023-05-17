@@ -138,7 +138,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker_async()
         async with catalogue_sessionmaker() as catalogue_session:
-            resource = await utils.lookup_resource_by_id_async(
+            resource = await utils.lookup_resource_by_id(
                 id=process_id,
                 record=self.process_table,
                 session=catalogue_session,
@@ -187,15 +187,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Submitted job's status information.
         """
-        user_uid = await auth.authenticate_user_async(auth_header)
+        user_uid = await auth.authenticate_user(auth_header)
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
-        stored_accepted_licences = await auth.get_stored_accepted_licences_async(
-            auth_header
-        )
+        stored_accepted_licences = await auth.get_stored_accepted_licences(auth_header)
         execution_content = execution_content.dict()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker_async()
         async with catalogue_sessionmaker() as catalogue_session:
-            resource = await utils.lookup_resource_by_id_async(
+            resource = await utils.lookup_resource_by_id(
                 id=process_id,
                 record=self.process_table,
                 session=catalogue_session,
@@ -272,7 +270,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             List of jobs status information.
         """
-        user_uid = await auth.authenticate_user_async(auth_header)
+        user_uid = await auth.authenticate_user(auth_header)
         job_filters = {
             "process_id": processID,
             "status": status,
@@ -305,13 +303,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 jobs = []
                 for job in job_entries:
                     job = utils.dictify_job(job)
-                    dataset_metadata = await utils.lookup_resource_by_id_async(
+                    dataset_metadata = await utils.lookup_resource_by_id(
                         job["process_id"],
                         self.process_table,
                         catalogue_session,
                         catalogue_semaphore,
                     )
-                    results = await utils.parse_results_from_broker_db_async(
+                    results = await utils.parse_results_from_broker_db(
                         job, compute_session
                     )
                     jobs.append(
@@ -350,10 +348,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Job status information.
         """
-        user_uid = await auth.authenticate_user_async(auth_header)
+        user_uid = await auth.authenticate_user(auth_header)
         compute_sessionmaker = db_utils.get_compute_sessionmaker_async()
         async with compute_semaphore, compute_sessionmaker() as compute_session:
-            job = await utils.get_job_from_broker_db_async(
+            job = await utils.get_job_from_broker_db(
                 job_id=job_id, session=compute_session
             )
         auth.verify_permission(user_uid, job)
@@ -382,15 +380,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job results.
         """
         structlog.contextvars.bind_contextvars(job_id=job_id)
-        user_uid = await auth.authenticate_user_async(auth_header)
+        user_uid = await auth.authenticate_user(auth_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
         compute_sessionmaker = db_utils.get_compute_sessionmaker_async()
         async with compute_semaphore, compute_sessionmaker() as compute_session:
-            job = await utils.get_job_from_broker_db_async(
+            job = await utils.get_job_from_broker_db(
                 job_id=job_id, session=compute_session
             )
             auth.verify_permission(user_uid, job)
-            results = await utils.get_results_from_broker_db_async(
+            results = await utils.get_results_from_broker_db(
                 job=job, session=compute_session
             )
         return results
@@ -417,11 +415,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job status information
         """
         structlog.contextvars.bind_contextvars(job_id=job_id)
-        user_uid = await auth.authenticate_user_async(auth_header)
+        user_uid = await auth.authenticate_user(auth_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
         compute_sessionmaker = db_utils.get_compute_sessionmaker_async()
         async with compute_semaphore, compute_sessionmaker() as compute_session:
-            job = await utils.get_job_from_broker_db_async(
+            job = await utils.get_job_from_broker_db(
                 job_id=job_id, session=compute_session
             )
             auth.verify_permission(user_uid, job)

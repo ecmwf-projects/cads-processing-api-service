@@ -29,7 +29,6 @@ import cads_catalogue.database
 import fastapi
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
-import sqlalchemy as sa
 import sqlalchemy.exc
 import sqlalchemy.ext.asyncio
 import sqlalchemy.orm
@@ -53,56 +52,6 @@ class JobSortCriterion(str, enum.Enum):
     created_at_desc: str = "-created"
 
 
-@cachetools.cached(  # type: ignore
-    cache=cachetools.TTLCache(
-        maxsize=config.ensure_settings().cache_resources_maxsize,
-        ttl=config.ensure_settings().cache_resources_ttl,
-    ),
-    key=lambda id, record, session: cachetools.keys.hashkey(id, record),
-    info=True,
-)
-def lookup_resource_by_id(
-    id: str,
-    record: type[cads_catalogue.database.Resource],
-    session: sqlalchemy.orm.Session,
-) -> cads_catalogue.database.Resource:
-    """Look for the resource identified by `id` into the Catalogue database.
-
-    Parameters
-    ----------
-    id : str
-        Resource identifier.
-    record : type[cads_catalogue.database.Resource]
-        Catalogue database table.
-    session : sqlalchemy.orm.Session
-        Catalogue database session.
-
-    Returns
-    -------
-    cads_catalogue.database.Resource
-        Found resource.
-
-    Raises
-    ------
-    ogc_api_processes_fastapi.exceptions.NoSuchProcess
-        Raised if no resource corresponding to the provided `id` is found.
-    """
-    try:
-        row: cads_catalogue.database.Resource = (
-            session.execute(
-                sa.select(record)  # type: ignore
-                .options(sqlalchemy.orm.joinedload(record.licences))
-                .filter(record.resource_uid == id)
-            )
-            .unique()
-            .scalar_one()
-        )
-    except sqlalchemy.orm.exc.NoResultFound:
-        raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
-    session.expunge(row)  # type:ignore
-    return row
-
-
 @cache.async_cached(
     cache=cachetools.TTLCache(
         maxsize=config.ensure_settings().cache_resources_maxsize,
@@ -110,7 +59,7 @@ def lookup_resource_by_id(
     ),
     key=lambda id, record, session, semaphore: cachetools.keys.hashkey(id, record),
 )
-async def lookup_resource_by_id_async(
+async def lookup_resource_by_id(
     id: str,
     record: type[cads_catalogue.database.Resource],
     session: sqlalchemy.ext.asyncio.AsyncSession,
@@ -404,37 +353,7 @@ def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
     return job
 
 
-def get_job_from_broker_db(
-    job_id: str, session: sqlalchemy.orm.Session
-) -> dict[str, Any]:
-    """Get job description from the Broker database.
-
-    Parameters
-    ----------
-    job_id : str
-        Job identifer.
-    session : sqlalchemy.orm.Session
-        Broker database session.
-
-    Returns
-    -------
-    dict[str, Any]
-        Job description.
-
-    Raises
-    ------
-    ogc_api_processes_fastapi.exceptions.NoSuchJob
-        Raised if no job corresponding to the provided identifier is found.
-    """
-    try:
-        request = cads_broker.database.get_request(request_uid=job_id, session=session)
-    except cads_broker.database.NoResultFound:
-        raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-    job = dictify_job(request)
-    return job
-
-
-async def get_job_from_broker_db_async(
+async def get_job_from_broker_db(
     job_id: str, session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
     """Get job description from the Broker database.
@@ -466,53 +385,7 @@ async def get_job_from_broker_db_async(
     return job
 
 
-def get_results_from_broker_db(
-    job: dict[str, Any], session: sqlalchemy.orm.Session
-) -> dict[str, Any]:
-    """Get job results description from the Broker database.
-
-    Parameters
-    ----------
-    job : dict[str, Any]
-        Job status description.
-    session : sqlalchemy.orm.Session
-        Broker database session.
-
-    Returns
-    -------
-    dict[str, Any]
-        Job results description.
-
-    Raises
-    ------
-    ogc_api_processes_fastapi.exceptions.JobResultsFailed
-        Raised if the job for which results have been requested has status `failed`.
-    results_not_ready_exc
-        Raised if job's results are not yet ready.
-    """
-    job_status = job["status"]
-    job_id = job["request_uid"]
-    if job_status == "successful":
-        try:
-            asset_value = cads_broker.database.get_request_result(
-                request_uid=job_id, session=session
-            )["args"][0]
-            results = {"asset": {"value": asset_value}}
-        except Exception:
-            raise exceptions.JobResultsExpired()
-    elif job_status == "failed":
-        raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
-            status_code=fastapi.status.HTTP_400_BAD_REQUEST,
-            traceback=job["response_traceback"],
-        )
-    elif job_status in ("accepted", "running"):
-        raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
-            detail=f"status of {job_id} is '{job_status}'"
-        )
-    return results
-
-
-async def get_results_from_broker_db_async(
+async def get_results_from_broker_db(
     job: dict[str, Any], session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
     """Get job results description from the Broker database.
@@ -558,30 +431,11 @@ async def get_results_from_broker_db_async(
     return results
 
 
-def parse_results_from_broker_db(
+async def parse_results_from_broker_db(
     job: dict[str, Any], session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
     try:
-        results = get_results_from_broker_db(job=job, session=session)
-    except ogc_api_processes_fastapi.exceptions.OGCAPIException as exc:
-        results = ogc_api_processes_fastapi.models.Exception(
-            type=exc.type,
-            title=exc.title,
-            status=exc.status_code,
-            detail=exc.detail,
-            trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
-            traceback="".join(
-                traceback.TracebackException.from_exception(exc).format()
-            ),
-        ).dict(exclude_none=True)
-    return results
-
-
-async def parse_results_from_broker_db_async(
-    job: dict[str, Any], session: sqlalchemy.orm.Session
-) -> dict[str, Any]:
-    try:
-        results = await get_results_from_broker_db_async(job=job, session=session)
+        results = await get_results_from_broker_db(job=job, session=session)
     except ogc_api_processes_fastapi.exceptions.OGCAPIException as exc:
         results = ogc_api_processes_fastapi.models.Exception(
             type=exc.type,
