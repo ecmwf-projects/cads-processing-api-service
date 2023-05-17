@@ -376,7 +376,7 @@ async def get_job_from_broker_db(
         Raised if no job corresponding to the provided identifier is found.
     """
     try:
-        request = await cads_broker.database.get_request_async(
+        request = await cads_broker.database.get_request(
             request_uid=job_id, session=session
         )
     except cads_broker.database.NoResultFound:
@@ -413,7 +413,7 @@ async def get_results_from_broker_db(
     job_id = job["request_uid"]
     if job_status == "successful":
         try:
-            asset_value = await cads_broker.database.get_request_result_async(
+            asset_value = await cads_broker.database.get_request_result(
                 request_uid=job_id, session=session
             )
             results = {"asset": {"value": asset_value["args"][0]}}
