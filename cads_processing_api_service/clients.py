@@ -209,7 +209,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         compute_sessionmaker = db_utils.get_compute_sessionmaker_async()
         async with compute_semaphore, compute_sessionmaker() as compute_session:
-            job = await cads_broker.database.create_request_async(
+            job = await cads_broker.database.create_request(
                 session=compute_session,
                 request_uid=job_id,
                 user_uid=user_uid,
@@ -423,7 +423,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 job_id=job_id, session=compute_session
             )
             auth.verify_permission(user_uid, job)
-            job = await cads_broker.database.delete_request_async(
+            job = await cads_broker.database.delete_request(
                 request_uid=job_id, session=compute_session
             )
         job = utils.dictify_job(job)
