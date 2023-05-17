@@ -49,7 +49,7 @@ TOTAL_USERS_GAUGE = prometheus_client.Gauge(
 def handle_metrics(
     request: starlette.requests.Request,
 ) -> starlette.responses.Response:
-    compute_sessionmaker = db_utils.get_compute_sessionmaker()
+    compute_sessionmaker = db_utils.get_compute_sessionmaker_sync()
     with compute_sessionmaker() as compute_session:
         set_request_metrics(compute_session)
         set_user_metrics(compute_session)

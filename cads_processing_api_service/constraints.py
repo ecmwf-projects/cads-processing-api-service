@@ -6,17 +6,19 @@ import cads_adaptors.constraints
 import cads_catalogue
 import fastapi
 
-from . import adaptors, db_utils, exceptions, utils
+from . import adaptors, clients, db_utils, exceptions, utils
 
 
-def apply_constraints(
+async def apply_constraints(
     process_id: str = fastapi.Path(...),
     request: dict[str, Any] = fastapi.Body(...),
 ) -> dict[str, list[str]]:
     record = cads_catalogue.database.Resource
-    catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
-    with catalogue_sessionmaker() as catalogue_session:
-        dataset = utils.lookup_resource_by_id(process_id, record, catalogue_session)
+    catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker_async()
+    async with catalogue_sessionmaker() as catalogue_session:
+        dataset = await utils.lookup_resource_by_id_async(
+            process_id, record, catalogue_session, clients.catalogue_semaphore
+        )
     adaptor: cads_adaptors.adaptor.AbstractAdaptor = adaptors.instantiate_adaptor(
         dataset
     )

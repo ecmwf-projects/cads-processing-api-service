@@ -98,7 +98,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.process_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
-        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker_async()
         async with catalogue_semaphore, catalogue_sessionmaker() as catalogue_session:
             results = await catalogue_session.execute(statement)
             processes_entries = results.scalars().all()
@@ -136,7 +136,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.ProcessDescription
             Process description.
         """
-        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker_async()
         async with catalogue_sessionmaker() as catalogue_session:
             resource = await utils.lookup_resource_by_id_async(
                 id=process_id,
@@ -193,7 +193,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             auth_header
         )
         execution_content = execution_content.dict()
-        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker_async()
         async with catalogue_sessionmaker() as catalogue_session:
             resource = await utils.lookup_resource_by_id_async(
                 id=process_id,
@@ -209,7 +209,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_kwargs = adaptors.make_system_job_kwargs(
             resource, execution_content, adaptor.resources
         )
-        compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
+        compute_sessionmaker = db_utils.get_compute_sessionmaker_async()
         async with compute_semaphore, compute_sessionmaker() as compute_session:
             job = await cads_broker.database.create_request_async(
                 session=compute_session,
@@ -294,8 +294,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.job_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
-        compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
-        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
+        compute_sessionmaker = db_utils.get_compute_sessionmaker_async()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker_async()
         async with compute_semaphore, compute_sessionmaker() as compute_session:
             result = await compute_session.execute(statement)
             job_entries = result.scalars().all()
@@ -351,7 +351,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job status information.
         """
         user_uid = await auth.authenticate_user_async(auth_header)
-        compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
+        compute_sessionmaker = db_utils.get_compute_sessionmaker_async()
         async with compute_semaphore, compute_sessionmaker() as compute_session:
             job = await utils.get_job_from_broker_db_async(
                 job_id=job_id, session=compute_session
@@ -384,7 +384,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         structlog.contextvars.bind_contextvars(job_id=job_id)
         user_uid = await auth.authenticate_user_async(auth_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
-        compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
+        compute_sessionmaker = db_utils.get_compute_sessionmaker_async()
         async with compute_semaphore, compute_sessionmaker() as compute_session:
             job = await utils.get_job_from_broker_db_async(
                 job_id=job_id, session=compute_session
@@ -419,7 +419,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         structlog.contextvars.bind_contextvars(job_id=job_id)
         user_uid = await auth.authenticate_user_async(auth_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
-        compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
+        compute_sessionmaker = db_utils.get_compute_sessionmaker_async()
         async with compute_semaphore, compute_sessionmaker() as compute_session:
             job = await utils.get_job_from_broker_db_async(
                 job_id=job_id, session=compute_session

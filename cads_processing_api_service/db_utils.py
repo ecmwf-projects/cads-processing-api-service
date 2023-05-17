@@ -23,7 +23,7 @@ import sqlalchemy.ext.asyncio
 
 
 @functools.lru_cache()
-def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+def get_compute_sessionmaker_sync() -> sqlalchemy.orm.sessionmaker:
     """Get an sqlalchemy.orm.sessionmaker object bound to the Broker database.
 
     Returns
@@ -41,25 +41,7 @@ def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker:
 
 
 @functools.lru_cache()
-def get_catalogue_sessionmaker() -> sqlalchemy.orm.sessionmaker:
-    """Get an sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
-
-    Returns
-    -------
-    sqlalchemy.orm.sessionmaker
-        sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
-    """
-    catalogue_settings = cads_catalogue.config.ensure_settings()
-    catalogue_engine = sqlalchemy.create_engine(
-        catalogue_settings.connection_string,
-        pool_timeout=0.1,
-        pool_recycle=catalogue_settings.pool_recycle,
-    )
-    return sqlalchemy.orm.sessionmaker(catalogue_engine)
-
-
-@functools.lru_cache()
-def get_compute_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+def get_compute_sessionmaker_async() -> sqlalchemy.orm.sessionmaker:
     """Get an async sqlalchemy.orm.sessionmaker object bound to the Broker database.
 
     Returns
@@ -84,7 +66,7 @@ def get_compute_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
 
 
 @functools.lru_cache()
-def get_catalogue_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+def get_catalogue_sessionmaker_async() -> sqlalchemy.orm.sessionmaker:
     """Get an async sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
 
     Returns
