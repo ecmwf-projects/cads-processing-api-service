@@ -1,6 +1,6 @@
 import asyncio
 import functools
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import cachetools
 import cachetools.keys
@@ -12,8 +12,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 def async_cached(
     cache: cachetools.Cache,
     key: Callable[..., Any] = cachetools.keys.hashkey,
-    # lock: Optional[contextlib.AbstractContextManager] = None,
-    locks: Optional[dict[str, asyncio.Lock]] = None,
+    locks: dict[str, asyncio.Lock] | None = None,
 ) -> Callable[..., Any]:
     if locks is None:
         locks = {}
