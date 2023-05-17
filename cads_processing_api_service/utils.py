@@ -507,11 +507,76 @@ def get_results_from_broker_db(
     return results
 
 
+async def get_results_from_broker_db_async(
+    job: dict[str, Any], session: sqlalchemy.orm.Session
+) -> dict[str, Any]:
+    """Get job results description from the Broker database.
+
+    Parameters
+    ----------
+    job : dict[str, Any]
+        Job status description.
+    session : sqlalchemy.orm.Session
+        Broker database session.
+
+    Returns
+    -------
+    dict[str, Any]
+        Job results description.
+
+    Raises
+    ------
+    ogc_api_processes_fastapi.exceptions.JobResultsFailed
+        Raised if the job for which results have been requested has status `failed`.
+    results_not_ready_exc
+        Raised if job's results are not yet ready.
+    """
+    job_status = job["status"]
+    job_id = job["request_uid"]
+    if job_status == "successful":
+        try:
+            asset_value = await cads_broker.database.get_request_result_async(
+                request_uid=job_id, session=session
+            )
+            results = {"asset": {"value": asset_value["args"][0]}}
+        except Exception:
+            raise exceptions.JobResultsExpired()
+    elif job_status == "failed":
+        raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
+            status_code=fastapi.status.HTTP_400_BAD_REQUEST,
+            traceback=job["response_traceback"],
+        )
+    elif job_status in ("accepted", "running"):
+        raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
+            detail=f"status of {job_id} is '{job_status}'"
+        )
+    return results
+
+
 def parse_results_from_broker_db(
     job: dict[str, Any], session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
     try:
         results = get_results_from_broker_db(job=job, session=session)
+    except ogc_api_processes_fastapi.exceptions.OGCAPIException as exc:
+        results = ogc_api_processes_fastapi.models.Exception(
+            type=exc.type,
+            title=exc.title,
+            status=exc.status_code,
+            detail=exc.detail,
+            trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
+            traceback="".join(
+                traceback.TracebackException.from_exception(exc).format()
+            ),
+        ).dict(exclude_none=True)
+    return results
+
+
+async def parse_results_from_broker_db_async(
+    job: dict[str, Any], session: sqlalchemy.orm.Session
+) -> dict[str, Any]:
+    try:
+        results = await get_results_from_broker_db_async(job=job, session=session)
     except ogc_api_processes_fastapi.exceptions.OGCAPIException as exc:
         results = ogc_api_processes_fastapi.models.Exception(
             type=exc.type,

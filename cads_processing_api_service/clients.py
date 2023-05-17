@@ -231,7 +231,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         return status_info
 
-    def get_jobs(
+    async def get_jobs(
         self,
         processID: list[str] | None = fastapi.Query(None),
         status: list[ogc_api_processes_fastapi.models.StatusCode]
@@ -272,7 +272,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             List of jobs status information.
         """
-        user_uid = auth.authenticate_user(auth_header)
+        user_uid = await auth.authenticate_user_async(auth_header)
         job_filters = {
             "process_id": processID,
             "status": status,
@@ -294,20 +294,26 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.job_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
-        compute_sessionmaker = db_utils.get_compute_sessionmaker()
-        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
-        with compute_sessionmaker() as compute_session:
-            job_entries = compute_session.scalars(statement).all()
+        compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
+        async with compute_semaphore, compute_sessionmaker() as compute_session:
+            result = await compute_session.execute(statement)
+            job_entries = result.scalars().all()
             if back:
                 job_entries = reversed(job_entries)
-            with catalogue_sessionmaker() as catalogue_session:
+            async with catalogue_sessionmaker() as catalogue_session:
                 jobs = []
                 for job in job_entries:
                     job = utils.dictify_job(job)
-                    dataset_metadata = utils.lookup_resource_by_id(
-                        job["process_id"], self.process_table, catalogue_session
+                    dataset_metadata = await utils.lookup_resource_by_id_async(
+                        job["process_id"],
+                        self.process_table,
+                        catalogue_session,
+                        catalogue_semaphore,
                     )
-                    results = utils.parse_results_from_broker_db(job, compute_session)
+                    results = await utils.parse_results_from_broker_db_async(
+                        job, compute_session
+                    )
                     jobs.append(
                         utils.make_status_info(
                             job=job,
@@ -315,16 +321,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                             dataset_metadata=dataset_metadata,
                         )
                     )
-            statistics = {
-                "accepted_requests": cads_broker.database.count_requests(
-                    session=compute_session, status="accepted", user_uid=user_uid
-                ),
-                "running_requests": cads_broker.database.count_requests(
-                    session=compute_session, status="running", user_uid=user_uid
-                ),
-            }
         job_list = models.JobList(jobs=jobs)
-        job_list.statistics = statistics
         pagination_query_params = utils.make_pagination_query_params(
             jobs, sort_key=sortby.lstrip("-")
         )
