@@ -41,6 +41,7 @@ from . import adaptors, auth, config, db_utils, models, serializers, utils
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
+catalogue_semaphore = asyncio.Semaphore(15)
 compute_semaphore = asyncio.Semaphore(15)
 
 
@@ -63,7 +64,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         default=cads_broker.database.SystemRequest
     )
 
-    def get_processes(
+    async def get_processes(
         self,
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
         sortby: utils.ProcessSortCriterion
@@ -97,9 +98,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.process_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
-        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
-        with catalogue_sessionmaker() as catalogue_session:
-            processes_entries = catalogue_session.scalars(statement).all()
+        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
+        async with catalogue_semaphore, catalogue_sessionmaker() as catalogue_session:
+            results = await catalogue_session.execute(statement)
+            processes_entries = results.scalars().all()
         processes = [
             serializers.serialize_process_summary(process)
             for process in processes_entries
@@ -113,7 +115,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_list._pagination_query_params = pagination_query_params
         return process_list
 
-    def get_process(
+    async def get_process(
         self,
         response: fastapi.Response,
         process_id: str = fastapi.Path(...),
@@ -134,10 +136,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.ProcessDescription
             Process description.
         """
-        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
-        with catalogue_sessionmaker() as catalogue_session:
-            resource = utils.lookup_resource_by_id(
-                id=process_id, record=self.process_table, session=catalogue_session
+        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
+        async with catalogue_sessionmaker() as catalogue_session:
+            resource = await utils.lookup_resource_by_id_async(
+                id=process_id,
+                record=self.process_table,
+                session=catalogue_session,
+                semaphore=catalogue_semaphore,
             )
         process_description = serializers.serialize_process_description(resource)
         process_description.outputs = {

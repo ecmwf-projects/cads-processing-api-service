@@ -81,3 +81,28 @@ def get_compute_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
         expire_on_commit=False,
     )
     return sessionmaker
+
+
+@functools.lru_cache()
+def get_catalogue_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+    """Get an async sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
+
+    Returns
+    -------
+    sqlalchemy.orm.sessionmaker
+        sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
+    """
+    catalogue_settings = cads_catalogue.config.ensure_settings()
+    connection_string = catalogue_settings.connection_string.replace(
+        "postgresql", "postgresql+asyncpg"
+    )
+    catalogue_engine = sqlalchemy.ext.asyncio.create_async_engine(
+        connection_string,
+        pool_timeout=0.1,
+        pool_recycle=catalogue_settings.pool_recycle,
+    )
+    sessionmaker = sqlalchemy.ext.asyncio.async_sessionmaker(
+        catalogue_engine,
+        expire_on_commit=False,
+    )
+    return sessionmaker
