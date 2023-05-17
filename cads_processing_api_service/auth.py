@@ -242,6 +242,44 @@ def get_stored_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str,
     return accepted_licences
 
 
+@cache.async_cached(
+    cache=cachetools.TTLCache(
+        maxsize=config.ensure_settings().cache_users_maxsize,
+        ttl=config.ensure_settings().cache_users_ttl,
+    ),
+)
+async def get_stored_accepted_licences_async(
+    auth_header: tuple[str, str]
+) -> set[tuple[str, int]]:
+    """Get licences accepted by a user stored in the Extended Profiles database.
+
+    The user is identified by the provided authentication header.
+
+    Parameters
+    ----------
+    auth_header : tuple[str, str]
+        Authentication header
+
+    Returns
+    -------
+    set[tuple[str, int]]
+        Accepted licences.
+    """
+    settings = config.ensure_settings()
+    request_url = urllib.parse.urljoin(
+        settings.internal_proxy_url,
+        f"{settings.profiles_base_url}/account/licences",
+    )
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            request_url, headers={auth_header[0]: auth_header[1]}
+        )
+    response.raise_for_status()
+    licences = response.json()["licences"]
+    accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}
+    return accepted_licences
+
+
 def check_licences(
     required_licences: set[tuple[str, int]], accepted_licences: set[tuple[str, int]]
 ) -> set[tuple[str, int]]:

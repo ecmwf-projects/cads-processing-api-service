@@ -107,13 +107,13 @@ def lookup_resource_by_id(
         maxsize=config.ensure_settings().cache_resources_maxsize,
         ttl=config.ensure_settings().cache_resources_ttl,
     ),
-    key=lambda id, record, session: cachetools.keys.hashkey(id, record),
+    key=lambda id, record, session, semaphore: cachetools.keys.hashkey(id, record),
 )
 async def lookup_resource_by_id_async(
     id: str,
     record: type[cads_catalogue.database.Resource],
     session: sqlalchemy.ext.asyncio.AsyncSession,
-    sempaphore: asyncio.Semaphore | None = None,
+    semaphore: asyncio.Semaphore | None = None,
 ) -> cads_catalogue.database.Resource:
     """Look for the resource identified by `id` into the Catalogue database.
 
@@ -136,7 +136,7 @@ async def lookup_resource_by_id_async(
     ogc_api_processes_fastapi.exceptions.NoSuchProcess
         Raised if no resource corresponding to the provided `id` is found.
     """
-    semaphore = sempaphore or contextlib.nullcontext()
+    semaphore = semaphore or contextlib.nullcontext()
     statement = (
         sqlalchemy.select(record)
         .options(sqlalchemy.orm.joinedload(record.licences))

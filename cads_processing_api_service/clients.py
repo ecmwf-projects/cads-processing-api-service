@@ -157,14 +157,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 ),
             ),
         }
-
         response.headers[
             "cache-control"
         ] = config.ensure_settings().public_cache_control
 
         return process_description
 
-    def post_process_execution(
+    async def post_process_execution(
         self,
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
@@ -188,14 +187,19 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Submitted job's status information.
         """
-        user_uid = auth.authenticate_user(auth_header)
+        user_uid = await auth.authenticate_user_async(auth_header)
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
-        stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
+        stored_accepted_licences = await auth.get_stored_accepted_licences_async(
+            auth_header
+        )
         execution_content = execution_content.dict()
-        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
-        with catalogue_sessionmaker() as catalogue_session:
-            resource = utils.lookup_resource_by_id(
-                id=process_id, record=self.process_table, session=catalogue_session
+        catalogue_sessionmaker = db_utils.get_catalogue_async_sessionmaker()
+        async with catalogue_sessionmaker() as catalogue_session:
+            resource = await utils.lookup_resource_by_id_async(
+                id=process_id,
+                record=self.process_table,
+                session=catalogue_session,
+                semaphore=catalogue_semaphore,
             )
         adaptor = adaptors.instantiate_adaptor(resource)
         licences = adaptor.get_licences(execution_content)
@@ -205,9 +209,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_kwargs = adaptors.make_system_job_kwargs(
             resource, execution_content, adaptor.resources
         )
-        compute_sessionmaker = db_utils.get_compute_sessionmaker()
-        with compute_sessionmaker() as compute_session:
-            job = cads_broker.database.create_request(
+        compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
+        async with compute_semaphore, compute_sessionmaker() as compute_session:
+            job = await cads_broker.database.create_request_async(
                 session=compute_session,
                 request_uid=job_id,
                 user_uid=user_uid,
