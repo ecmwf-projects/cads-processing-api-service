@@ -16,7 +16,7 @@ async def apply_constraints(
     record = cads_catalogue.database.Resource
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker_async()
     async with catalogue_sessionmaker() as catalogue_session:
-        dataset = await utils.lookup_resource_by_id_async(
+        dataset = await utils.lookup_resource_by_id(
             process_id, record, catalogue_session, clients.catalogue_semaphore
         )
     adaptor: cads_adaptors.adaptor.AbstractAdaptor = adaptors.instantiate_adaptor(
