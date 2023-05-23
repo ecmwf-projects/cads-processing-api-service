@@ -37,6 +37,7 @@ import sqlalchemy.sql.selectable
 import structlog
 
 from . import adaptors, auth, config, db_utils, models, serializers, utils
+from .metrics import handle_download_metrics
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -378,6 +379,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             auth.verify_permission(user_uid, job)
             results = utils.get_results_from_broker_db(job=job, session=compute_session)
+            handle_download_metrics(job, results)
         return results
 
     def delete_job(
