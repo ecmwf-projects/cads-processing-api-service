@@ -25,7 +25,7 @@ import fastapi.middleware.cors
 import ogc_api_processes_fastapi
 import structlog
 
-from . import clients, constraints, exceptions, metrics, middlewares
+from . import clients, constraints, exceptions, middlewares
 
 
 def add_user_request_flag(
@@ -59,7 +59,6 @@ app.router.add_api_route(
     methods=["POST"],
 )
 
-app.router.add_api_route("/metrics", metrics.handle_metrics)
 app.add_middleware(middlewares.ProcessingPrometheusMiddleware, group_paths=True)
 
 
