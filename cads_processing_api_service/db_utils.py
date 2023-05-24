@@ -73,7 +73,7 @@ def get_compute_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
     )
     broker_engine = sqlalchemy.ext.asyncio.create_async_engine(
         connection_string,
-        pool_timeout=broker_settings.pool_timeout,
+        pool_timeout=30,
         pool_recycle=broker_settings.pool_recycle,
     )
     sessionmaker = sqlalchemy.ext.asyncio.async_sessionmaker(
