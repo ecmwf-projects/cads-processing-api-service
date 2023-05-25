@@ -23,6 +23,8 @@ import cads_common.logging
 import fastapi
 import fastapi.middleware.cors
 import ogc_api_processes_fastapi
+import pyinstrument
+import starlette.responses
 import structlog
 
 from . import clients, constraints, exceptions, metrics, middlewares
@@ -82,3 +84,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def profile_request(request: fastapi.Request, call_next):
+    # profiling = request.headers.get("profile", False)
+    profiling = True
+    if profiling:
+        profiler = pyinstrument.Profiler(interval=0.0001, async_mode="enabled")
+        profiler.start()
+        await call_next(request)
+        profiler.stop()
+        return starlette.responses.HTMLResponse(profiler.output_html())
+    else:
+        return await call_next(request)
