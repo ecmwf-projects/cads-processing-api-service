@@ -91,7 +91,7 @@ async def profile_request(request: fastapi.Request, call_next):
     # profiling = request.headers.get("profile", False)
     profiling = True
     if profiling:
-        profiler = pyinstrument.Profiler(interval=0.0001, async_mode="enabled")
+        profiler = pyinstrument.Profiler(interval=0.0001, async_mode="disabled")
         profiler.start()
         await call_next(request)
         profiler.stop()
