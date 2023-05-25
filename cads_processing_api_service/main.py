@@ -95,6 +95,6 @@ async def profile_request(request: fastapi.Request, call_next):
         profiler.start()
         await call_next(request)
         profiler.stop()
-        return starlette.responses.HTMLResponse(profiler.output_html())
+        return starlette.responses.HTMLResponse(profiler.output_html(timeline=True))
     else:
         return await call_next(request)
