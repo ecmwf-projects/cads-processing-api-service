@@ -106,7 +106,10 @@ def authenticate_user(auth_header: tuple[str, str]) -> str | None:
         f"{settings.profiles_base_url}{verification_endpoint}",
     )
     response = requests.post(request_url, headers={auth_header[0]: auth_header[1]})
-    if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
+    if response.status_code in (
+        fastapi.status.HTTP_401_UNAUTHORIZED,
+        fastapi.status.HTTP_403_FORBIDDEN,
+    ):
         raise exceptions.PermissionDenied(
             status_code=response.status_code,
             title=response.json()["title"],
