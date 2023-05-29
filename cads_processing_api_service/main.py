@@ -15,6 +15,7 @@
 # limitations under the License
 
 import logging
+import sys
 import uuid
 from contextlib import asynccontextmanager
 from typing import Any, Awaitable, Callable, Mapping, MutableMapping
@@ -24,10 +25,9 @@ import fastapi
 import fastapi.middleware.cors
 import ogc_api_processes_fastapi
 import pyinstrument
-import starlette.responses
 import structlog
 
-from . import clients, constraints, exceptions, metrics, middlewares
+from . import clients, config, constraints, exceptions, metrics, middlewares
 
 
 def add_user_request_flag(
@@ -88,13 +88,16 @@ app.add_middleware(
 
 @app.middleware("http")
 async def profile_request(request: fastapi.Request, call_next):
-    # profiling = request.headers.get("profile", False)
-    profiling = True
+    profiling = config.ensure_settings().profiling
     if profiling:
-        profiler = pyinstrument.Profiler(interval=0.0001, async_mode="disabled")
+        profiler = pyinstrument.Profiler(interval=0.001, async_mode="disabled")
         profiler.start()
-        await call_next(request)
+        response = await call_next(request)
         profiler.stop()
-        return starlette.responses.HTMLResponse(profiler.output_html(timeline=True))
+        profiler.print(
+            timeline=True,
+        )
+        sys.stdout.flush()
+        return response
     else:
         return await call_next(request)

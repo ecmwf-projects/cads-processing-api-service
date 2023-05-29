@@ -38,6 +38,8 @@ class Settings(pydantic.BaseSettings):
     cache_resources_maxsize: int = 1000
     cache_resources_ttl: int = 10
 
+    profiling: bool = False
+
 
 def ensure_settings(
     settings: Settings | None = None,
