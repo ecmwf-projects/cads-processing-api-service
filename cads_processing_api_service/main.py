@@ -89,7 +89,7 @@ app.add_middleware(
 @app.middleware("http")
 async def profile_request(request: fastapi.Request, call_next):
     profiling = config.ensure_settings().profiling
-    if profiling:
+    if profiling and ("/metrics" not in request.url.path):
         profiler = pyinstrument.Profiler(interval=0.001, async_mode="disabled")
         profiler.start()
         response = await call_next(request)
