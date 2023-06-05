@@ -22,6 +22,7 @@ EXCLUDED_WIDGETS = [
     "ExclusiveFrameWidget",
     "LicenceWidget",
     "DateRangeWidget",
+    "ExclusiveGroupWidget",
 ]
 
 
