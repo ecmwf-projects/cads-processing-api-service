@@ -16,15 +16,6 @@
 
 from typing import Any
 
-EXCLUDED_WIDGETS = [
-    "LabelWidget",
-    "FreeEditionWidget",
-    "ExclusiveFrameWidget",
-    "LicenceWidget",
-    "DateRangeWidget",
-    "ExclusiveGroupWidget",
-]
-
 
 def translate_string_list(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
     input_ogc_schema: dict[str, Any] = {"type": "array", "items": {"type": "string"}}
@@ -82,6 +73,7 @@ SCHEMA_TRANSLATORS = {
     "StringListArrayWidget": translate_string_list_array,
     "StringChoiceWidget": translate_string_choice,
     "GeographicExtentMapWidget": translate_geographic_extent_map,
+    "GeographicExtentWidget": translate_geographic_extent_map,
 }
 
 
@@ -115,7 +107,7 @@ def translate_cds_form(
         ]
     ogc_inputs = {}
     for cds_input_schema in cds_form:
-        if cds_input_schema["type"] not in EXCLUDED_WIDGETS:
+        if cds_input_schema["type"] in SCHEMA_TRANSLATORS:
             ogc_inputs[cds_input_schema["name"]] = {
                 "title": cds_input_schema["label"],
                 "schema_": {**make_ogc_input_schema(cds_input_schema)},
