@@ -187,7 +187,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         execution_content = execution_content.dict()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with catalogue_sessionmaker() as catalogue_session:
-            resource = utils.lookup_resource_by_id(
+            resource: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
             )
         adaptor = adaptors.instantiate_adaptor(resource)
@@ -206,6 +206,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 origin=auth.REQUEST_ORIGIN[auth_header[0]],
                 user_uid=user_uid,
                 process_id=process_id,
+                portal=resource.portal,
                 **job_kwargs,
             )
         status_info = models.StatusInfo(
