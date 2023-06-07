@@ -23,10 +23,12 @@ import requests
 
 from . import config, exceptions
 
-VERIFICATION_ENDPOINTS = {
+VERIFICATION_ENDPOINT = {
     "PRIVATE-TOKEN": "/account/verification/pat",
     "Authorization": "/account/verification/oidc",
 }
+
+REQUEST_ORIGIN = {"PRIVATE-TOKEN": "api", "Authorization": "ui"}
 
 
 def get_auth_header(
@@ -99,7 +101,7 @@ def authenticate_user(auth_header: tuple[str, str]) -> str | None:
         Raised if the provided authentication header doesn't correspond to a
         registered/authorized user.
     """
-    verification_endpoint = VERIFICATION_ENDPOINTS[auth_header[0]]
+    verification_endpoint = VERIFICATION_ENDPOINT[auth_header[0]]
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
         settings.internal_proxy_url,

@@ -203,6 +203,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job = cads_broker.database.create_request(
                 session=compute_session,
                 request_uid=job_id,
+                origin=auth.REQUEST_ORIGIN[auth_header[0]],
                 user_uid=user_uid,
                 process_id=process_id,
                 **job_kwargs,
