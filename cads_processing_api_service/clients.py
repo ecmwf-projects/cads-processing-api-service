@@ -330,6 +330,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
+        portal_header: str = fastapi.Header("", alias="X-CADS-PORTAL"),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -348,9 +349,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job status information.
         """
         user_uid = auth.authenticate_user(auth_header)
+        portals = [p.strip() for p in portal_header.split(",")]
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
+        if job["portal"] not in portals:
+            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
         auth.verify_permission(user_uid, job)
         status_info = utils.make_status_info(job=job)
         return status_info
