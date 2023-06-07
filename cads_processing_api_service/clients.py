@@ -233,6 +233,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
+        portal_header: str = fastapi.Header("", alias="X-CADS-PORTAL"),
     ) -> models.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
 
@@ -264,10 +265,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             List of jobs status information.
         """
         user_uid = auth.authenticate_user(auth_header)
+        portals = [p.strip() for p in portal_header.split(",")]
         job_filters = {
             "process_id": processID,
             "status": status,
             "user_uid": [user_uid],
+            "portal": portals,
         }
         sort_key, sort_dir = utils.parse_sortby(sortby.name)
         statement = sqlalchemy.select(self.job_table)
