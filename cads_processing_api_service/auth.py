@@ -151,7 +151,7 @@ async def authenticate_user_async(auth_header: tuple[str, str]) -> str | None:
         Raised if the provided authentication header doesn't correspond to a
         registered/authorized user.
     """
-    verification_endpoint = VERIFICATION_ENDPOINTS[auth_header[0]]
+    verification_endpoint = VERIFICATION_ENDPOINT[auth_header[0]]
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(
         settings.internal_proxy_url,
