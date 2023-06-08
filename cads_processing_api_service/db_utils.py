@@ -36,6 +36,8 @@ def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker:
         broker_settings.connection_string,
         pool_timeout=broker_settings.pool_timeout,
         pool_recycle=broker_settings.pool_recycle,
+        pool_size=0,
+        max_overflow=10,
     )
     return sqlalchemy.orm.sessionmaker(broker_engine)
 
@@ -75,6 +77,8 @@ def get_compute_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
         connection_string,
         pool_timeout=30,
         pool_recycle=broker_settings.pool_recycle,
+        pool_size=5,
+        max_overflow=10,
     )
     sessionmaker = sqlalchemy.ext.asyncio.async_sessionmaker(
         broker_engine,
