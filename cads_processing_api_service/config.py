@@ -26,8 +26,8 @@ general_settings = None
 class Settings(pydantic.BaseSettings):
     """General settings."""
 
-    profiles_service: str
-    profiles_api_service_port: int
+    profiles_service: str = "profiles-api"
+    profiles_api_service_port: int = 8000
 
     default_cache_control: str = "max-age=2"
     default_vary: str = "PRIVATE-TOKEN, Authorization"
