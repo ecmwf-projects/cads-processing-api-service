@@ -267,7 +267,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             List of jobs status information.
         """
-        user_uid = auth.authenticate_user(auth_header)
+        user_uid = auth.authenticate_user(auth_header, portal_header)
         portals = [p.strip() for p in portal_header.split(",")]
         job_filters = {
             "process_id": processID,
