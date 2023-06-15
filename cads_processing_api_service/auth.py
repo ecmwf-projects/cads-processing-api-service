@@ -108,7 +108,10 @@ def authenticate_user(
     request_url = urllib.parse.urljoin(settings.profiles_api_url, verification_endpoint)
     response = requests.post(
         request_url,
-        headers={auth_header[0]: auth_header[1], "X-CADS-PORTAL": portal_header},
+        headers={
+            auth_header[0]: auth_header[1],
+            config.PORTAL_HEADER_NAME: portal_header,
+        },
     )
     if response.status_code in (
         fastapi.status.HTTP_401_UNAUTHORIZED,

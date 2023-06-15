@@ -63,3 +63,6 @@ def ensure_settings(
     else:
         general_settings = Settings()
     return general_settings
+
+
+PORTAL_HEADER_NAME = "X-CADS-PORTAL"
