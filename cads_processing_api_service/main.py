@@ -15,7 +15,6 @@
 # limitations under the License
 
 import logging
-import sys
 import uuid
 from contextlib import asynccontextmanager
 from typing import Any, Awaitable, Callable, Mapping, MutableMapping
@@ -24,10 +23,9 @@ import cads_common.logging
 import fastapi
 import fastapi.middleware.cors
 import ogc_api_processes_fastapi
-import pyinstrument
 import structlog
 
-from . import clients, config, constraints, exceptions, metrics, middlewares
+from . import clients, constraints, exceptions, metrics, middlewares
 
 
 def add_user_request_flag(
@@ -84,20 +82,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.middleware("http")
-async def profile_request(request: fastapi.Request, call_next):
-    profiling = config.ensure_settings().profiling
-    if profiling and ("/metrics" not in request.url.path):
-        profiler = pyinstrument.Profiler(interval=0.001, async_mode="disabled")
-        profiler.start()
-        response = await call_next(request)
-        profiler.stop()
-        profiler.print(
-            timeline=True,
-        )
-        sys.stdout.flush()
-        return response
-    else:
-        return await call_next(request)
