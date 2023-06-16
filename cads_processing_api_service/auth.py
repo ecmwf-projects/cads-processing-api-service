@@ -134,7 +134,9 @@ def authenticate_user(
         ttl=config.ensure_settings().cache_users_ttl,
     ),
 )
-async def authenticate_user_async(auth_header: tuple[str, str]) -> str | None:
+async def authenticate_user_async(
+    auth_header: tuple[str, str], portal_header: str | None = None
+) -> str | None:
     """Verify user authentication.
 
     Verify if the provided authentication header corresponds to a registered user.
@@ -158,13 +160,14 @@ async def authenticate_user_async(auth_header: tuple[str, str]) -> str | None:
     """
     verification_endpoint = VERIFICATION_ENDPOINT[auth_header[0]]
     settings = config.ensure_settings()
-    request_url = urllib.parse.urljoin(
-        settings.internal_proxy_url,
-        f"{settings.profiles_base_url}{verification_endpoint}",
-    )
+    request_url = urllib.parse.urljoin(settings.profiles_api_url, verification_endpoint)
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            request_url, headers={auth_header[0]: auth_header[1]}
+            request_url,
+            headers={
+                auth_header[0]: auth_header[1],
+                config.PORTAL_HEADER_NAME: portal_header,
+            },
         )
     if response.status_code == fastapi.status.HTTP_401_UNAUTHORIZED:
         raise exceptions.PermissionDenied(
