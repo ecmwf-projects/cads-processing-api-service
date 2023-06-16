@@ -164,6 +164,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
+        portal_header: str
+        | None = fastapi.Header(None, alias=config.PORTAL_HEADER_NAME),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
 
@@ -183,13 +185,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Submitted job's status information.
         """
-        user_uid = auth.authenticate_user(auth_header)
+        user_uid = auth.authenticate_user(auth_header, portal_header)
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
         stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
         execution_content = execution_content.dict()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with catalogue_sessionmaker() as catalogue_session:
-            resource = utils.lookup_resource_by_id(
+            resource: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
             )
         adaptor = adaptors.instantiate_adaptor(resource)
@@ -208,6 +210,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 origin=auth.REQUEST_ORIGIN[auth_header[0]],
                 user_uid=user_uid,
                 process_id=process_id,
+                portal=resource.portal,
                 **job_kwargs,
             )
         status_info = models.StatusInfo(
@@ -234,6 +237,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
+        portal_header: str
+        | None = fastapi.Header(None, alias=config.PORTAL_HEADER_NAME),
     ) -> models.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
 
@@ -264,11 +269,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             List of jobs status information.
         """
-        user_uid = auth.authenticate_user(auth_header)
+        user_uid = auth.authenticate_user(auth_header, portal_header)
+        portals = [p.strip() for p in portal_header.split(",")]
         job_filters = {
             "process_id": processID,
             "status": status,
             "user_uid": [user_uid],
+            "portal": portals,
         }
         sort_key, sort_dir = utils.parse_sortby(sortby.name)
         statement = sqlalchemy.select(self.job_table)
@@ -328,6 +335,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
+        portal_header: str
+        | None = fastapi.Header(None, alias=config.PORTAL_HEADER_NAME),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -345,12 +354,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Job status information.
         """
-        user_uid = await auth.authenticate_user_async(auth_header)
+        user_uid = await auth.authenticate_user_async(auth_header, portal_header)
+        portals = [p.strip() for p in portal_header.split(",")]
         compute_sessionmaker = db_utils.get_compute_async_sessionmaker()
         async with compute_sessionmaker() as compute_session:
             job = await utils.get_job_from_broker_db_async(
                 job_id=job_id, session=compute_session
             )
+        if job["portal"] not in portals:
+            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
         auth.verify_permission(user_uid, job)
         status_info = utils.make_status_info(job=job)
         return status_info
@@ -359,6 +371,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
+        portal_header: str
+        | None = fastapi.Header(None, alias=config.PORTAL_HEADER_NAME),
     ) -> ogc_api_processes_fastapi.models.Results:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
 
@@ -377,7 +391,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job results.
         """
         structlog.contextvars.bind_contextvars(job_id=job_id)
-        user_uid = auth.authenticate_user(auth_header)
+        user_uid = auth.authenticate_user(auth_header, portal_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
@@ -391,6 +405,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
+        portal_header: str
+        | None = fastapi.Header(None, alias=config.PORTAL_HEADER_NAME),
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `DELETE /jobs/{job_id}` endpoint.
 
@@ -409,7 +425,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job status information
         """
         structlog.contextvars.bind_contextvars(job_id=job_id)
-        user_uid = auth.authenticate_user(auth_header)
+        user_uid = auth.authenticate_user(auth_header, portal_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:

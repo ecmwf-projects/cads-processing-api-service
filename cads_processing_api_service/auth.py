@@ -80,7 +80,9 @@ def get_auth_header(
     ),
     info=True,
 )
-def authenticate_user(auth_header: tuple[str, str]) -> str | None:
+def authenticate_user(
+    auth_header: tuple[str, str], portal_header: str | None = None
+) -> str | None:
     """Verify user authentication.
 
     Verify if the provided authentication header corresponds to a registered user.
@@ -104,11 +106,14 @@ def authenticate_user(auth_header: tuple[str, str]) -> str | None:
     """
     verification_endpoint = VERIFICATION_ENDPOINT[auth_header[0]]
     settings = config.ensure_settings()
-    request_url = urllib.parse.urljoin(
-        settings.internal_proxy_url,
-        f"{settings.profiles_base_url}{verification_endpoint}",
+    request_url = urllib.parse.urljoin(settings.profiles_api_url, verification_endpoint)
+    response = requests.post(
+        request_url,
+        headers={
+            auth_header[0]: auth_header[1],
+            config.PORTAL_HEADER_NAME: portal_header,
+        },
     )
-    response = requests.post(request_url, headers={auth_header[0]: auth_header[1]})
     if response.status_code in (
         fastapi.status.HTTP_401_UNAUTHORIZED,
         fastapi.status.HTTP_403_FORBIDDEN,
@@ -236,10 +241,7 @@ def get_stored_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str,
         Accepted licences.
     """
     settings = config.ensure_settings()
-    request_url = urllib.parse.urljoin(
-        settings.internal_proxy_url,
-        f"{settings.profiles_base_url}/account/licences",
-    )
+    request_url = urllib.parse.urljoin(settings.profiles_api_url, "account/licences")
     response = requests.get(request_url, headers={auth_header[0]: auth_header[1]})
     response.raise_for_status()
     licences = response.json()["licences"]

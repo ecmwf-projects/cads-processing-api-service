@@ -26,8 +26,8 @@ general_settings = None
 class Settings(pydantic.BaseSettings):
     """General settings."""
 
-    internal_proxy_url: str = "http://proxy"
-    profiles_base_url: str = "/api/profiles/"
+    profiles_service: str = "profiles-api"
+    profiles_api_service_port: int = 8000
 
     default_cache_control: str = "max-age=2"
     default_vary: str = "PRIVATE-TOKEN, Authorization"
@@ -39,6 +39,10 @@ class Settings(pydantic.BaseSettings):
     cache_resources_ttl: int = 10
 
     profiling: bool = False
+
+    @property
+    def profiles_api_url(self) -> str:
+        return f"http://{self.profiles_service}:{self.profiles_api_service_port}"
 
 
 def ensure_settings(
@@ -61,3 +65,6 @@ def ensure_settings(
     else:
         general_settings = Settings()
     return general_settings
+
+
+PORTAL_HEADER_NAME = "X-CADS-PORTAL"
