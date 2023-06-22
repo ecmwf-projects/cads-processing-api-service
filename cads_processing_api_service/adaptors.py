@@ -17,8 +17,8 @@
 from typing import Any
 
 import cads_adaptors.adaptor
-import cads_adaptors.adaptor_utils
 import cads_catalogue.database
+from cads_adaptors.tools import adaptor_tools
 
 DEFAULT_ENTRY_POINT = "cads_adaptors:UrlCdsAdaptor"
 
@@ -85,7 +85,7 @@ def instantiate_adaptor(
     dataset: cads_catalogue.database.Resource,
 ) -> cads_adaptors.adaptor.AbstractAdaptor:
     adaptor_properties = get_adaptor_properties(dataset)
-    adaptor_class = cads_adaptors.adaptor_utils.get_adaptor_class(
+    adaptor_class = adaptor_tools.get_adaptor_class(
         entry_point=adaptor_properties["entry_point"],
         setup_code=adaptor_properties["setup_code"],
     )
