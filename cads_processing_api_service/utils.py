@@ -30,6 +30,7 @@ import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
 import sqlalchemy as sa
 import sqlalchemy.exc
+import sqlalchemy.ext.asyncio
 import sqlalchemy.orm
 import sqlalchemy.orm.attributes
 import sqlalchemy.orm.exc
