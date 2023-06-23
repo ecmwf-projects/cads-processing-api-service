@@ -85,14 +85,14 @@ def get_compute_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
 
 @functools.lru_cache()
 def get_catalogue_async_sessionmaker() -> sqlalchemy.orm.sessionmaker:
-    broker_settings = cads_broker.config.ensure_settings()
-    connection_string = broker_settings.connection_string.replace(
+    catalogue_settings = cads_catalogue.config.ensure_settings()
+    connection_string = catalogue_settings.connection_string.replace(
         "postgresql", "postgresql+asyncpg"
     )
     broker_engine = sqlalchemy.ext.asyncio.create_async_engine(
         connection_string,
         pool_timeout=0.1,
-        pool_recycle=broker_settings.pool_recycle,
+        pool_recycle=catalogue_settings.pool_recycle,
     )
     sessionmaker = sqlalchemy.ext.asyncio.async_sessionmaker(
         broker_engine,
