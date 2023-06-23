@@ -107,7 +107,7 @@ def lookup_resource_by_id(
         maxsize=config.ensure_settings().cache_resources_maxsize,
         ttl=config.ensure_settings().cache_resources_ttl,
     ),
-    key=lambda id, record, session, semaphore: cachetools.keys.hashkey(id, record),
+    key=lambda id, record, session: cachetools.keys.hashkey(id, record),
 )
 async def lookup_resource_by_id_async(
     id: str,

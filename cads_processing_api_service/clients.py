@@ -41,8 +41,6 @@ from .metrics import handle_download_metrics
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-# semaphore = asyncio.Semaphore(15)
-
 
 @attrs.define
 class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
