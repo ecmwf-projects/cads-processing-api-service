@@ -14,7 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import base64
+import contextlib
 import enum
 import traceback
 from typing import Any, Callable, Mapping
@@ -34,7 +36,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import config, exceptions, models
+from . import cache, config, exceptions, models
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -97,6 +99,56 @@ def lookup_resource_by_id(
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     session.expunge(row)  # type:ignore
     return row
+
+
+@cache.async_cached(
+    cache=cachetools.TTLCache(
+        maxsize=config.ensure_settings().cache_resources_maxsize,
+        ttl=config.ensure_settings().cache_resources_ttl,
+    ),
+    key=lambda id, record, session, semaphore: cachetools.keys.hashkey(id, record),
+)
+async def lookup_resource_by_id_async(
+    id: str,
+    record: type[cads_catalogue.database.Resource],
+    session: sqlalchemy.ext.asyncio.AsyncSession,
+    semaphore: asyncio.Semaphore | None = None,
+) -> cads_catalogue.database.Resource:
+    """Look for the resource identified by `id` into the Catalogue database.
+
+    Parameters
+    ----------
+    id : str
+        Resource identifier.
+    record : type[cads_catalogue.database.Resource]
+        Catalogue database table.
+    session : sqlalchemy.orm.Session
+        Catalogue database session.
+
+    Returns
+    -------
+    cads_catalogue.database.Resource
+        Found resource.
+
+    Raises
+    ------
+    ogc_api_processes_fastapi.exceptions.NoSuchProcess
+        Raised if no resource corresponding to the provided `id` is found.
+    """
+    semaphore = semaphore or contextlib.nullcontext()
+    statement = (
+        sqlalchemy.select(record)
+        .options(sqlalchemy.orm.joinedload(record.licences))
+        .where(record.resource_uid == id)
+    )
+    async with semaphore:
+        try:
+            results = await session.execute(statement)
+            resource = results.scalars().unique().one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
+        session.expunge(resource)
+    return resource
 
 
 def parse_sortby(sortby: str) -> tuple[str, str]:
