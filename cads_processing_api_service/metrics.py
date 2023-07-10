@@ -29,17 +29,12 @@ DOWNLOAD_BYTES = prometheus_client.Summary(
 def handle_metrics(
     request: starlette.requests.Request,
 ) -> starlette.responses.Response:
-    """
-    Controller for the metrics endpoint.
-    """
+    """Control for the metrics endpoint."""
     return starlette_exporter.handle_metrics(request)
 
 
 def handle_download_metrics(job, results):
-    """
-    Updates the download metrics when a user downloads a dataset, or
-    at least attempts to.
-    """
+    """Update the download metrics when a user downloads a dataset."""
     try:
         if "process_id" not in job:
             logger.error("No process_id in job")
