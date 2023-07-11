@@ -82,7 +82,7 @@ def make_system_job_kwargs(
 
 def instantiate_adaptor(
     dataset: cads_catalogue.database.Resource,
-) -> cads_adaptors.adaptor.AbstractAdaptor:
+) -> cads_adaptors.AbstractAdaptor:
     adaptor_properties = get_adaptor_properties(dataset)
     adaptor_class = cads_adaptors.get_adaptor_class(
         entry_point=adaptor_properties["entry_point"],
