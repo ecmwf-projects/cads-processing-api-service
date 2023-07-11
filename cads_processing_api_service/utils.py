@@ -441,10 +441,26 @@ def parse_results_from_broker_db(
     return results
 
 
+# Mocked function
+def collect_job_statistics(
+    job: dict[str, Any], session: sqlalchemy.orm.Session
+) -> dict[str, Any]:
+    statistics = {
+        "running_requests_per_user_and_adaptor": 1,
+        "queued_requests_per_user_and_adaptor": 10,
+        "running_requests_per_adaptor": 1,
+        "queued_requests_per_adaptor": 10,
+        "active_users_per_adaptor": 1,
+        "waiting_users_per_adaptor": 10,
+    }
+    return statistics
+
+
 def make_status_info(
     job: dict[str, Any],
     results: dict[str, Any] | None = None,
     dataset_metadata: cads_catalogue.database.Resource | None = None,
+    statistics: dict[str, Any] | None = None,
 ) -> models.StatusInfo:
     """Compose job's status information.
 
@@ -456,6 +472,8 @@ def make_status_info(
         Results description, by default None
     dataset_metadata : cads_catalogue.database.Resource | None, optional
         Dataset metadata, by default None
+    statistics : dict[str, Any] | None, optional
+        Job statistics, by default None
 
     Returns
     -------
@@ -480,4 +498,6 @@ def make_status_info(
         status_info.results = results
     if dataset_metadata:
         status_info.processDescription = {"title": dataset_metadata.title}
+    if statistics:
+        status_info.statistics = statistics
     return status_info

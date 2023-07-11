@@ -305,23 +305,16 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                         job["process_id"], self.process_table, catalogue_session
                     )
                     results = utils.parse_results_from_broker_db(job, compute_session)
+                    statistics = utils.collect_job_statistics(job, compute_session)
                     jobs.append(
                         utils.make_status_info(
                             job=job,
                             results=results,
                             dataset_metadata=dataset_metadata,
+                            statistics=statistics,
                         )
                     )
-            statistics = {
-                "accepted_requests": cads_broker.database.count_requests(
-                    session=compute_session, status="accepted", user_uid=user_uid
-                ),
-                "running_requests": cads_broker.database.count_requests(
-                    session=compute_session, status="running", user_uid=user_uid
-                ),
-            }
         job_list = models.JobList(jobs=jobs)
-        job_list.statistics = statistics
         pagination_query_params = utils.make_pagination_query_params(
             jobs, sort_key=sortby.lstrip("-")
         )
