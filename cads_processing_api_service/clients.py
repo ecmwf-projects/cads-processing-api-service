@@ -186,7 +186,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         user_uid = auth.authenticate_user(auth_header, portal_header)
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
         stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
-        execution_content = execution_content.dict()
+        execution_content = execution_content.model_dump()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with catalogue_sessionmaker() as catalogue_session:
             resource: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
