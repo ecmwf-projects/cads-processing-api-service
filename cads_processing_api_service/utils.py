@@ -446,12 +446,12 @@ def collect_job_statistics(
     job: dict[str, Any], session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
     statistics = {
-        "running_requests_per_user_and_adaptor": 1,
-        "queued_requests_per_user_and_adaptor": 10,
+        "running_requests_per_user_adaptor": 1,
+        "queued_requests_per_user_adaptor": 0,
         "running_requests_per_adaptor": 1,
-        "queued_requests_per_adaptor": 10,
+        "queued_requests_per_adaptor": 0,
         "active_users_per_adaptor": 1,
-        "waiting_users_per_adaptor": 10,
+        "waiting_users_per_adaptor": 0,
     }
     return statistics
 
