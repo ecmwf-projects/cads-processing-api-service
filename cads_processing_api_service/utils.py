@@ -458,6 +458,7 @@ def collect_job_statistics(
 
 def make_status_info(
     job: dict[str, Any],
+    request: dict[str, Any] | None = None,
     results: dict[str, Any] | None = None,
     dataset_metadata: cads_catalogue.database.Resource | None = None,
     statistics: dict[str, Any] | None = None,
@@ -480,20 +481,18 @@ def make_status_info(
     models.StatusInfo
         Job status information.
     """
-    request_uid = job["request_uid"]
-    process_id = job["process_id"]
-    job_status = job["status"]
     status_info = models.StatusInfo(
         type="process",
-        jobID=request_uid,
-        processID=process_id,
-        status=job_status,
+        jobID=job["request_uid"],
+        processID=job["process_id"],
+        status=job["status"],
         created=job["created_at"],
         started=job["started_at"],
         finished=job["finished_at"],
         updated=job["updated_at"],
-        request=job["request_body"]["kwargs"]["request"],
     )
+    if request:
+        status_info.request = request
     if results:
         status_info.results = results
     if dataset_metadata:
