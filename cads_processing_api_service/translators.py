@@ -17,41 +17,54 @@
 from typing import Any
 
 
-def translate_string_list(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
-    input_ogc_schema: dict[str, Any] = {"type": "array", "items": {"type": "string"}}
-    input_ogc_schema["items"]["enum"] = sorted(input_cds_schema["details"]["values"])
-    return input_ogc_schema
+def extract_labels(input_cds_schema: dict[str, Any]) -> dict[str, str]:
+    details = input_cds_schema["details"]
+    values = {}
+    if "groups" in details:
+        values = extract_groups_labels(details["groups"])
+    else:
+        values = details["labels"]
+    return values
 
 
-def extract_groups_values(
-    groups: list[Any], values: list[Any] | None = None
+def extract_groups_labels(
+    groups: list[Any], values: dict[str, str] | None = None
 ) -> list[Any]:
     if values is None:
-        values = []
-
+        values = {}
     for group in groups:
-        if "values" in group:
-            values.extend(group["values"])
+        if "labels" in group:
+            values.update(group["labels"])
         elif "groups" in group:
-            values = extract_groups_values(group["groups"], values)
+            values = extract_groups_labels(group["groups"], values)
     return values
+
+
+def translate_string_list(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+    labels = extract_labels(input_cds_schema)
+    input_ogc_schema: dict[str, Any] = {
+        "type": "array",
+        "items": {"type": "string", "enum": sorted(list(labels.keys()))},
+    }
+    return input_ogc_schema
 
 
 def translate_string_list_array(
     input_cds_schema: dict[str, Any],
 ) -> dict[str, Any]:
-    values = extract_groups_values(input_cds_schema["details"]["groups"])
+    labels = extract_labels(input_cds_schema)
     input_ogc_schema: dict[str, Any] = {
         "type": "array",
-        "items": {"type": "string", "enum": sorted(list(set(values)))},
+        "items": {"type": "string", "enum": sorted(list(set(labels.keys())))},
     }
     return input_ogc_schema
 
 
 def translate_string_choice(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+    labels = extract_labels(input_cds_schema)
     input_ogc_schema = {
         "type": "string",
-        "enum": input_cds_schema["details"]["values"],
+        "enum": list(labels.keys()),
         "default": input_cds_schema["details"].get("default", None),
     }
     return input_ogc_schema
