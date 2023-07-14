@@ -127,3 +127,26 @@ def translate_cds_form(
             }
 
     return ogc_inputs
+
+
+def translate_request_ids_into_labels(
+    request: dict[str, Any], cds_form: list[Any] | dict[str, Any]
+) -> dict[str, Any]:
+    if not isinstance(cds_form, list):
+        cds_form = [
+            cds_form,
+        ]
+    request_labels = {}
+    for cds_input_schema in cds_form:
+        input_name = cds_input_schema["name"]
+        if input_name in request:
+            input_ids = request[input_name]
+            if not isinstance(input_ids, list):
+                input_ids = [
+                    input_ids,
+                ]
+            input_labels = extract_labels(cds_input_schema)
+            request_labels[cds_input_schema["label"]] = [
+                input_labels[input_id] for input_id in input_ids
+            ]
+    return request_labels
