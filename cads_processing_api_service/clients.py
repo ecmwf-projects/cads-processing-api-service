@@ -343,7 +343,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
         auth.verify_permission(user_uid, job)
         kwargs = {}
-        if origin == "portal":
+        if origin == "ui":
             kwargs["statistics"] = utils.collect_job_statistics(job, compute_session)
             kwargs["request"] = job["request_body"]["kwargs"]["request"]
         status_info = utils.make_status_info(job=job, **kwargs)
