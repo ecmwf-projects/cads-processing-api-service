@@ -211,17 +211,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 portal=resource.portal,
                 **job_kwargs,
             )
-        status_info = models.StatusInfo(
-            processID=job["process_id"],
-            type="process",
-            jobID=job["request_uid"],
-            status=job["status"],
-            created=job["created_at"],
-            started=job["started_at"],
-            finished=job["finished_at"],
-            updated=job["updated_at"],
-            request=job["request_body"]["kwargs"]["request"],
-        )
+        status_info = utils.make_status_info(job)
         return status_info
 
     def get_jobs(
@@ -312,16 +302,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                             dataset_metadata=dataset_metadata,
                         )
                     )
-            statistics = {
-                "accepted_requests": cads_broker.database.count_requests(
-                    session=compute_session, status="accepted", user_uid=user_uid
-                ),
-                "running_requests": cads_broker.database.count_requests(
-                    session=compute_session, status="running", user_uid=user_uid
-                ),
-            }
         job_list = models.JobList(jobs=jobs)
-        job_list.statistics = statistics
         pagination_query_params = utils.make_pagination_query_params(
             jobs, sort_key=sortby.lstrip("-")
         )
@@ -335,6 +316,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         portal_header: str
         | None = fastapi.Header(None, alias=config.PORTAL_HEADER_NAME),
+        statistics: bool = fastapi.Query(False),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -360,7 +342,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         if job["portal"] not in portals:
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
         auth.verify_permission(user_uid, job)
-        status_info = utils.make_status_info(job=job)
+        kwargs = {}
+        if statistics:
+            kwargs["statistics"] = utils.collect_job_statistics(job, compute_session)
+        kwargs["request"] = job["request_body"]["kwargs"]["request"]
+        status_info = utils.make_status_info(job=job, **kwargs)
         return status_info
 
     def get_job_results(
