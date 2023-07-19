@@ -13,7 +13,8 @@ dependencies:
 - cachetools
 - fastapi>=0.93.0
 - pip
-- pydantic==1.*
+- pydantic
+- pydantic-settings
 - sqlalchemy>=2.0.9
 - structlog
 - uvicorn
