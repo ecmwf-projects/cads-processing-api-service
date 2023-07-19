@@ -283,5 +283,7 @@ def test_make_status_info() -> None:
     assert status_info == exp_status_info
 
     exp_results = {"key": "value"}
-    status_info = utils.make_status_info(job, results=exp_results)
+    status_info = utils.make_status_info(
+        job, results=exp_results, request=job["request_body"]["kwargs"]["request"]
+    )
     assert status_info.results == exp_results

@@ -16,17 +16,23 @@ import cads_processing_api_service.translators
 
 TEST_INPUT = {
     "string_list": {
-        "details": {"values": ["val1", "val2", "val3"]},
+        "details": {"labels": {"val1": "Val1", "val2": "Val2", "val3": "Val3"}},
         "type": "StringListWidget",
     },
     "string_list_array": {
         "details": {
-            "groups": [{"values": ["val1", "val2"]}, {"values": ["val2", "val3"]}]
+            "groups": [
+                {"labels": {"val1": "Val1", "val2": "Val2"}},
+                {"labels": {"val2": "Val2", "val3": "Val3"}},
+            ]
         },
         "type": "StringListArrayWidget",
     },
     "string_choice": {
-        "details": {"values": ["val1", "val2", "val3"], "default": "val1"},
+        "details": {
+            "labels": {"val1": "Val1", "val2": "Val2", "val3": "Val3"},
+            "default": "val1",
+        },
         "type": "StringChoiceWidget",
     },
     "geographic_extent_map": {
@@ -38,14 +44,14 @@ TEST_INPUT = {
             "groups": [
                 {
                     "groups": [
-                        {"values": ["val1", "val2"]},
-                        {"values": ["val2", "val3"]},
+                        {"labels": {"val1": "Val1", "val2": "Val2"}},
+                        {"labels": {"val2": "Val2", "val3": "Val3"}},
                     ]
                 },
                 {
                     "groups": [
-                        {"values": ["val4", "val5"]},
-                        {"values": ["val5", "val6"]},
+                        {"labels": {"val4": "Val4", "val5": "Val5"}},
+                        {"labels": {"val5": "Val5", "val6": "Val6"}},
                     ]
                 },
             ]
