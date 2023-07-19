@@ -16,7 +16,6 @@ import unittest.mock
 from typing import Any
 
 import cads_broker
-import cads_catalogue.database
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
 import pytest
@@ -270,8 +269,7 @@ def test_make_status_info() -> None:
         "updated_at": "2023-01-01T16:20:12.175021",
         "request_body": {"kwargs": {"request": {"product_type": ["reanalysis"]}}},
     }
-    datset_metadata = cads_catalogue.database.Resource(title="Dataset title")
-    status_info = utils.make_status_info(job, dataset_metadata=datset_metadata)
+    status_info = utils.make_status_info(job)
     exp_status_info = models.StatusInfo(
         type="process",
         jobID=job["request_uid"],
@@ -281,7 +279,6 @@ def test_make_status_info() -> None:
         started=job["started_at"],
         finished=job["finished_at"],
         updated=job["updated_at"],
-        processDescription={"title": "Dataset title"},
     )
     assert status_info == exp_status_info
 

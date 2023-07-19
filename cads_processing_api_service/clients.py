@@ -316,6 +316,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         portal_header: str
         | None = fastapi.Header(None, alias=config.PORTAL_HEADER_NAME),
+        statistics: bool = fastapi.Query(False),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -334,7 +335,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job status information.
         """
         user_uid = auth.authenticate_user(auth_header, portal_header)
-        origin = auth.REQUEST_ORIGIN[auth_header[0]]
         portals = [p.strip() for p in portal_header.split(",")]
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         with compute_sessionmaker() as compute_session:
@@ -343,23 +343,23 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
         auth.verify_permission(user_uid, job)
         kwargs = {}
-        if origin == "api":
+        request_ids = job["request_body"]["kwargs"]["request"]
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+        with catalogue_sessionmaker() as catalogue_session:
+            resource: cads_catalogue.Resource = utils.lookup_resource_by_id(
+                id=job["process_id"],
+                record=self.process_table,
+                session=catalogue_session,
+            )
+        input_form = resource.form_data
+        kwargs["request"] = {
+            "ids": request_ids,
+            "labels": translators.translate_request_ids_into_labels(
+                request_ids, input_form
+            ),
+        }
+        if statistics:
             kwargs["statistics"] = utils.collect_job_statistics(job, compute_session)
-            request_ids = job["request_body"]["kwargs"]["request"]
-            catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
-            with catalogue_sessionmaker() as catalogue_session:
-                resource: cads_catalogue.Resource = utils.lookup_resource_by_id(
-                    id=job["process_id"],
-                    record=self.process_table,
-                    session=catalogue_session,
-                )
-            input_form = resource.form_data
-            kwargs["request"] = {
-                "ids": request_ids,
-                "labels": translators.translate_request_ids_into_labels(
-                    request_ids, input_form
-                ),
-            }
         status_info = utils.make_status_info(job=job, **kwargs)
         return status_info
 
