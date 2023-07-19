@@ -18,12 +18,12 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 # limitations under the License.
 
 
-import pydantic
+import pydantic_settings
 
 general_settings = None
 
 
-class Settings(pydantic.BaseSettings):
+class Settings(pydantic_settings.BaseSettings):
     """General settings."""
 
     profiles_service: str = "profiles-api"
@@ -58,7 +58,7 @@ def ensure_settings(
         General settings.
     """
     global general_settings
-    if settings and isinstance(settings, pydantic.BaseSettings):
+    if settings and isinstance(settings, pydantic_settings.BaseSettings):
         general_settings = settings
     else:
         general_settings = Settings()
