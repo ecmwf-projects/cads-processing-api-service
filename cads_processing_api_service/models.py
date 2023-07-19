@@ -25,20 +25,25 @@ class Licence(pydantic.BaseModel):
     revision: int
 
 
+class Request(pydantic.BaseModel):
+    ids: dict[
+        str,
+        ogc_api_processes_fastapi.models.InlineOrRefData
+        | list[ogc_api_processes_fastapi.models.InlineOrRefData],
+    ] | None = None
+    labels: dict[str, str | list[str]] | None = None
+
+
 class Execute(ogc_api_processes_fastapi.models.Execute):
     acceptedLicences: list[Licence] | None = None
 
 
 class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
-    request: dict[
-        str,
-        ogc_api_processes_fastapi.models.InlineOrRefData
-        | list[ogc_api_processes_fastapi.models.InlineOrRefData],
-    ]
+    request: Request | None = None
     results: dict[str, Any] | None = None
     processDescription: dict[str, Any] | None = None
+    statistics: dict[str, Any] | None = None
 
 
 class JobList(ogc_api_processes_fastapi.models.JobList):
     jobs: list[StatusInfo]  # type: ignore
-    statistics: dict[str, Any] | None = None

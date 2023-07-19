@@ -441,10 +441,27 @@ def parse_results_from_broker_db(
     return results
 
 
+# Mocked function
+def collect_job_statistics(
+    job: dict[str, Any], session: sqlalchemy.orm.Session
+) -> dict[str, Any]:
+    statistics = {
+        "running_requests_per_user_adaptor": 1,
+        "queued_requests_per_user_adaptor": 0,
+        "running_requests_per_adaptor": 1,
+        "queued_requests_per_adaptor": 0,
+        "active_users_per_adaptor": 1,
+        "waiting_users_per_adaptor": 0,
+    }
+    return statistics
+
+
 def make_status_info(
     job: dict[str, Any],
+    request: dict[str, Any] | None = None,
     results: dict[str, Any] | None = None,
     dataset_metadata: cads_catalogue.database.Resource | None = None,
+    statistics: dict[str, Any] | None = None,
 ) -> models.StatusInfo:
     """Compose job's status information.
 
@@ -456,28 +473,30 @@ def make_status_info(
         Results description, by default None
     dataset_metadata : cads_catalogue.database.Resource | None, optional
         Dataset metadata, by default None
+    statistics : dict[str, Any] | None, optional
+        Job statistics, by default None
 
     Returns
     -------
     models.StatusInfo
         Job status information.
     """
-    request_uid = job["request_uid"]
-    process_id = job["process_id"]
-    job_status = job["status"]
     status_info = models.StatusInfo(
         type="process",
-        jobID=request_uid,
-        processID=process_id,
-        status=job_status,
+        jobID=job["request_uid"],
+        processID=job["process_id"],
+        status=job["status"],
         created=job["created_at"],
         started=job["started_at"],
         finished=job["finished_at"],
         updated=job["updated_at"],
-        request=job["request_body"]["kwargs"]["request"],
     )
+    if request:
+        status_info.request = request
     if results:
         status_info.results = results
     if dataset_metadata:
         status_info.processDescription = {"title": dataset_metadata.title}
+    if statistics:
+        status_info.statistics = statistics
     return status_info

@@ -36,7 +36,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import adaptors, auth, config, db_utils, models, serializers, utils
+from . import adaptors, auth, config, db_utils, models, serializers, translators, utils
 from .metrics import handle_download_metrics
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -211,17 +211,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 portal=resource.portal,
                 **job_kwargs,
             )
-        status_info = models.StatusInfo(
-            processID=job["process_id"],
-            type="process",
-            jobID=job["request_uid"],
-            status=job["status"],
-            created=job["created_at"],
-            started=job["started_at"],
-            finished=job["finished_at"],
-            updated=job["updated_at"],
-            request=job["request_body"]["kwargs"]["request"],
-        )
+        status_info = utils.make_status_info(job)
         return status_info
 
     def get_jobs(
@@ -312,16 +302,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                             dataset_metadata=dataset_metadata,
                         )
                     )
-            statistics = {
-                "accepted_requests": cads_broker.database.count_requests(
-                    session=compute_session, status="accepted", user_uid=user_uid
-                ),
-                "running_requests": cads_broker.database.count_requests(
-                    session=compute_session, status="running", user_uid=user_uid
-                ),
-            }
         job_list = models.JobList(jobs=jobs)
-        job_list.statistics = statistics
         pagination_query_params = utils.make_pagination_query_params(
             jobs, sort_key=sortby.lstrip("-")
         )
@@ -335,6 +316,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         portal_header: str
         | None = fastapi.Header(None, alias=config.PORTAL_HEADER_NAME),
+        statistics: bool = fastapi.Query(False),
+        request: bool = fastapi.Query(False),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -360,7 +343,26 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         if job["portal"] not in portals:
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
         auth.verify_permission(user_uid, job)
-        status_info = utils.make_status_info(job=job)
+        kwargs = {}
+        if request:
+            request_ids = job["request_body"]["kwargs"]["request"]
+            catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+            with catalogue_sessionmaker() as catalogue_session:
+                resource: cads_catalogue.Resource = utils.lookup_resource_by_id(
+                    id=job["process_id"],
+                    record=self.process_table,
+                    session=catalogue_session,
+                )
+            input_form = resource.form_data
+            kwargs["request"] = {
+                "ids": request_ids,
+                "labels": translators.translate_request_ids_into_labels(
+                    request_ids, input_form
+                ),
+            }
+        if statistics:
+            kwargs["statistics"] = utils.collect_job_statistics(job, compute_session)
+        status_info = utils.make_status_info(job=job, **kwargs)
         return status_info
 
     def get_job_results(
