@@ -18,4 +18,8 @@ dependencies:
 - pip:
   - sqlalchemy[mypy]
   - git+https://github.com/ecmwf-projects/cacholote.git
+  - git+https://github.com/ecmwf-projects/cads-adaptors.git
+  - git+https://github.com/ecmwf-projects/cads-broker.git
+  - git+https://github.com/ecmwf-projects/cads-catalogue.git
+  - git+https://github.com/ecmwf-projects/cads-common.git
   - git+https://github.com/ecmwf-projects/ogc-api-processes-fastapi.git
