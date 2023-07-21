@@ -36,7 +36,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import adaptors, auth, config, db_utils, models, serializers, translators, utils
+from . import adaptors, auth, config, db_utils, models, serializers, utils
 from .metrics import handle_download_metrics
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -317,7 +317,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         portal_header: str
         | None = fastapi.Header(None, alias=config.PORTAL_HEADER_NAME),
         statistics: bool = fastapi.Query(False),
-        request: bool = fastapi.Query(False),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -344,22 +343,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
         auth.verify_permission(user_uid, job)
         kwargs = {}
-        if request:
-            request_ids = job["request_body"]["kwargs"]["request"]
-            catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
-            with catalogue_sessionmaker() as catalogue_session:
-                resource: cads_catalogue.Resource = utils.lookup_resource_by_id(
-                    id=job["process_id"],
-                    record=self.process_table,
-                    session=catalogue_session,
-                )
-            input_form = resource.form_data
-            kwargs["request"] = {
-                "ids": request_ids,
-                "labels": translators.translate_request_ids_into_labels(
-                    request_ids, input_form
-                ),
-            }
         if statistics:
             kwargs["statistics"] = utils.collect_job_statistics(job, compute_session)
         status_info = utils.make_status_info(job=job, **kwargs)
