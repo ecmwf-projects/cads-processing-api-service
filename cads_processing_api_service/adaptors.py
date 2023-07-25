@@ -71,11 +71,9 @@ def make_system_job_kwargs(
         "entry_point": adaptor_properties["entry_point"],
         "setup_code": adaptor_properties["setup_code"],
         "adaptor_config": adaptor_properties["config"],
+        "adaptor_form": adaptor_properties["form"],
         "resources": resources,
-        "kwargs": {
-            "form": adaptor_properties["form"],
-            "request": request["inputs"],
-        },
+        "request": request["inputs"],
     }
     return system_job_kwargs
 
