@@ -441,17 +441,45 @@ def parse_results_from_broker_db(
     return results
 
 
-# Mocked function
 def collect_job_statistics(
     job: dict[str, Any], session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
+    entry_point = job["entry_point"]
+    user_uid = job["user_uid"]
     statistics = {
-        "running_requests_per_user_adaptor": 1,
-        "queued_requests_per_user_adaptor": 0,
-        "running_requests_per_adaptor": 1,
-        "queued_requests_per_adaptor": 0,
-        "active_users_per_adaptor": 1,
-        "waiting_users_per_adaptor": 0,
+        "adaptor_entry_point": entry_point,
+        "running_requests_per_user_adaptor": cads_broker.database.count_requests(
+            session=session,
+            status="running",
+            entry_point=entry_point,
+            user_uid=user_uid,
+        ),
+        "queued_requests_per_user_adaptor": cads_broker.database.count_requests(
+            session=session,
+            status="accepted",
+            entry_point=entry_point,
+            user_uid=user_uid,
+        ),
+        "running_requests_per_adaptor": cads_broker.database.count_requests(
+            session=session,
+            status="running",
+            entry_point=entry_point,
+        ),
+        "queued_requests_per_adaptor": cads_broker.database.count_requests(
+            session=session,
+            status="accepted",
+            entry_point=entry_point,
+        ),
+        "active_users_per_adaptor": cads_broker.database.count_users(
+            session=session,
+            status="running",
+            entry_point=entry_point,
+        ),
+        "waiting_users_per_adaptor": cads_broker.database.count_users(
+            session=session,
+            status="accepted",
+            entry_point=entry_point,
+        ),
     }
     return statistics
 
