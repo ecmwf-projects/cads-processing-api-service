@@ -489,7 +489,7 @@ def make_status_info(
         started=job["started_at"],
         finished=job["finished_at"],
         updated=job["updated_at"],
-        request=job["request_body"]["request"],
+        request=job["request_body"]["kwargs"]["request"],
     )
     if results:
         status_info.results = results
