@@ -47,6 +47,7 @@ def get_adaptor_properties(
             (licence.licence_uid, licence.revision) for licence in licences
         ]
     form = dataset.form_data
+    hash = dataset.adaptor_properties_hash
 
     adaptor_properties: dict[str, Any] = {
         "entry_point": entry_point,
@@ -54,6 +55,7 @@ def get_adaptor_properties(
         "resources": resources,
         "form": form,
         "config": config,
+        "hash": hash,
     }
 
     return adaptor_properties
@@ -71,11 +73,10 @@ def make_system_job_kwargs(
         "entry_point": adaptor_properties["entry_point"],
         "setup_code": adaptor_properties["setup_code"],
         "resources": resources,
-        "kwargs": {
-            "form": adaptor_properties["form"],
-            "config": adaptor_properties["config"],
-            "request": request["inputs"],
-        },
+        "adaptor_form": adaptor_properties["form"],
+        "adaptor_config": adaptor_properties["config"],
+        "adaptor_properties_hash": adaptor_properties["hash"],
+        "request": request["inputs"],
     }
     return system_job_kwargs
 
