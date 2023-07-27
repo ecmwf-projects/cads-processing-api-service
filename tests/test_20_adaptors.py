@@ -29,6 +29,7 @@ def test_get_adaptor_properties() -> None:
     licences = [cads_catalogue.database.Licence(licence_uid="licence_uid", revision=1)]
     form_data = {}
     setup_code = "test_setup_code"
+    adaptor_properties_hash = "test_adaptor_properties_hash"
     dataset = cads_catalogue.database.Resource(
         adaptor_configuration=adaptors_configuration,
         constraints_data=constraints_data,
@@ -36,6 +37,7 @@ def test_get_adaptor_properties() -> None:
         licences=licences,
         form_data=form_data,
         adaptor=setup_code,
+        adaptor_properties_hash=adaptor_properties_hash,
     )
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
 
@@ -50,6 +52,7 @@ def test_get_adaptor_properties() -> None:
             "constraints": constraints_data,
             "mapping": mapping,
         },
+        "hash": adaptor_properties_hash,
     }
     assert adaptor_properties == exp_adaptor_properties
 
@@ -84,6 +87,7 @@ def test_instantiate_adaptor() -> None:
         mapping=mapping,
         licences=licences,
         form_data=form_data,
+        adaptor_properties_hash="test_adaptor_properties_hash",
     )
     adaptor = adaptors.instantiate_adaptor(dataset)
 
