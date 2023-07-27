@@ -84,7 +84,7 @@ def instantiate_adaptor(
     dataset: cads_catalogue.database.Resource,
 ) -> cads_adaptors.AbstractAdaptor:
     adaptor_properties = get_adaptor_properties(dataset)
-    adaptor_class = cads_adaptors.AbstractCdsAdaptor
+    adaptor_class = cads_adaptors.DummyCdsAdaptor
     adaptor = adaptor_class(
         form=adaptor_properties["form"], **adaptor_properties["config"]
     )
