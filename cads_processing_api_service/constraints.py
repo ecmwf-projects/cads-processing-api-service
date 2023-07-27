@@ -1,7 +1,7 @@
 from typing import Any
 
 # import cads_adaptors
-from cads_adaptors.constraints import validate_constraints
+from cads_adaptors.constraints import validate_constraints, ParameterError
 import cads_catalogue
 import fastapi
 
@@ -19,15 +19,13 @@ def apply_constraints(
 
     
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
-    constraints = validate_constraints(
-        adaptor_properties.get("form", []), request,
-        adaptor_properties.get("config", {}).get("constraints", [])
-    )
-    
-    # adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
-    # try:
-    #     constraints = adaptor.apply_constraints(request=request)
-    # except cads_adaptors.constraints.ParameterError as exc:
-    #     raise exceptions.InvalidParameter(detail=str(exc))
+    # Why are we catching this error here and not letting it fail where it fails?
+    try:
+        constraints = validate_constraints(
+            adaptor_properties.get("form", []), request,
+            adaptor_properties.get("config", {}).get("constraints", [])
+        )
+    except ParameterError as exc:
+        raise exceptions.InvalidParameter(detail=str(exc))
 
     return constraints
