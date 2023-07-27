@@ -20,8 +20,8 @@ def apply_constraints(
     
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
     constraints = validate_constraints(
-        form = adaptor_properties.get("form", []), request=request,
-        constraints = adaptor_properties.get("config", {}).get("constraints", [])
+        adaptor_properties.get("form", []), request,
+        adaptor_properties.get("config", {}).get("constraints", [])
     )
     
     # adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
