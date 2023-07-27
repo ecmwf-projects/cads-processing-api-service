@@ -16,10 +16,18 @@ def apply_constraints(
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
     with catalogue_sessionmaker() as catalogue_session:
         dataset = utils.lookup_resource_by_id(process_id, record, catalogue_session)
-    adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
-    try:
-        constraints = adaptor.apply_constraints(request=request)
-    except cads_adaptors.constraints.ParameterError as exc:
-        raise exceptions.InvalidParameter(detail=str(exc))
+
+    
+    adaptor_properties = adaptors.get_adaptor_properties(dataset)
+    constraints = cads_adaptors.validate_constraints(
+        form = adaptor_properties.get("form", []), request=request,
+        constraints = adaptor_properties.get("config", {}).get("constraints", [])
+    )
+    
+    # adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
+    # try:
+    #     constraints = adaptor.apply_constraints(request=request)
+    # except cads_adaptors.constraints.ParameterError as exc:
+    #     raise exceptions.InvalidParameter(detail=str(exc))
 
     return constraints
