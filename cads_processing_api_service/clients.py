@@ -345,7 +345,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         auth.verify_permission(user_uid, job)
         kwargs = {}
         if request:
-            request_ids = job["request_body"]["kwargs"]["request"]
+            request_ids = job["request_body"]["request"]
             catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
             with catalogue_sessionmaker() as catalogue_session:
                 resource: cads_catalogue.Resource = utils.lookup_resource_by_id(
