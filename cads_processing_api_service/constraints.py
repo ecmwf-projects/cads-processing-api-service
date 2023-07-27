@@ -1,7 +1,7 @@
 from typing import Any
 
-import cads_adaptors
-import cads_adaptors.constraints
+# import cads_adaptors
+from cads_adaptors.constraints import validate_constraints
 import cads_catalogue
 import fastapi
 
@@ -19,7 +19,7 @@ def apply_constraints(
 
     
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
-    constraints = cads_adaptors.validate_constraints(
+    constraints = validate_constraints(
         form = adaptor_properties.get("form", []), request=request,
         constraints = adaptor_properties.get("config", {}).get("constraints", [])
     )
