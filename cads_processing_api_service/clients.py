@@ -415,6 +415,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job = cads_broker.database.delete_request(
                 request_uid=job_id, session=compute_session
             )
+        job.status = "dismissed"
         job = utils.dictify_job(job)
         status_info = utils.make_status_info(job)
         return status_info
