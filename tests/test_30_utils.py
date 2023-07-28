@@ -279,6 +279,5 @@ def test_make_status_info() -> None:
         started=job["started_at"],
         finished=job["finished_at"],
         updated=job["updated_at"],
-        request=job["request_body"]["request"],
     )
     assert status_info == exp_status_info
