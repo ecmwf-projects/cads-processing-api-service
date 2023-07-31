@@ -486,6 +486,7 @@ def collect_job_statistics(
 
 def make_status_info(
     job: dict[str, Any],
+    request: dict[str, Any] | None = None,
     results: dict[str, Any] | None = None,
     dataset_metadata: cads_catalogue.database.Resource | None = None,
     statistics: dict[str, Any] | None = None,
@@ -517,8 +518,9 @@ def make_status_info(
         started=job["started_at"],
         finished=job["finished_at"],
         updated=job["updated_at"],
-        request=job["request_body"]["request"],
     )
+    if request:
+        status_info.request = request
     if results:
         status_info.results = results
     if dataset_metadata:
