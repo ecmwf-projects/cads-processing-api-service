@@ -88,7 +88,11 @@ def test_apply_job_filters() -> None:
     }
     statement = utils.apply_job_filters(statement, job_table, filters)
     compiled_statement = statement.compile()
-    exp_params = {"process_id_1": ["process"], "status_1": ["successful", "failed"]}
+    exp_params = {
+        "process_id_1": ["process"],
+        "status_1": ["successful", "failed"],
+        "status_2": "dismissed",
+    }
     exp_substatement = (
         "WHERE system_requests.process_id IN (__[POSTCOMPILE_process_id_1]) "
         "AND system_requests.status IN (__[POSTCOMPILE_status_1])"
