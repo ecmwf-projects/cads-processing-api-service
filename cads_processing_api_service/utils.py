@@ -163,6 +163,7 @@ def apply_job_filters(
             statement = statement.where(
                 getattr(resource, filter_key).in_(filter_values)
             )
+    statement = statement.where(resource.status != "dismissed")
     return statement
 
 
@@ -370,6 +371,8 @@ def get_job_from_broker_db(
     """
     try:
         request = cads_broker.database.get_request(request_uid=job_id, session=session)
+        if request.status == "dismissed":
+            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
     except cads_broker.database.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
     job = dictify_job(request)
