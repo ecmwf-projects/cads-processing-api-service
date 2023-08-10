@@ -16,7 +16,6 @@
 
 import base64
 import enum
-import traceback
 from typing import Any, Callable, Mapping
 
 import cachetools
@@ -437,9 +436,7 @@ def parse_results_from_broker_db(
             status=exc.status_code,
             detail=exc.detail,
             trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
-            traceback="".join(
-                traceback.TracebackException.from_exception(exc).format()
-            ),
+            traceback=exc.traceback,
         ).dict(exclude_none=True)
     return results
 
