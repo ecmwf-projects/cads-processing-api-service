@@ -47,6 +47,38 @@ class JobResultsExpired(ogc_api_processes_fastapi.exceptions.OGCAPIException):
     title: str = "results expired"
 
 
+def format_exception_content(
+    exc: ogc_api_processes_fastapi.exceptions.OGCAPIException,
+    request: fastapi.Request | None = None,
+) -> dict[str, str | int | None]:
+    """Format an OGC API exception as a JSON serializable pytthon dictionary.
+
+    Parameters
+    ----------
+    exc : ogc_api_processes_fastapi.exceptions.OGCAPIException
+        Exception to be formatted.
+    request: fastapi.Request
+        HTTP request rasing the exception.
+
+    Returns
+    -------
+    dict[str, str | int | None]
+        Formatted exception.
+    """
+    instance = str(request.url) if request else None
+    exception_content = ogc_api_processes_fastapi.models.Exception(
+        type=exc.type,
+        title=exc.title,
+        status=exc.status_code,
+        detail=exc.detail,
+        instance=instance,
+        trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
+        traceback=exc.traceback,
+    ).dict(exclude_none=True)
+
+    return exception_content
+
+
 def exception_handler(
     request: fastapi.Request, exc: ogc_api_processes_fastapi.exceptions.OGCAPIException
 ) -> fastapi.responses.JSONResponse:
@@ -71,15 +103,7 @@ def exception_handler(
     )
     return fastapi.responses.JSONResponse(
         status_code=exc.status_code,
-        content=ogc_api_processes_fastapi.models.Exception(
-            type=exc.type,
-            title=exc.title,
-            status=exc.status_code,
-            detail=exc.detail,
-            instance=str(request.url),
-            trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
-            traceback=exc.traceback,
-        ).dict(exclude_none=True),
+        content=format_exception_content(exc=exc, request=request),
     )
 
 

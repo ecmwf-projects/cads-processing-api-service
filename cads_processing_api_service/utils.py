@@ -16,7 +16,6 @@
 
 import base64
 import enum
-import traceback
 from typing import Any, Callable, Mapping
 
 import cachetools
@@ -431,16 +430,15 @@ def parse_results_from_broker_db(
     try:
         results = get_results_from_broker_db(job=job, session=session)
     except ogc_api_processes_fastapi.exceptions.OGCAPIException as exc:
-        results = ogc_api_processes_fastapi.models.Exception(
-            type=exc.type,
-            title=exc.title,
-            status=exc.status_code,
-            detail=exc.detail,
-            trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
-            traceback="".join(
-                traceback.TracebackException.from_exception(exc).format()
-            ),
-        ).dict(exclude_none=True)
+        # results = ogc_api_processes_fastapi.models.Exception(
+        #     type=exc.type,
+        #     title=exc.title,
+        #     status=exc.status_code,
+        #     detail=exc.detail,
+        #     trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
+        #     traceback=exc.traceback,
+        # ).dict(exclude_none=True)
+        results = exceptions.format_exception_content(exc=exc)
     return results
 
 
