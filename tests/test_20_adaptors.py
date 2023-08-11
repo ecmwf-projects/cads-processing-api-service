@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cads_adaptors.adaptor_cds
+import cads_adaptors.adaptors.url
 import cads_catalogue.database
 
 from cads_processing_api_service import adaptors
@@ -91,4 +91,4 @@ def test_instantiate_adaptor() -> None:
     )
     adaptor = adaptors.instantiate_adaptor(dataset)
 
-    assert isinstance(adaptor, cads_adaptors.adaptor_cds.UrlCdsAdaptor)
+    assert isinstance(adaptor, cads_adaptors.adaptors.url.UrlCdsAdaptor)
