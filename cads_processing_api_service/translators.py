@@ -17,41 +17,54 @@
 from typing import Any
 
 
-def translate_string_list(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
-    input_ogc_schema: dict[str, Any] = {"type": "array", "items": {"type": "string"}}
-    input_ogc_schema["items"]["enum"] = sorted(input_cds_schema["details"]["values"])
-    return input_ogc_schema
+def extract_labels(input_cds_schema: dict[str, Any]) -> dict[str, str]:
+    details = input_cds_schema["details"]
+    values = {}
+    if "groups" in details:
+        values = extract_groups_labels(details["groups"])
+    else:
+        values = details["labels"]
+    return values
 
 
-def extract_groups_values(
-    groups: list[Any], values: list[Any] | None = None
+def extract_groups_labels(
+    groups: list[Any], values: dict[str, str] | None = None
 ) -> list[Any]:
     if values is None:
-        values = []
-
+        values = {}
     for group in groups:
-        if "values" in group:
-            values.extend(group["values"])
+        if "labels" in group:
+            values.update(group["labels"])
         elif "groups" in group:
-            values = extract_groups_values(group["groups"], values)
+            values = extract_groups_labels(group["groups"], values)
     return values
+
+
+def translate_string_list(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+    labels = extract_labels(input_cds_schema)
+    input_ogc_schema: dict[str, Any] = {
+        "type": "array",
+        "items": {"type": "string", "enum": sorted(list(labels.keys()))},
+    }
+    return input_ogc_schema
 
 
 def translate_string_list_array(
     input_cds_schema: dict[str, Any],
 ) -> dict[str, Any]:
-    values = extract_groups_values(input_cds_schema["details"]["groups"])
+    labels = extract_labels(input_cds_schema)
     input_ogc_schema: dict[str, Any] = {
         "type": "array",
-        "items": {"type": "string", "enum": sorted(list(set(values)))},
+        "items": {"type": "string", "enum": sorted(list(set(labels.keys())))},
     }
     return input_ogc_schema
 
 
 def translate_string_choice(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+    labels = extract_labels(input_cds_schema)
     input_ogc_schema = {
         "type": "string",
-        "enum": input_cds_schema["details"]["values"],
+        "enum": list(labels.keys()),
         "default": input_cds_schema["details"].get("default", None),
     }
     return input_ogc_schema
@@ -114,3 +127,70 @@ def translate_cds_form(
             }
 
     return ogc_inputs
+
+
+def make_request_labels(
+    input_value_ids: list[str],
+    cds_input_schema: dict[str, Any],
+) -> list[str]:
+    if cds_input_schema["type"] == "GeographicExtentWidget":
+        request_labels = [
+            f"{label}: {value}°"
+            for label, value in zip(
+                ["North", "West", "South", "East"],
+                input_value_ids,
+            )
+        ]
+    else:
+        input_value_label = extract_labels(cds_input_schema)
+        request_labels = [
+            input_value_label[input_value_id] for input_value_id in input_value_ids
+        ]
+    return request_labels
+
+
+def make_request_labels_group(
+    request: dict[str, Any],
+    children: list[str],
+    default: str,
+    cds_form: list[dict[str, Any]],
+) -> list[str]:
+    for cds_input_schema in cds_form:
+        if cds_input_schema["name"] in children:
+            input_key_id = cds_input_schema["name"]
+            if input_key_id in request:
+                input_value_ids = request[input_key_id]
+                request_labels = make_request_labels(input_value_ids, cds_input_schema)
+                cds_form.remove(cds_input_schema)
+                return request_labels
+            elif input_key_id == default:
+                request_labels = [cds_input_schema["label"]]
+    return request_labels
+
+
+def translate_request_ids_into_labels(
+    request: dict[str, Any], cds_form: list[Any] | dict[str, Any]
+) -> dict[str, Any]:
+    if not isinstance(cds_form, list):
+        cds_form = [cds_form]
+    request_labels = {}
+    for cds_input_schema in cds_form:
+        if cds_input_schema["type"] == "ExclusiveGroupWidget":
+            input_key_label = cds_input_schema["label"]
+            children = cds_input_schema["children"]
+            default = cds_input_schema["details"]["default"]
+            request_labels[input_key_label] = make_request_labels_group(
+                request, children, default, cds_form
+            )
+        else:
+            input_key_id = cds_input_schema["name"]
+            if input_key_id in request:
+                input_key_label = cds_input_schema["label"]
+                input_value_ids = request[input_key_id]
+                if not isinstance(input_value_ids, list):
+                    input_value_ids = [input_value_ids]
+                request_labels[input_key_label] = make_request_labels(
+                    input_value_ids, cds_input_schema
+                )
+
+    return request_labels
