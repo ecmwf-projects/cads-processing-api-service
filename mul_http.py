@@ -11,7 +11,7 @@ replicas = int(sys.argv[2]) or 10
 
 
 async def get_async(url):
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with httpx.AsyncClient(timeout=60) as client:
         return await client.get(url)
 
 
