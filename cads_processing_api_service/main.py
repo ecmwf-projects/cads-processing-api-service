@@ -15,17 +15,14 @@
 # limitations under the License
 
 import logging
-import uuid
-from contextlib import asynccontextmanager
 from typing import Any, Awaitable, Callable, Mapping, MutableMapping
 
-import cads_common.logging
 import fastapi
 import fastapi.middleware.cors
 import ogc_api_processes_fastapi
 import structlog
 
-from . import clients, constraints, exceptions, metrics, middlewares
+from . import clients, constraints, exceptions, metrics, middlewares, testing
 
 
 def add_user_request_flag(
@@ -37,11 +34,11 @@ def add_user_request_flag(
     return event_dict
 
 
-@asynccontextmanager
-async def lifespan(application: fastapi.FastAPI):
-    cads_common.logging.structlog_configure([add_user_request_flag])
-    cads_common.logging.logging_configure()
-    yield
+# @asynccontextmanager
+# async def lifespan(application: fastapi.FastAPI):
+#     cads_common.logging.structlog_configure([add_user_request_flag])
+#     cads_common.logging.logging_configure()
+#     yield
 
 
 logger = structlog.get_logger(__name__)
@@ -52,7 +49,7 @@ app = ogc_api_processes_fastapi.instantiate_app(
 )
 app = exceptions.include_exception_handlers(app)
 # FIXME : "app.router.lifespan_context" is not officially supported and would likely break
-app.router.lifespan_context = lifespan
+# app.router.lifespan_context = lifespan
 app.router.add_api_route(
     "/processes/{process_id}/constraints",
     constraints.apply_constraints,
@@ -68,8 +65,8 @@ async def initialize_logger(
     request: fastapi.Request, call_next: Callable[[fastapi.Request], Awaitable[Any]]
 ) -> Any:
     structlog.contextvars.clear_contextvars()
-    trace_id = str(uuid.uuid4())
-    structlog.contextvars.bind_contextvars(trace_id=trace_id)
+    # trace_id = str(uuid.uuid4())
+    # structlog.contextvars.bind_contextvars(trace_id=trace_id)
     response = await call_next(request)
     return response
 
@@ -82,3 +79,5 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app = testing.add_testing_routes(app)
