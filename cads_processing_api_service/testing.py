@@ -86,11 +86,11 @@ def database_connect_with_dependency(
     catalogue_session: fastapi.Depends = fastapi.Depends(get_catalogue_session),
 ) -> fastapi.responses.JSONResponse:
     # this is just to show that db session is opened when first operation on db is performed
-    do_something_not_related_to_database()
+    do_something_not_related_to_database(5)
     resource = lookup_resource_by_id(
         id="reanalysis-era5-single-levels", session=catalogue_session
     )
-    do_something_not_related_to_database()
+    do_something_not_related_to_database(5)
     return fastapi.responses.JSONResponse(
         status_code=fastapi.status.HTTP_200_OK,
         content={"resource": resource.resource_uid},
@@ -101,11 +101,11 @@ def database_connect_with_context_manager() -> fastapi.responses.JSONResponse:
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
     with catalogue_sessionmaker() as catalogue_session:
         # this is just to show that db session is opened when first operation on db is performed
-        do_something_not_related_to_database()
+        do_something_not_related_to_database(5)
         resource = lookup_resource_by_id(
             id="reanalysis-era5-single-levels", session=catalogue_session
         )
-    do_something_not_related_to_database()
+    do_something_not_related_to_database(5)
     return fastapi.responses.JSONResponse(
         status_code=fastapi.status.HTTP_200_OK,
         content={"resource": resource.resource_uid},

@@ -1,12 +1,13 @@
 #!/usr/bin/python
 
 import asyncio
+import sys
 import time
 
 import httpx
 
-ENDPOINT = "async-independent-operations"
-REPLICAS = 10
+endpoint = sys.argv[1]
+replicas = 10 or int(sys.argv[2])
 
 
 async def get_async(url):
@@ -15,7 +16,7 @@ async def get_async(url):
 
 
 urls = [
-    f"http://localhost:8080/api/retrieve/v1/testing/{ENDPOINT}" for _ in range(REPLICAS)
+    f"http://localhost:8080/api/retrieve/v1/testing/{endpoint}" for _ in range(replicas)
 ]
 
 
