@@ -112,6 +112,26 @@ def database_connect_with_context_manager() -> fastapi.responses.JSONResponse:
     )
 
 
+def sync_one_operation() -> fastapi.responses.JSONResponse:
+    start_time = time.time()
+    num_0 = 5
+    sleep_and_give_me_a_number_sync(num_0)
+    return fastapi.responses.JSONResponse(
+        status_code=fastapi.status.HTTP_200_OK,
+        content={"time_elapsed": time.time() - start_time, "total": num_0},
+    )
+
+
+async def async_one_operation() -> fastapi.responses.JSONResponse:
+    start_time = time.time()
+    num_0 = 5
+    await sleep_and_give_me_a_number_async(num_0)
+    return fastapi.responses.JSONResponse(
+        status_code=fastapi.status.HTTP_200_OK,
+        content={"time_elapsed": time.time() - start_time, "total": num_0},
+    )
+
+
 def sync_dependent_operations() -> fastapi.responses.JSONResponse:
     start_time = time.time()
     num_0 = 1
@@ -191,6 +211,16 @@ def add_testing_routes(app: fastapi.FastAPI) -> fastapi.FastAPI:
     app.add_api_route(
         "/testing/connect-with-context-manager",
         database_connect_with_context_manager,
+        methods=["GET"],
+    )
+    app.add_api_route(
+        "/testing/sync-one-operation",
+        sync_one_operation,
+        methods=["GET"],
+    )
+    app.add_api_route(
+        "/testing/async-one-operation",
+        async_one_operation,
         methods=["GET"],
     )
     app.add_api_route(
