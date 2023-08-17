@@ -7,7 +7,7 @@ import time
 import httpx
 
 endpoint = sys.argv[1]
-replicas = 10 or int(sys.argv[2])
+replicas = int(sys.argv[2]) or 10
 
 
 async def get_async(url):
