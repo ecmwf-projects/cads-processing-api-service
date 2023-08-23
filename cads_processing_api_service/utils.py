@@ -63,7 +63,7 @@ def lookup_resource_by_id(
     record: type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
     load_only: sqlalchemy.orm.attributes.InstrumentedAttribute
-    | list[sqlalchemy.orm.attributes.InstrumentedAttribute]
+    | tuple[sqlalchemy.orm.attributes.InstrumentedAttribute]
     | None = None,
 ) -> cads_catalogue.database.Resource:
     """Look for the resource identified by `id` into the Catalogue database.
@@ -77,7 +77,7 @@ def lookup_resource_by_id(
     session : sqlalchemy.orm.Session
         Catalogue database session.
     load_only : sqlalchemy.orm.attributes.InstrumentedAttribute |
-    list[sqlalchemy.orm.attributes.InstrumentedAttribute] |
+    tuple[sqlalchemy.orm.attributes.InstrumentedAttribute] |
     None, optional
         List of columns to be loaded, by default all.
 
@@ -97,8 +97,8 @@ def lookup_resource_by_id(
         .filter(record.resource_uid == id)
     )
     if load_only:
-        if not isinstance(load_only, list):
-            load_only = [load_only]
+        if not isinstance(load_only, tuple):
+            load_only = (load_only,)
         statement = statement.options(sqlalchemy.orm.load_only(*load_only))
     try:
         row: cads_catalogue.database.Resource = (
