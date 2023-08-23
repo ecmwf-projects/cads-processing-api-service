@@ -60,6 +60,9 @@ def lookup_resource_by_id(
     id: str,
     record: type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
+    load_only: sqlalchemy.orm.attributes.InstrumentedAttribute
+    | list[sqlalchemy.orm.attributes.InstrumentedAttribute]
+    | None = None,
 ) -> cads_catalogue.database.Resource:
     """Look for the resource identified by `id` into the Catalogue database.
 
@@ -71,6 +74,10 @@ def lookup_resource_by_id(
         Catalogue database table.
     session : sqlalchemy.orm.Session
         Catalogue database session.
+    load_only : sqlalchemy.orm.attributes.InstrumentedAttribute |
+    list[sqlalchemy.orm.attributes.InstrumentedAttribute] |
+    None, optional
+        List of columns to be loaded, by default all.
 
     Returns
     -------
@@ -82,15 +89,18 @@ def lookup_resource_by_id(
     ogc_api_processes_fastapi.exceptions.NoSuchProcess
         Raised if no resource corresponding to the provided `id` is found.
     """
+    statement = (
+        sa.select(record)  # type: ignore
+        .options(sqlalchemy.orm.joinedload(record.licences))
+        .filter(record.resource_uid == id)
+    )
+    if load_only:
+        if not isinstance(load_only, list):
+            load_only = [load_only]
+        statement = statement.options(sqlalchemy.orm.load_only(*load_only))
     try:
         row: cads_catalogue.database.Resource = (
-            session.execute(
-                sa.select(record)  # type: ignore
-                .options(sqlalchemy.orm.joinedload(record.licences))
-                .filter(record.resource_uid == id)
-            )
-            .unique()
-            .scalar_one()
+            session.execute(statement).unique().scalar_one()
         )
     except sqlalchemy.orm.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
