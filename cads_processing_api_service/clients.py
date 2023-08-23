@@ -319,7 +319,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                             dataset_metadata=dataset_metadata,
                         )
                     )
-        print(utils.lookup_resource_by_id.cache_info(), flush=True)
         job_list = models.JobList(jobs=jobs)
         pagination_query_params = utils.make_pagination_query_params(
             jobs, sort_key=sortby.lstrip("-")
@@ -377,6 +376,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     session=catalogue_session,
                     load_only=record.form_data,
                 )
+            print(utils.lookup_resource_by_id.cache_info(), flush=True)
             input_form = resource.form_data
             kwargs["request"] = {
                 "ids": request_ids,
