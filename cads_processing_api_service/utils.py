@@ -53,7 +53,7 @@ class JobSortCriterion(str, enum.Enum):
         maxsize=config.ensure_settings().cache_resources_maxsize,
         ttl=config.ensure_settings().cache_resources_ttl,
     ),
-    key=lambda id, record, session, load_only: cachetools.keys.hashkey(
+    key=lambda id, record, session, load_only=None: cachetools.keys.hashkey(
         id, record, load_only
     ),
     info=True,
