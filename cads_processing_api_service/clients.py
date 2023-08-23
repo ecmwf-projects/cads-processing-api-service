@@ -139,12 +139,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 id=process_id,
                 record=record,
                 session=catalogue_session,
-                load_only=[
+                load_only=(
                     record.title,
                     record.abstract,
                     record.resource_uid,
                     record.form_data,
-                ],
+                ),
             )
         process_description = serializers.serialize_process_description(resource)
         process_description.outputs = {
