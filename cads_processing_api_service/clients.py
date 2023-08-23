@@ -132,10 +132,19 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.ProcessDescription
             Process description.
         """
+        record = self.process_table
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with catalogue_sessionmaker() as catalogue_session:
             resource = utils.lookup_resource_by_id(
-                id=process_id, record=self.process_table, session=catalogue_session
+                id=process_id,
+                record=record,
+                session=catalogue_session,
+                load_only=[
+                    record.title,
+                    record.abstract,
+                    record.resource_uid,
+                    record.form_data,
+                ],
             )
         process_description = serializers.serialize_process_description(resource)
         process_description.outputs = {
@@ -187,10 +196,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
         stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
         execution_content = execution_content.dict()
+        record = self.process_table
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with catalogue_sessionmaker() as catalogue_session:
             resource: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
-                id=process_id, record=self.process_table, session=catalogue_session
+                id=process_id, record=record, session=catalogue_session
             )
         adaptor = adaptors.instantiate_adaptor(resource)
         licences = adaptor.get_licences(execution_content)
@@ -281,6 +291,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.job_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
+        record = self.process_table
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with compute_sessionmaker() as compute_session:
@@ -292,7 +303,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 for job in job_entries:
                     job = utils.dictify_job(job)
                     dataset_metadata = utils.lookup_resource_by_id(
-                        job["process_id"], self.process_table, catalogue_session
+                        id=job["process_id"],
+                        record=record,
+                        session=catalogue_session,
+                        load_only=record.title,
                     )
                     results = utils.parse_results_from_broker_db(job, compute_session)
                     jobs.append(
@@ -346,12 +360,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         kwargs = {}
         if request:
             request_ids = job["request_body"]["request"]
+            record = self.process_table
             catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
             with catalogue_sessionmaker() as catalogue_session:
                 resource: cads_catalogue.Resource = utils.lookup_resource_by_id(
                     id=job["process_id"],
-                    record=self.process_table,
+                    record=record,
                     session=catalogue_session,
+                    load_only=record.form_data,
                 )
             input_form = resource.form_data
             kwargs["request"] = {
