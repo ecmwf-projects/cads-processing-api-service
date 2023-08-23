@@ -36,7 +36,7 @@ class Settings(pydantic.BaseSettings):
     cache_users_maxsize: int = 2000
     cache_users_ttl: int = 600
     cache_resources_maxsize: int = 1000
-    cache_resources_ttl: int = 10
+    cache_resources_ttl: int = 60
 
     @property
     def profiles_api_url(self) -> str:
