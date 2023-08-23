@@ -28,6 +28,7 @@ import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
+import pyinstrument
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.orm.attributes
@@ -202,6 +203,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             resource: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
                 id=process_id, record=record, session=catalogue_session
             )
+        print(utils.lookup_resource_by_id.cache_info(), flush=True)
         adaptor = adaptors.instantiate_adaptor(resource)
         licences = adaptor.get_licences(execution_content)
         auth.validate_licences(execution_content, stored_accepted_licences, licences)
@@ -267,6 +269,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             List of jobs status information.
         """
+        profiler = pyinstrument.Profiler(interval=0.01)
+        profiler.start()
         user_uid = auth.authenticate_user(auth_header, portal_header)
         portals = [p.strip() for p in portal_header.split(",")]
         job_filters = {
@@ -316,11 +320,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                             dataset_metadata=dataset_metadata,
                         )
                     )
+        print(utils.lookup_resource_by_id.cache_info(), flush=True)
         job_list = models.JobList(jobs=jobs)
         pagination_query_params = utils.make_pagination_query_params(
             jobs, sort_key=sortby.lstrip("-")
         )
         job_list._pagination_query_params = pagination_query_params
+        profiler.stop()
+        print(profiler.output_text(unicode=True, color=True), flush=True)
 
         return job_list
 
@@ -349,6 +356,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Job status information.
         """
+        profiler = pyinstrument.Profiler(interval=0.01)
+        profiler.start()
         user_uid = auth.authenticate_user(auth_header, portal_header)
         portals = [p.strip() for p in portal_header.split(",")]
         compute_sessionmaker = db_utils.get_compute_sessionmaker()
@@ -379,6 +388,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         if statistics:
             kwargs["statistics"] = utils.collect_job_statistics(job, compute_session)
         status_info = utils.make_status_info(job=job, **kwargs)
+        profiler.stop()
+        print(profiler.output_text(unicode=True, color=True), flush=True)
         return status_info
 
     def get_job_results(
