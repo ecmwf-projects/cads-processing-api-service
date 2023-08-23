@@ -310,7 +310,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                         id=job["process_id"],
                         record=record,
                         session=catalogue_session,
-                        load_only=record.title,
                     )
                     results = utils.parse_results_from_broker_db(job, compute_session)
                     jobs.append(
