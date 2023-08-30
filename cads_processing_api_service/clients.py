@@ -209,6 +209,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 user_uid=user_uid,
                 process_id=process_id,
                 portal=resource.portal,
+                qos_tags=resource.qos_tags,
                 **job_kwargs,
             )
         status_info = utils.make_status_info(job)
