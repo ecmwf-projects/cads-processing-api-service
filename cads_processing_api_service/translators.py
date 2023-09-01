@@ -1,4 +1,4 @@
-"""Catalogue CDS forms to OGC API Processes compliant inputs translators."""
+"""Catalogue CDS forms requests translators."""
 
 # Copyright 2022, European Union.
 #
@@ -15,6 +15,8 @@
 # limitations under the License.
 
 from typing import Any
+
+import fastapi
 
 
 def extract_labels(input_cds_schema: dict[str, Any]) -> dict[str, str]:
@@ -194,3 +196,46 @@ def translate_request_ids_into_labels(
                 )
 
     return request_labels
+
+
+def format_api_request(
+    process_id: str,
+    request: dict[str, Any],
+) -> str:
+    """Format API request into a string.
+
+    Parameters
+    ----------
+    process_id : str
+        Process identifier.
+    request : dict[str, Any]
+        Request.
+
+    Returns
+    -------
+    str
+        Formatted API request.
+    """
+    request_inputs: dict[str, Any] = request["inputs"]
+    api_request_kwargs = ",\n".join(
+        [f"{key}={value}" for key, value in request_inputs.items()]
+    )
+    api_request = f"""
+        import cads_api_client
+
+        client = cads_api_client.ApiClient()
+
+        client.retrieve(
+            collection_id={process_id},
+            {api_request_kwargs}
+        )
+        """
+    return api_request
+
+
+def get_api_request(
+    process_id: str = fastapi.Path(...),
+    request: dict[str, Any] = fastapi.Body(...),
+) -> dict[str, list[str]]:
+    api_request = format_api_request(process_id, request)
+    return {"api_request": api_request}
