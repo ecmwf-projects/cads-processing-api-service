@@ -198,11 +198,21 @@ def translate_request_ids_into_labels(
     return request_labels
 
 
+def format_request_value(
+    request_value: str | list[str],
+) -> str | list[str]:
+    if isinstance(request_value, str):
+        formatted_request_value = f"'{request_value}'"
+    else:
+        formatted_request_value = request_value
+    return formatted_request_value
+
+
 def format_api_request(
     process_id: str,
     request: dict[str, Any],
 ) -> str:
-    """Format API request into a string.
+    """Format processing requestinto a CADS API request kwargs.
 
     Parameters
     ----------
@@ -214,28 +224,40 @@ def format_api_request(
     Returns
     -------
     str
-        Formatted API request.
+        CADS API request.
     """
     request_inputs: dict[str, Any] = request["inputs"]
-    api_request_kwargs = ",\n".join(
-        [f"{key}={value}" for key, value in request_inputs.items()]
+    api_request_kwargs = ",\n\t".join(
+        [
+            f"{key}={format_request_value(value)}"
+            for key, value in request_inputs.items()
+        ]
     )
-    api_request = f"""
-        import cads_api_client
+    api_request = (
+        "import cads_api_client\n\nclient = cads_api_client.ApiClient()\n\nclient.retrieve(\n\t"
+        f"collection_id='{process_id}',\n\t{api_request_kwargs}\n)\n"
+    )
 
-        client = cads_api_client.ApiClient()
-
-        client.retrieve(
-            collection_id={process_id},
-            {api_request_kwargs}
-        )
-        """
     return api_request
 
 
 def get_api_request(
     process_id: str = fastapi.Path(...),
     request: dict[str, Any] = fastapi.Body(...),
-) -> dict[str, list[str]]:
+) -> dict[str, str]:
+    """Get CADS API request equivalent to the provided processing request.
+
+    Parameters
+    ----------
+    process_id : str, optional
+        Process identifier, by default fastapi.Path(...)
+    request : dict[str, Any], optional
+        Request, by default fastapi.Body(...)
+
+    Returns
+    -------
+    dict[str, str]
+        CDS API request.
+    """
     api_request = format_api_request(process_id, request)
     return {"api_request": api_request}

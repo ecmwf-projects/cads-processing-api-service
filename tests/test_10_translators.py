@@ -127,3 +127,22 @@ def test_translate_geographic_extent_map() -> None:
     )
 
     assert res_output == exp_ouput
+
+
+def test_format_api_request() -> None:
+    test_process_id = "test_process_id"
+    test_request = {
+        "inputs": {
+            "variable": ["test_variable_1", "test_variable_2"],
+            "year": ["2000", "2001"],
+        }
+    }
+    exp_output = (
+        "import cads_api_client\n\nclient = cads_api_client.ApiClient()\n\nclient.retrieve(\n\t"
+        "collection_id='test_process_id',\n\tvariable=['test_variable_1', 'test_variable_2'],\n\t"
+        "year=['2000', '2001']\n)\n"
+    )
+    res_output = cads_processing_api_service.translators.format_api_request(
+        test_process_id, test_request
+    )
+    assert res_output == exp_output
