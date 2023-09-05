@@ -18,6 +18,8 @@ from typing import Any
 
 import fastapi
 
+from . import config
+
 
 def extract_labels(input_cds_schema: dict[str, Any]) -> dict[str, str]:
     details = input_cds_schema["details"]
@@ -209,13 +211,16 @@ def format_request_value(
 
 
 def format_api_request(
+    api_request_template: str,
     process_id: str,
     request: dict[str, Any],
 ) -> str:
-    """Format processing requestinto a CADS API request kwargs.
+    """Format processing request into a CADS API request kwargs.
 
     Parameters
     ----------
+    api_request_template: str,
+        CADS API request template.
     process_id : str
         Process identifier.
     request : dict[str, Any]
@@ -227,15 +232,18 @@ def format_api_request(
         CADS API request.
     """
     request_inputs: dict[str, Any] = request["inputs"]
-    api_request_kwargs = ",\n\t".join(
-        [
-            f"{key}={format_request_value(value)}"
-            for key, value in request_inputs.items()
-        ]
+    api_request_kwargs = (
+        "**{"
+        + ", ".join(
+            [
+                f"'{key}': {format_request_value(value)}"
+                for key, value in request_inputs.items()
+            ]
+        )
+        + "}"
     )
-    api_request = (
-        "import cads_api_client\n\nclient = cads_api_client.ApiClient()\n\nclient.retrieve(\n\t"
-        f"collection_id='{process_id}',\n\t{api_request_kwargs}\n)\n"
+    api_request = api_request_template.format(
+        process_id=process_id, api_request_kwargs=api_request_kwargs
     )
 
     return api_request
@@ -259,5 +267,6 @@ def get_api_request(
     dict[str, str]
         CDS API request.
     """
-    api_request = format_api_request(process_id, request)
+    api_request_template = config.ensure_settings().api_request_template
+    api_request = format_api_request(api_request_template, process_id, request)
     return {"api_request": api_request}
