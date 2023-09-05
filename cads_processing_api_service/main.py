@@ -61,7 +61,7 @@ app.router.add_api_route(
 app.router.add_api_route(
     "/processes/{process_id}/api-request",
     translators.get_api_request,
-    methods=["GET"],
+    methods=["POST"],
 )
 
 app.router.add_api_route("/metrics", metrics.handle_metrics)
