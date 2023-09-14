@@ -209,6 +209,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 user_uid=user_uid,
                 process_id=process_id,
                 portal=resource.portal,
+                qos_tags=resource.qos_tags,
                 **job_kwargs,
             )
         status_info = utils.make_status_info(job)
@@ -345,7 +346,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         auth.verify_permission(user_uid, job)
         kwargs = {}
         if request:
-            request_ids = job["request_body"]["kwargs"]["request"]
+            request_ids = job["request_body"]["request"]
             catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
             with catalogue_sessionmaker() as catalogue_session:
                 resource: cads_catalogue.Resource = utils.lookup_resource_by_id(
@@ -429,9 +430,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             auth.verify_permission(user_uid, job)
-            job = cads_broker.database.delete_request(
-                request_uid=job_id, session=compute_session
+            job = cads_broker.database.set_request_status(
+                request_uid=job_id, status="dismissed", session=compute_session
             )
-        job = utils.dictify_job(job)
+            job = utils.dictify_job(job)
         status_info = utils.make_status_info(job)
         return status_info

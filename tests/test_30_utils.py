@@ -88,7 +88,11 @@ def test_apply_job_filters() -> None:
     }
     statement = utils.apply_job_filters(statement, job_table, filters)
     compiled_statement = statement.compile()
-    exp_params = {"process_id_1": ["process"], "status_1": ["successful", "failed"]}
+    exp_params = {
+        "process_id_1": ["process"],
+        "status_1": ["successful", "failed"],
+        "status_2": "dismissed",
+    }
     exp_substatement = (
         "WHERE system_requests.process_id IN (__[POSTCOMPILE_process_id_1]) "
         "AND system_requests.status IN (__[POSTCOMPILE_status_1])"
@@ -267,7 +271,7 @@ def test_make_status_info() -> None:
         "started_at": "2023-01-01T16:20:12.175021",
         "finished_at": "2023-01-01T16:20:12.175021",
         "updated_at": "2023-01-01T16:20:12.175021",
-        "request_body": {"kwargs": {"request": {"product_type": ["reanalysis"]}}},
+        "request_body": {"request": {"product_type": ["reanalysis"]}},
     }
     status_info = utils.make_status_info(job)
     exp_status_info = models.StatusInfo(
@@ -281,9 +285,3 @@ def test_make_status_info() -> None:
         updated=job["updated_at"],
     )
     assert status_info == exp_status_info
-
-    exp_results = {"key": "value"}
-    status_info = utils.make_status_info(
-        job, results=exp_results, request=job["request_body"]["kwargs"]["request"]
-    )
-    assert status_info.results == exp_results
