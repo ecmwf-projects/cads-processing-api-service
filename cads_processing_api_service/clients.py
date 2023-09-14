@@ -104,7 +104,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ]
         if back:
             processes = list(reversed(processes))
-        process_list = ogc_api_processes_fastapi.models.ProcessList(processes=processes)
+        process_list = ogc_api_processes_fastapi.models.ProcessList(
+            processes=processes, links=[ogc_api_processes_fastapi.models.Link(href="")]
+        )
         pagination_query_params = utils.make_pagination_query_params(
             processes, sort_key=sortby.lstrip("-")
         )
@@ -303,7 +305,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                             dataset_metadata=dataset_metadata,
                         )
                     )
-        job_list = models.JobList(jobs=jobs)
+        job_list = models.JobList(
+            jobs=jobs, links=[ogc_api_processes_fastapi.models.Link(href="")]
+        )
         pagination_query_params = utils.make_pagination_query_params(
             jobs, sort_key=sortby.lstrip("-")
         )
