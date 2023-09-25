@@ -38,6 +38,12 @@ class Settings(pydantic_settings.BaseSettings):
     cache_resources_maxsize: int = 1000
     cache_resources_ttl: int = 10
 
+    api_request_template: str = (
+        "import cads_api_client\n\nclient = cads_api_client.ApiClient()\n\nclient.retrieve("
+        "\n\tcollection_id='{process_id}',"
+        "\n\t{api_request_kwargs}\n)\n"
+    )
+
     @property
     def profiles_api_url(self) -> str:
         return f"http://{self.profiles_service}:{self.profiles_api_service_port}"

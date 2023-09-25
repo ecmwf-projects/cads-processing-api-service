@@ -1,4 +1,4 @@
-"""Catalogue CDS forms to OGC API Processes compliant inputs translators."""
+"""Catalogue CDS forms requests translators."""
 
 # Copyright 2022, European Union.
 #
@@ -15,6 +15,10 @@
 # limitations under the License.
 
 from typing import Any
+
+import fastapi
+
+from . import config
 
 
 def extract_labels(input_cds_schema: dict[str, Any]) -> dict[str, str]:
@@ -194,3 +198,75 @@ def translate_request_ids_into_labels(
                 )
 
     return request_labels
+
+
+def format_request_value(
+    request_value: str | list[str],
+) -> str | list[str]:
+    if isinstance(request_value, str):
+        formatted_request_value = f"'{request_value}'"
+    else:
+        formatted_request_value = request_value
+    return formatted_request_value
+
+
+def format_api_request(
+    api_request_template: str,
+    process_id: str,
+    request: dict[str, Any],
+) -> str:
+    """Format processing request into a CADS API request kwargs.
+
+    Parameters
+    ----------
+    api_request_template: str,
+        CADS API request template.
+    process_id : str
+        Process identifier.
+    request : dict[str, Any]
+        Request.
+
+    Returns
+    -------
+    str
+        CADS API request.
+    """
+    request_inputs: dict[str, Any] = request["inputs"]
+    api_request_kwargs = (
+        "**{"
+        + ", ".join(
+            [
+                f"'{key}': {format_request_value(value)}"
+                for key, value in request_inputs.items()
+            ]
+        )
+        + "}"
+    )
+    api_request = api_request_template.format(
+        process_id=process_id, api_request_kwargs=api_request_kwargs
+    )
+
+    return api_request
+
+
+def get_api_request(
+    process_id: str = fastapi.Path(...),
+    request: dict[str, Any] = fastapi.Body(...),
+) -> dict[str, str]:
+    """Get CADS API request equivalent to the provided processing request.
+
+    Parameters
+    ----------
+    process_id : str, optional
+        Process identifier, by default fastapi.Path(...)
+    request : dict[str, Any], optional
+        Request, by default fastapi.Body(...)
+
+    Returns
+    -------
+    dict[str, str]
+        CDS API request.
+    """
+    api_request_template = config.ensure_settings().api_request_template
+    api_request = format_api_request(api_request_template, process_id, request)
+    return {"api_request": api_request}

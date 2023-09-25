@@ -25,7 +25,7 @@ import fastapi.middleware.cors
 import ogc_api_processes_fastapi
 import structlog
 
-from . import clients, constraints, exceptions, metrics, middlewares
+from . import clients, constraints, exceptions, metrics, middlewares, translators
 
 
 def add_user_request_flag(
@@ -56,6 +56,11 @@ app.router.lifespan_context = lifespan
 app.router.add_api_route(
     "/processes/{process_id}/constraints",
     constraints.apply_constraints,
+    methods=["POST"],
+)
+app.router.add_api_route(
+    "/processes/{process_id}/api-request",
+    translators.get_api_request,
     methods=["POST"],
 )
 
