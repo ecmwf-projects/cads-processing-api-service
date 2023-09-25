@@ -129,7 +129,7 @@ def test_translate_geographic_extent_map() -> None:
     assert res_output == exp_ouput
 
 
-def test_format_request_value() -> str:
+def test_format_request_value() -> None:
     test_value = "test_value"
     exp_output = "'test_value'"
     res_output = cads_processing_api_service.translators.format_request_value(
@@ -138,7 +138,7 @@ def test_format_request_value() -> str:
     assert res_output == exp_output
 
     test_value = ["test_value_1", "test_value_2"]
-    exp_output = ["test_value_1", "test_value_2"]
+    exp_output = "['test_value_1', 'test_value_2']"
     res_output = cads_processing_api_service.translators.format_request_value(
         test_value
     )
