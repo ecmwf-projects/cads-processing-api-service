@@ -21,16 +21,6 @@ import fastapi
 from . import config
 
 
-def extract_labels(input_cds_schema: dict[str, Any]) -> dict[str, str]:
-    details = input_cds_schema["details"]
-    values = {}
-    if "groups" in details:
-        values = extract_groups_labels(details["groups"])
-    else:
-        values = details["labels"]
-    return values
-
-
 def extract_groups_labels(
     groups: list[Any], values: dict[str, str] | None = None
 ) -> dict[str, str]:
@@ -41,6 +31,16 @@ def extract_groups_labels(
             values.update(group["labels"])
         elif "groups" in group:
             values = extract_groups_labels(group["groups"], values)
+    return values
+
+
+def extract_labels(input_cds_schema: dict[str, Any]) -> dict[str, str]:
+    details = input_cds_schema["details"]
+    values = {}
+    if "groups" in details:
+        values = extract_groups_labels(details["groups"])
+    else:
+        values = details["labels"]
     return values
 
 

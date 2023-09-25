@@ -61,6 +61,46 @@ TEST_INPUT = {
 }
 
 
+def test_extract_groups_labels() -> None:
+    test_groups = TEST_INPUT["string_list_array"]["details"]["groups"]
+    test_values = {"test_value": "Test Value"}
+    exp_output = {
+        "test_value": "Test Value",
+        "val1": "Val1",
+        "val2": "Val2",
+        "val3": "Val3",
+    }
+    res_output = cads_processing_api_service.translators.extract_groups_labels(
+        test_groups, test_values
+    )
+    assert res_output == exp_output
+
+    test_groups = TEST_INPUT["string_list_array"]["details"]["groups"]
+    exp_output = {"val1": "Val1", "val2": "Val2", "val3": "Val3"}
+    res_output = cads_processing_api_service.translators.extract_groups_labels(
+        test_groups
+    )
+    assert res_output == exp_output
+
+    test_groups = TEST_INPUT["string_list_array_groups"]["details"]["groups"]
+    exp_output = {
+        "val1": "Val1",
+        "val2": "Val2",
+        "val3": "Val3",
+        "val4": "Val4",
+        "val5": "Val5",
+        "val6": "Val6",
+    }
+    res_output = cads_processing_api_service.translators.extract_groups_labels(
+        test_groups
+    )
+    assert res_output == exp_output
+
+
+def test_extract_labels() -> None:
+    assert 1 == 2
+
+
 def test_translate_string_list() -> None:
     test_input = TEST_INPUT["string_list"]
     exp_ouput = {
