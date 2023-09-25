@@ -188,8 +188,8 @@ def test_make_pagination_query_params() -> None:
 
     pagination_query_params = utils.make_pagination_query_params(jobs, "created")
     exp_qs = ogc_api_processes_fastapi.models.PaginationQueryParameters(
-        next={"cursor": utils.encode_base64(str(jobs[-1].created)), "back": False},
-        prev={"cursor": utils.encode_base64(str(jobs[0].created)), "back": True},
+        next={"cursor": utils.encode_base64(str(jobs[-1].created)), "back": "False"},
+        prev={"cursor": utils.encode_base64(str(jobs[0].created)), "back": "True"},
     )
     assert pagination_query_params == exp_qs
 
