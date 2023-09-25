@@ -22,6 +22,8 @@ dependencies = [
   "cads-common",
   "fastapi",
   "ogc-api-processes-fastapi",
+  "pydantic>2",
+  "pydantic-settings>2",
   "prometheus_client",
   "requests",
   "sqlalchemy>=2.0.9",
