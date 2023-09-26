@@ -98,7 +98,19 @@ def test_extract_groups_labels() -> None:
 
 
 def test_extract_labels() -> None:
-    assert 1 == 2
+    test_inputs_cds_schema = TEST_INPUT["string_list_array"]
+    exp_output = {"val1": "Val1", "val2": "Val2", "val3": "Val3"}
+    res_output = cads_processing_api_service.translators.extract_labels(
+        test_inputs_cds_schema
+    )
+    assert res_output == exp_output
+
+    test_inputs_cds_schema = TEST_INPUT["string_list"]
+    exp_output = {"val1": "Val1", "val2": "Val2", "val3": "Val3"}
+    res_output = cads_processing_api_service.translators.extract_labels(
+        test_inputs_cds_schema
+    )
+    assert res_output == exp_output
 
 
 def test_translate_string_list() -> None:
