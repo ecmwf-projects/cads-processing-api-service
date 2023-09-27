@@ -534,6 +534,6 @@ def make_status_info(
         status_info.processDescription = {"title": dataset_metadata.title}
     if statistics:
         status_info.statistics = statistics
-    if log:
+    if log is not None:
         status_info.log = log
     return status_info
