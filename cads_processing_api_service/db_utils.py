@@ -19,10 +19,11 @@ import functools
 import cads_broker.config
 import cads_catalogue.config
 import sqlalchemy
+import sqlalchemy.orm
 
 
 @functools.lru_cache()
-def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker[sqlalchemy.orm.Session]:
     """Get an sqlalchemy.orm.sessionmaker object bound to the Broker database.
 
     Returns
@@ -40,7 +41,7 @@ def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker:
 
 
 @functools.lru_cache()
-def get_catalogue_sessionmaker() -> sqlalchemy.orm.sessionmaker:
+def get_catalogue_sessionmaker() -> sqlalchemy.orm.sessionmaker[sqlalchemy.orm.Session]:
     """Get an sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
 
     Returns
