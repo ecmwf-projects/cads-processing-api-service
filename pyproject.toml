@@ -46,7 +46,8 @@ strict = true
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
-  "syslog_rfc5424_formatter"
+  "cads_adaptors.*",
+  "cads_common.*"
 ]
 
 [tool.ruff]
