@@ -19,9 +19,10 @@ import traceback
 import attrs
 import fastapi
 import ogc_api_processes_fastapi.exceptions
-import ogc_api_processes_fastapi.models
 import requests
 import structlog
+
+from . import models
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -66,7 +67,7 @@ def format_exception_content(
         Formatted exception.
     """
     instance = str(request.url) if request else None
-    exception_content = ogc_api_processes_fastapi.models.Exception(
+    exception_content = models.Exception(
         type=exc.type,
         title=exc.title,
         status=exc.status_code,
@@ -126,7 +127,7 @@ def request_readtimeout_handler(
     """
     out = fastapi.responses.JSONResponse(
         status_code=fastapi.status.HTTP_504_GATEWAY_TIMEOUT,
-        content=ogc_api_processes_fastapi.models.Exception(
+        content=models.Exception(
             type="read timeout error",
             title="read timeout error",
             trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
@@ -160,7 +161,7 @@ def general_exception_handler(
     )
     return fastapi.responses.JSONResponse(
         status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=ogc_api_processes_fastapi.models.Exception(
+        content=models.Exception(
             type="internal server error",
             title="internal server error",
             trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),

@@ -47,3 +47,8 @@ class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
 
 class JobList(ogc_api_processes_fastapi.models.JobList):
     jobs: list[StatusInfo]  # type: ignore
+
+
+class Exception(ogc_api_processes_fastapi.models.Exception):
+    trace_id: str | None = None
+    traceback: str | None = None
