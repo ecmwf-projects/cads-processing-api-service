@@ -106,10 +106,10 @@ def parse_sortby(sortby: str) -> tuple[str, str]:
 
 
 def apply_metadata_filters(
-    statement: sqlalchemy.sql.selectable.Select,
+    statement: sqlalchemy.sql.selectable.Select[tuple[Any, ...]],
     resource: type[cads_broker.database.SystemRequest],
     filters: dict[str, list[str]],
-) -> sqlalchemy.sql.selectable.Select:
+) -> sqlalchemy.sql.selectable.Select[tuple[Any, ...]]:
     """Apply search filters to the provided select statement.
 
     Parameters
@@ -136,10 +136,10 @@ def apply_metadata_filters(
 
 
 def apply_job_filters(
-    statement: sqlalchemy.sql.selectable.Select,
+    statement: sqlalchemy.sql.selectable.Select[tuple[Any, ...]],
     resource: type[cads_broker.database.SystemRequest],
     filters: Mapping[str, list[str] | None],
-) -> sqlalchemy.sql.selectable.Select:
+) -> sqlalchemy.sql.selectable.Select[tuple[Any, ...]]:
     """Apply search filters related to the job status to the provided select statement.
 
     Parameters
@@ -201,14 +201,14 @@ def encode_base64(decoded: str) -> str:
 
 
 def apply_bookmark(
-    statement: sqlalchemy.sql.selectable.Select,
+    statement: sqlalchemy.sql.selectable.Select[tuple[Any, ...]],
     resource: type[cads_catalogue.database.Resource]
     | type[cads_broker.database.SystemRequest],
     cursor: str,
     back: bool,
     sort_key: str,
     sort_dir: str,
-) -> sqlalchemy.sql.selectable.Select:
+) -> sqlalchemy.sql.selectable.Select[tuple[Any, ...]]:
     """Apply pagination bookmark to the provided select statement.
 
     Parameters
@@ -231,7 +231,7 @@ def apply_bookmark(
         sqlalchemy.sql.selectable.Select
             Updated select statement.
     """
-    resource_attribute: sqlalchemy.orm.attributes.InstrumentedAttribute = getattr(
+    resource_attribute: sqlalchemy.orm.attributes.InstrumentedAttribute[Any] = getattr(
         resource, sort_key
     )
     compare_method_name: str = get_compare_and_sort_method_name(sort_dir, back)[
@@ -245,13 +245,13 @@ def apply_bookmark(
 
 
 def apply_sorting(
-    statement: sqlalchemy.sql.selectable.Select,
+    statement: sqlalchemy.sql.selectable.Select[tuple[Any, ...]],
     resource: type[cads_catalogue.database.Resource]
     | type[cads_broker.database.SystemRequest],
     back: bool,
     sort_key: str,
     sort_dir: str,
-) -> sqlalchemy.sql.selectable.Select:
+) -> sqlalchemy.sql.selectable.Select[tuple[Any, ...]]:
     """Apply sorting to the provided select statement.
 
     Parameters
@@ -272,7 +272,7 @@ def apply_sorting(
         sqlalchemy.sql.selectable.Select
             Updated select statement.
     """
-    resource_attribute: sqlalchemy.orm.attributes.InstrumentedAttribute = getattr(
+    resource_attribute: sqlalchemy.orm.attributes.InstrumentedAttribute[Any] = getattr(
         resource, sort_key
     )
     sort_method_name: str = get_compare_and_sort_method_name(sort_dir, back)[
@@ -285,9 +285,9 @@ def apply_sorting(
 
 
 def apply_limit(
-    statement: sqlalchemy.sql.selectable.Select,
+    statement: sqlalchemy.sql.selectable.Select[tuple[Any, ...]],
     limit: int | None,
-) -> sqlalchemy.sql.selectable.Select:
+) -> sqlalchemy.sql.selectable.Select[tuple[Any, ...]]:
     """Apply limit to the provided select statement.
 
     Parameters
@@ -341,7 +341,7 @@ def make_pagination_query_params(
 def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
     job: dict[str, Any] = {
         column.key: getattr(request, column.key)
-        for column in sqlalchemy.inspect(request).mapper.column_attrs
+        for column in sqlalchemy.inspect(request).mapper.column_attrs  # type: ignore
     }
     return job
 
@@ -406,7 +406,8 @@ def get_results_from_broker_db(
     job_id = job["request_uid"]
     if job_status == "successful":
         try:
-            asset_value = cads_broker.database.get_request_result(
+            # TODO: fix type annotation in cads_broker function
+            asset_value = cads_broker.database.get_request_result(  # type: ignore
                 request_uid=job_id, session=session
             )["args"][0]
             results = {"asset": {"value": asset_value}}
@@ -511,7 +512,7 @@ def make_status_info(
         Job status information.
     """
     status_info = models.StatusInfo(
-        type="process",
+        type=ogc_api_processes_fastapi.models.JobType.process,
         jobID=job["request_uid"],
         processID=job["process_id"],
         status=job["status"],
