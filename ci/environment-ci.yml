@@ -15,7 +15,7 @@ dependencies:
 # DO NOT EDIT ABOVE THIS LINE, ADD DEPENDENCIES BELOW
 - pip
 - types-requests
-- types-cachetools
+# - types-cachetools
 - pip:
   - sqlalchemy[mypy]
   - git+https://github.com/ecmwf-projects/cacholote.git
