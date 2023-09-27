@@ -85,16 +85,16 @@ def lookup_resource_by_id(
     try:
         row: cads_catalogue.database.Resource = (
             session.execute(
-                sa.select(record)  # type: ignore
+                sa.select(record)
                 .options(sqlalchemy.orm.joinedload(record.licences))
                 .filter(record.resource_uid == id)
             )
             .unique()
             .scalar_one()
         )
-    except sqlalchemy.orm.exc.NoResultFound:
+    except sqlalchemy.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
-    session.expunge(row)  # type:ignore
+    session.expunge(row)
     return row
 
 
