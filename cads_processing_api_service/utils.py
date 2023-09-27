@@ -106,10 +106,12 @@ def parse_sortby(sortby: str) -> tuple[str, str]:
 
 
 def apply_metadata_filters(
-    statement: sqlalchemy.sql.selectable.Select[tuple[Any, ...]],
+    statement: sqlalchemy.sql.selectable.Select[
+        tuple[cads_broker.database.SystemRequest]
+    ],
     resource: type[cads_broker.database.SystemRequest],
     filters: dict[str, list[str]],
-) -> sqlalchemy.sql.selectable.Select[tuple[Any, ...]]:
+) -> sqlalchemy.sql.selectable.Select[tuple[cads_broker.database.SystemRequest]]:
     """Apply search filters to the provided select statement.
 
     Parameters
@@ -136,10 +138,12 @@ def apply_metadata_filters(
 
 
 def apply_job_filters(
-    statement: sqlalchemy.sql.selectable.Select[tuple[Any, ...]],
+    statement: sqlalchemy.sql.selectable.Select[
+        tuple[cads_broker.database.SystemRequest]
+    ],
     resource: type[cads_broker.database.SystemRequest],
     filters: Mapping[str, list[str] | None],
-) -> sqlalchemy.sql.selectable.Select[tuple[Any, ...]]:
+) -> sqlalchemy.sql.selectable.Select[tuple[cads_broker.database.SystemRequest]]:
     """Apply search filters related to the job status to the provided select statement.
 
     Parameters
@@ -201,14 +205,16 @@ def encode_base64(decoded: str) -> str:
 
 
 def apply_bookmark(
-    statement: sqlalchemy.sql.selectable.Select[tuple[Any, ...]],
+    statement: sqlalchemy.sql.selectable.Select[
+        tuple[cads_broker.database.SystemRequest]
+    ],
     resource: type[cads_catalogue.database.Resource]
     | type[cads_broker.database.SystemRequest],
     cursor: str,
     back: bool,
     sort_key: str,
     sort_dir: str,
-) -> sqlalchemy.sql.selectable.Select[tuple[Any, ...]]:
+) -> sqlalchemy.sql.selectable.Select[tuple[cads_broker.database.SystemRequest]]:
     """Apply pagination bookmark to the provided select statement.
 
     Parameters
@@ -245,13 +251,15 @@ def apply_bookmark(
 
 
 def apply_sorting(
-    statement: sqlalchemy.sql.selectable.Select[tuple[Any, ...]],
+    statement: sqlalchemy.sql.selectable.Select[
+        tuple[cads_broker.database.SystemRequest]
+    ],
     resource: type[cads_catalogue.database.Resource]
     | type[cads_broker.database.SystemRequest],
     back: bool,
     sort_key: str,
     sort_dir: str,
-) -> sqlalchemy.sql.selectable.Select[tuple[Any, ...]]:
+) -> sqlalchemy.sql.selectable.Select[tuple[cads_broker.database.SystemRequest]]:
     """Apply sorting to the provided select statement.
 
     Parameters
@@ -285,9 +293,11 @@ def apply_sorting(
 
 
 def apply_limit(
-    statement: sqlalchemy.sql.selectable.Select[tuple[Any, ...]],
+    statement: sqlalchemy.sql.selectable.Select[
+        tuple[cads_broker.database.SystemRequest]
+    ],
     limit: int | None,
-) -> sqlalchemy.sql.selectable.Select[tuple[Any, ...]]:
+) -> sqlalchemy.sql.selectable.Select[tuple[cads_broker.database.SystemRequest]]:
     """Apply limit to the provided select statement.
 
     Parameters
