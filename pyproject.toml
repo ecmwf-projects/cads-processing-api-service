@@ -21,7 +21,7 @@ dependencies = [
   "cads-catalogue@git+https://github.com/ecmwf-projects/cads-catalogue.git",
   "cads-common@git+https://github.com/ecmwf-projects/cads-common.git",
   "fastapi",
-  "ogc-api-processes-fastapi",
+  "ogc-api-processes-fastapi@git+https://github.com/ecmwf-projects/ogc-api-processes-fastapi.git",
   "pydantic>2",
   "pydantic-settings>2",
   "prometheus_client",
