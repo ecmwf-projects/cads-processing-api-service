@@ -38,13 +38,13 @@ def serialize_process_summary(
     retval = ogc_api_processes_fastapi.models.ProcessSummary(
         title=db_model.title,
         description=db_model.abstract,
-        id=db_model.resource_uid,
+        id=db_model.resource_uid,  # type: ignore
         version="1.0.0",
         jobControlOptions=[
-            "async-execute",
+            ogc_api_processes_fastapi.models.JobControlOptions.async_execute,
         ],
         outputTransmission=[
-            "reference",
+            ogc_api_processes_fastapi.models.TransmissionMode.reference,
         ],
     )
 
