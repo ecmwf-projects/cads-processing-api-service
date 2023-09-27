@@ -16,7 +16,7 @@ classifiers = [
 dependencies = [
   "attrs",
   "cacholote",
-  "cads-adaptors",
+  "cads-adaptors@git+https://github.com/ecmwf-projects/cads-adaptors.git",
   "cads-broker",
   "cads-catalogue",
   "cads-common",
