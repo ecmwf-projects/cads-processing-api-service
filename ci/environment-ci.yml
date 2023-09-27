@@ -11,12 +11,12 @@ dependencies:
 - pytest
 - pytest-cov
 - sphinx
-- sphinx-autoapi
 # DO NOT EDIT ABOVE THIS LINE, ADD DEPENDENCIES BELOW
 - pip
 - types-cachetools
 - types-requests
 - pip:
+  - sphinx-autoapi
   - sqlalchemy[mypy]
   - git+https://github.com/ecmwf-projects/cacholote.git
   - git+https://github.com/ecmwf-projects/cads-adaptors.git
