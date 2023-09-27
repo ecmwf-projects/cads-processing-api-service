@@ -110,7 +110,7 @@ def authenticate_user(
         request_url,
         headers={
             auth_header[0]: auth_header[1],
-            config.PORTAL_HEADER_NAME: portal_header,
+            config.PORTAL_HEADER_NAME: portal_header,  # type: ignore
         },
     )
     if response.status_code in (

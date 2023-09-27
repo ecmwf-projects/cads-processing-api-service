@@ -17,7 +17,7 @@
 import logging
 import uuid
 from contextlib import asynccontextmanager
-from typing import Any, Awaitable, Callable, Mapping, MutableMapping
+from typing import Any, AsyncGenerator, Awaitable, Callable, Mapping, MutableMapping
 
 import cads_common.logging
 import fastapi
@@ -38,7 +38,7 @@ def add_user_request_flag(
 
 
 @asynccontextmanager
-async def lifespan(application: fastapi.FastAPI):
+async def lifespan(application: fastapi.FastAPI) -> AsyncGenerator[Any, None]:
     cads_common.logging.structlog_configure([add_user_request_flag])
     cads_common.logging.logging_configure()
     yield

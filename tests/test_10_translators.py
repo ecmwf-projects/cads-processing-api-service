@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 import cads_processing_api_service.translators
 
-TEST_INPUT = {
+TEST_INPUT: dict[str, Any] = {
     "string_list": {
         "details": {"labels": {"val1": "Val1", "val2": "Val2", "val3": "Val3"}},
         "type": "StringListWidget",
@@ -182,19 +184,19 @@ def test_translate_geographic_extent_map() -> None:
 
 
 def test_format_request_value() -> None:
-    test_value = "test_value"
-    exp_output = "'test_value'"
-    res_output = cads_processing_api_service.translators.format_request_value(
-        test_value
+    test_value_1 = "test_value"
+    exp_output_1 = "'test_value'"
+    res_output_1 = cads_processing_api_service.translators.format_request_value(
+        test_value_1
     )
-    assert res_output == exp_output
+    assert res_output_1 == exp_output_1
 
-    test_value = ["test_value_1", "test_value_2"]
-    exp_output = "['test_value_1', 'test_value_2']"
-    res_output = cads_processing_api_service.translators.format_request_value(
-        test_value
+    test_value_2 = ["test_value_1", "test_value_2"]
+    exp_output_2 = "['test_value_1', 'test_value_2']"
+    res_output_2 = cads_processing_api_service.translators.format_request_value(
+        test_value_2
     )
-    assert res_output == exp_output
+    assert res_output_2 == exp_output_2
 
 
 def test_format_api_request() -> None:
