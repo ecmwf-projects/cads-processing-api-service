@@ -14,8 +14,8 @@ dependencies:
 - sphinx-autoapi
 # DO NOT EDIT ABOVE THIS LINE, ADD DEPENDENCIES BELOW
 - pip
+- types-cachetools
 - types-requests
-# - types-cachetools
 - pip:
   - sqlalchemy[mypy]
   - git+https://github.com/ecmwf-projects/cacholote.git
