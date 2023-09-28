@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cads_processing_api_service.metrics import handle_download_metrics, DOWNLOAD_BYTES
+from cads_processing_api_service.metrics import handle_download_metrics
 from prometheus_client import REGISTRY
 
 
