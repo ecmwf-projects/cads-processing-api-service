@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import unittest.mock
 from typing import Any
 
@@ -132,21 +133,27 @@ def test_make_cursor() -> None:
     jobs = [
         ogc_api_processes_fastapi.models.StatusInfo(
             jobID="a0",
-            status="successful",
-            type="process",
-            created="2022-10-24T13:34:02.321682",
+            status=ogc_api_processes_fastapi.models.StatusCode.successful,
+            type=ogc_api_processes_fastapi.models.JobType.process,
+            created=datetime.datetime.strptime(
+                "2022-10-24T13:34:02.321682", "%Y-%m-%dT%H:%M:%S.%f"
+            ),
         ),
         ogc_api_processes_fastapi.models.StatusInfo(
             jobID="a1",
-            status="successful",
-            type="process",
-            created="2022-10-24T13:32:02.321682",
+            status=ogc_api_processes_fastapi.models.StatusCode.successful,
+            type=ogc_api_processes_fastapi.models.JobType.process,
+            created=datetime.datetime.strptime(
+                "2022-10-24T13:34:02.321682", "%Y-%m-%dT%H:%M:%S.%f"
+            ),
         ),
         ogc_api_processes_fastapi.models.StatusInfo(
             jobID="a1",
-            status="successful",
-            type="process",
-            created="2022-10-24T13:30:02.321682",
+            status=ogc_api_processes_fastapi.models.StatusCode.successful,
+            type=ogc_api_processes_fastapi.models.JobType.process,
+            created=datetime.datetime.strptime(
+                "2022-10-24T13:30:02.321682", "%Y-%m-%dT%H:%M:%S.%f"
+            ),
         ),
     ]
 
@@ -168,21 +175,27 @@ def test_make_pagination_query_params() -> None:
     jobs = [
         ogc_api_processes_fastapi.models.StatusInfo(
             jobID="a0",
-            status="successful",
-            type="process",
-            created="2022-10-24T13:34:02.321682",
+            status=ogc_api_processes_fastapi.models.StatusCode.successful,
+            type=ogc_api_processes_fastapi.models.JobType.process,
+            created=datetime.datetime.strptime(
+                "2022-10-24T13:34:02.321682", "%Y-%m-%dT%H:%M:%S.%f"
+            ),
         ),
         ogc_api_processes_fastapi.models.StatusInfo(
             jobID="a1",
-            status="successful",
-            type="process",
-            created="2022-10-24T13:32:02.321682",
+            status=ogc_api_processes_fastapi.models.StatusCode.successful,
+            type=ogc_api_processes_fastapi.models.JobType.process,
+            created=datetime.datetime.strptime(
+                "2022-10-24T13:32:02.321682", "%Y-%m-%dT%H:%M:%S.%f"
+            ),
         ),
         ogc_api_processes_fastapi.models.StatusInfo(
             jobID="a1",
-            status="successful",
-            type="process",
-            created="2022-10-24T13:30:02.321682",
+            status=ogc_api_processes_fastapi.models.StatusCode.successful,
+            type=ogc_api_processes_fastapi.models.JobType.process,
+            created=datetime.datetime.strptime(
+                "2022-10-24T13:30:02.321682", "%Y-%m-%dT%H:%M:%S.%f"
+            ),
         ),
     ]
 
@@ -195,7 +208,7 @@ def test_make_pagination_query_params() -> None:
 
 
 def test_dictify_job() -> None:
-    request = cads_broker.database.SystemRequest(request_id=0, status="failed")
+    request = cads_broker.database.SystemRequest(request_id=0, status="failed")  # type: ignore
     exp_job = {"request_id": 0, "status": "failed"}
     res_job = utils.dictify_job(request)
     assert isinstance(res_job, dict)
@@ -206,8 +219,10 @@ def test_get_job_from_broker_db() -> None:
     test_job_id = "1234"
     mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
     with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
-        mock_get_request.return_value = cads_broker.database.SystemRequest(
-            request_uid=test_job_id
+        mock_get_request.return_value = (
+            cads_broker.database.SystemRequest(  # type:ignore
+                request_uid=test_job_id
+            )
         )
         job = utils.get_job_from_broker_db(test_job_id, session=mock_session)
     assert isinstance(job, dict)
@@ -225,7 +240,7 @@ def test_get_job_from_broker_db() -> None:
 
 
 def test_get_results_from_broker_db() -> None:
-    job = {"status": "successful", "request_uid": "1234"}
+    job: dict[str, Any] = {"status": "successful", "request_uid": "1234"}
     mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
     with unittest.mock.patch(
         "cads_broker.database.get_request_result"
@@ -275,7 +290,7 @@ def test_make_status_info() -> None:
     }
     status_info = utils.make_status_info(job)
     exp_status_info = models.StatusInfo(
-        type="process",
+        type=ogc_api_processes_fastapi.models.JobType.process,
         jobID=job["request_uid"],
         processID=job["process_id"],
         status=job["status"],

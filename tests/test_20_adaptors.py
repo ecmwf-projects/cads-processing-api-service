@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 import cads_adaptors.adaptors.url
 import cads_catalogue.database
 
@@ -27,14 +29,14 @@ def test_get_adaptor_properties() -> None:
     constraints_data = {"constraints_key": "constraints_value"}
     mapping = {"mapping_key": "mapping_value"}
     licences = [cads_catalogue.database.Licence(licence_uid="licence_uid", revision=1)]
-    form_data = {}
+    form_data: dict[str, Any] = {}
     setup_code = "test_setup_code"
     adaptor_properties_hash = "test_adaptor_properties_hash"
     dataset = cads_catalogue.database.Resource(
         adaptor_configuration=adaptors_configuration,
         constraints_data=constraints_data,
         mapping=mapping,
-        licences=licences,
+        licences=licences,  # type: ignore
         form_data=form_data,
         adaptor=setup_code,
         adaptor_properties_hash=adaptor_properties_hash,
@@ -64,7 +66,7 @@ def test_get_adaptor_properties() -> None:
         adaptor_configuration=adaptors_configuration,
         constraints_data=constraints_data,
         mapping=mapping,
-        licences=licences,
+        licences=licences,  # type: ignore
         form_data=form_data,
     )
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
@@ -80,12 +82,12 @@ def test_instantiate_adaptor() -> None:
     constraints_data = {"constraints_key": "constraints_value"}
     mapping = {"mapping_key": "mapping_value"}
     licences = [cads_catalogue.database.Licence(licence_uid="licence_uid", revision=1)]
-    form_data = {}
+    form_data: dict[str, Any] = {}
     dataset = cads_catalogue.database.Resource(
         adaptor_configuration=adaptors_configuration,
         constraints_data=constraints_data,
         mapping=mapping,
-        licences=licences,
+        licences=licences,  # type: ignore
         form_data=form_data,
         adaptor_properties_hash="test_adaptor_properties_hash",
     )

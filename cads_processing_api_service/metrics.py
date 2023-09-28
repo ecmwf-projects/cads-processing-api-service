@@ -10,6 +10,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License
+
+from typing import Any
+
 import prometheus_client
 import starlette.requests
 import starlette.responses
@@ -33,7 +36,7 @@ def handle_metrics(
     return starlette_exporter.handle_metrics(request)
 
 
-def handle_download_metrics(job, results):
+def handle_download_metrics(job: dict[str, Any], results: dict[str, Any]) -> None:
     """Update the download metrics when a user downloads a dataset."""
     try:
         if "process_id" not in job:
