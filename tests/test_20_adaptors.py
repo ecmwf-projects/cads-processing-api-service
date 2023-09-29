@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import unittest.mock
 from typing import Any
 
 import cads_adaptors.adaptors.url
@@ -82,6 +83,36 @@ def test_get_adaptor_properties() -> None:
     assert "constraints" not in adaptor_properties["config"]
     assert "mapping" not in adaptor_properties["config"]
     assert "licences" not in adaptor_properties["config"]
+
+
+def test_make_system_job_kwargs() -> None:
+    test_dataset = cads_catalogue.database.Resource()
+    test_request = {"inputs": {"test_inputs_key": "test_inputs_value"}}
+    test_adaptor_resources = {"test_adaptor_resources_key": 1}
+    with unittest.mock.patch(
+        "cads_processing_api_service.adaptors.get_adaptor_properties"
+    ) as mock_get_adaptor_properties:
+        mock_get_adaptor_properties.return_value = {
+            "entry_point": "test_entry_point",
+            "setup_code": "test_setup_code",
+            "resources": {"test_resource_key": 1},
+            "form": {},
+            "config": {"test_configuration_key": "test_configuration_value"},
+            "hash": "test_adaptor_properties_hash",
+        }
+        system_job_kwargs = adaptors.make_system_job_kwargs(
+            test_dataset, test_request, test_adaptor_resources
+        )
+    exp_system_job_kwargs = {
+        "entry_point": "test_entry_point",
+        "setup_code": "test_setup_code",
+        "resources": {"test_adaptor_resources_key": 1, "test_resource_key": 1},
+        "adaptor_form": {},
+        "adaptor_config": {"test_configuration_key": "test_configuration_value"},
+        "adaptor_properties_hash": "test_adaptor_properties_hash",
+        "request": {"test_inputs_key": "test_inputs_value"},
+    }
+    assert system_job_kwargs == exp_system_job_kwargs
 
 
 def test_instantiate_adaptor() -> None:
