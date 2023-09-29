@@ -16,6 +16,7 @@
 
 import base64
 import enum
+import json
 from typing import Any, Callable, Mapping
 
 import cachetools
@@ -384,6 +385,7 @@ def get_job_from_broker_db(
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
     except cads_broker.database.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
+
     job = dictify_job(request)
     return job
 
@@ -488,12 +490,22 @@ def collect_job_statistics(
     return statistics
 
 
+def extract_job_log(job: dict[str, Any]) -> list[str]:
+    log = []
+    if job["response_user_visible_log"]:
+        job_log = json.loads(job["response_user_visible_log"])
+        for log_timestamp, log_message in job_log:
+            log.append(log_message)
+    return log
+
+
 def make_status_info(
     job: dict[str, Any],
     request: dict[str, Any] | None = None,
     results: dict[str, Any] | None = None,
     dataset_metadata: cads_catalogue.database.Resource | None = None,
     statistics: dict[str, Any] | None = None,
+    log: list[str] | None = None,
 ) -> models.StatusInfo:
     """Compose job's status information.
 
@@ -507,6 +519,8 @@ def make_status_info(
         Dataset metadata, by default None
     statistics : dict[str, Any] | None, optional
         Job statistics, by default None
+    log : list[str] | None, optional
+        Job log, by default None
 
     Returns
     -------
@@ -531,4 +545,6 @@ def make_status_info(
         status_info.processDescription = {"title": dataset_metadata.title}
     if statistics:
         status_info.statistics = statistics
+    if log is not None:
+        status_info.log = log
     return status_info
