@@ -36,13 +36,13 @@ def get_adaptor_properties(
     resources = config.pop("resources", {})
 
     constraints = dataset.constraints_data
-    if constraints is not None:
+    if constraints:
         config["constraints"] = constraints
     mapping = dataset.mapping
-    if mapping is not None:
+    if mapping:
         config["mapping"] = mapping
     licences: list[cads_catalogue.database.Licence] = dataset.licences
-    if licences is not None:
+    if licences:
         config["licences"] = [
             (licence.licence_uid, licence.revision) for licence in licences
         ]
