@@ -12,14 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cads_processing_api_service.metrics import handle_download_metrics
-from prometheus_client import REGISTRY
+import prometheus_client
+
+from cads_processing_api_service import metrics
 
 
-def test_add_download_bytes():
-    job = {"process_id": "test"}
-    results = {"asset": {"value": {"file:size": 100}}}
-    handle_download_metrics(job, results)
-    handle_download_metrics(job, results)
-    assert REGISTRY.get_sample_value("download_bytes_count", labels={"dataset_id": "test"}) == 2
-    assert REGISTRY.get_sample_value("download_bytes_sum", labels={"dataset_id": "test"}) == 200
+def test_handle_download_metrics() -> None:
+    test_job = {"process_id": "test_process_id"}
+    test_results = {"asset": {"value": {"file:size": 100}}}
+    for _ in range(2):
+        metrics.handle_download_metrics(test_job, test_results)
+
+    exp_download_bytes_count = 2
+    res_download_bytes_count = prometheus_client.REGISTRY.get_sample_value(
+        "download_bytes_count", labels={"dataset_id": "test_process_id"}
+    )
+    assert res_download_bytes_count == exp_download_bytes_count
+
+    exp_download_bytes_sum = 200
+    res_download_bytes_sum = prometheus_client.REGISTRY.get_sample_value(
+        "download_bytes_sum", labels={"dataset_id": "test_process_id"}
+    )
+    assert res_download_bytes_sum == exp_download_bytes_sum

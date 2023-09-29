@@ -23,9 +23,10 @@ import cads_common.logging
 import fastapi
 import fastapi.middleware.cors
 import ogc_api_processes_fastapi
+import starlette_exporter
 import structlog
 
-from . import clients, constraints, exceptions, metrics, middlewares, translators
+from . import clients, constraints, exceptions, middlewares, translators
 
 
 def add_user_request_flag(
@@ -64,7 +65,7 @@ app.router.add_api_route(
     methods=["POST"],
 )
 
-app.router.add_api_route("/metrics", metrics.handle_metrics)
+app.router.add_api_route("/metrics", starlette_exporter.handle_metrics)
 app.add_middleware(middlewares.ProcessingPrometheusMiddleware, group_paths=True)
 
 
