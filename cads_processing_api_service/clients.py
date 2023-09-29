@@ -323,6 +323,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         | None = fastapi.Header(None, alias=config.PORTAL_HEADER_NAME),
         statistics: bool = fastapi.Query(False),
         request: bool = fastapi.Query(False),
+        log: bool = fastapi.Query(False),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -334,6 +335,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job identifer.
         auth_header : tuple[str, str], optional
             Authorization header
+        portal_header : str | None, optional
+            Portal header
+        statistics : bool, optional
+            Whether to include job statistics in the response
+        request : bool, optional
+            Whether to include the request in the response
+        log : bool, optional
+            Whether to include the job's log in the response
 
         Returns
         -------
@@ -367,6 +376,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             }
         if statistics:
             kwargs["statistics"] = utils.collect_job_statistics(job, compute_session)
+        if log:
+            kwargs["log"] = utils.extract_job_log(job)
         status_info = utils.make_status_info(job=job, **kwargs)
         return status_info
 
