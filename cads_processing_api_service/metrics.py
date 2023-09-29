@@ -25,7 +25,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 DOWNLOAD_BYTES = prometheus_client.Summary(
     "download_bytes",
     "Download bytes requests",
-    labelnames="dataset_id",
+    labelnames=("dataset_id",),
 )
 
 
@@ -39,26 +39,9 @@ def handle_metrics(
 def handle_download_metrics(job: dict[str, Any], results: dict[str, Any]) -> None:
     """Update the download metrics when a user downloads a dataset."""
     try:
-        if "process_id" not in job:
-            logger.error("No process_id in job")
-            return
-
-        if "result" not in results:
-            logger.warning("No result in results")
-            return
-
-        results = results["result"]
-
-        if "args" not in results:
-            logger.warning("No args in results")
-            return
-
-        args_list = results["args"]
         dataset_id = job["process_id"]
-        size = int(args_list[0]["file:size"])
-
-        DOWNLOAD_BYTES.labels(dataset_id).observe(size)
-
+        result_size = int(results["asset"]["value"]["file:size"])
+        DOWNLOAD_BYTES.labels(dataset_id).observe(result_size)
     except Exception as e:
         logger.error("Error updating download metrics", error=e)
-        return
+    return
