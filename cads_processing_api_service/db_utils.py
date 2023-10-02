@@ -16,7 +16,6 @@
 
 import enum
 import functools
-from typing import Type
 
 import cads_broker.config
 import cads_catalogue.config
@@ -33,7 +32,7 @@ class ConnectionMode(str, enum.Enum):
 
 @functools.lru_cache()
 def get_compute_sessionmaker(
-    mode: Type[ConnectionMode] = ConnectionMode.write,
+    mode: ConnectionMode = ConnectionMode.write,
 ) -> sqlalchemy.orm.sessionmaker[sqlalchemy.orm.Session]:
     """Get an sqlalchemy.orm.sessionmaker object bound to the Broker database.
 
