@@ -201,9 +201,13 @@ def test_format_request_value() -> None:
 
 def test_format_api_request() -> None:
     test_api_request_template = (
-        "import cads_api_client\n\nclient = cads_api_client.ApiClient()\n\nclient.retrieve("
-        "\n\tcollection_id='{process_id}',"
-        "\n\t{api_request_kwargs}\n)\n"
+        "import cads_api_client\n\n"
+        "request = {api_request_kwargs}\n\n"
+        "client = cads_api_client.ApiClient()\n"
+        "client.retrieve(\n\t"
+        "collection_id='{process_id}',\n\t"
+        "**request\n"
+        ")\n"
     )
     test_process_id = "test_process_id"
     test_request = {
@@ -213,9 +217,16 @@ def test_format_api_request() -> None:
         }
     }
     exp_output = (
-        "import cads_api_client\n\nclient = cads_api_client.ApiClient()\n\nclient.retrieve(\n\t"
+        "import cads_api_client\n\n"
+        "request = {\n\t"
+        "'variable': 'test_variable_1',\n\t"
+        "'year': ['2000', '2001']\n"
+        "}\n\n"
+        "client = cads_api_client.ApiClient()\n"
+        "client.retrieve(\n\t"
         "collection_id='test_process_id',\n\t"
-        "**{'variable': 'test_variable_1', 'year': ['2000', '2001']}\n)\n"
+        "**request\n"
+        ")\n"
     )
     res_output = cads_processing_api_service.translators.format_api_request(
         test_api_request_template, test_process_id, test_request
