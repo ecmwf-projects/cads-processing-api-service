@@ -436,7 +436,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 results = utils.get_results_from_broker_db(
                     job=job, session=compute_session
                 )
-        except ogc_api_processes_fastapi.exceptions.NoSuchJob:
+        except (
+            ogc_api_processes_fastapi.exceptions.NoSuchJob,
+            ogc_api_processes_fastapi.exceptions.ResultsNotReady,
+        ):
             compute_sessionmaker = db_utils.get_compute_sessionmaker(
                 mode=db_utils.ConnectionMode.write
             )
