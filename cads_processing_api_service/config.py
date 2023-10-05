@@ -40,12 +40,10 @@ class Settings(pydantic_settings.BaseSettings):
 
     api_request_template: str = (
         "import cads_api_client\n\n"
+        "collection_id = '{process_id}'\n"
         "request = {api_request_kwargs}\n\n"
         "client = cads_api_client.ApiClient()\n"
-        "client.retrieve(\n\t"
-        "collection_id='{process_id}',\n\t"
-        "**request\n"
-        ")\n"
+        "client.retrieve(collection_id, **request)\n"
     )
 
     @property

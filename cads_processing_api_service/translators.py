@@ -235,7 +235,7 @@ def format_api_request(
         "{"
         + ",".join(
             [
-                f"\n\t'{key}': {format_request_value(value)}"
+                f"\n    '{key}': {format_request_value(value)}"
                 for key, value in request_inputs.items()
             ]
         )
