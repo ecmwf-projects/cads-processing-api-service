@@ -218,9 +218,9 @@ def test_format_api_request() -> None:
     }
     exp_output = (
         "import cads_api_client\n\n"
-        "request = {\n\t"
-        "'variable': 'test_variable_1',\n\t"
-        "'year': ['2000', '2001']\n"
+        "request = {\n"
+        "    'variable': 'test_variable_1',\n"
+        "    'year': ['2000', '2001']\n"
         "}\n\n"
         "client = cads_api_client.ApiClient()\n"
         "client.retrieve(\n\t"
