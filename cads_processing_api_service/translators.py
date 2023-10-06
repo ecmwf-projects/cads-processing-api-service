@@ -232,14 +232,14 @@ def format_api_request(
     """
     request_inputs: dict[str, Any] = request["inputs"]
     api_request_kwargs = (
-        "**{"
-        + ", ".join(
+        "{"
+        + ",".join(
             [
-                f"'{key}': {format_request_value(value)}"
+                f"\n    '{key}': {format_request_value(value)}"
                 for key, value in request_inputs.items()
             ]
         )
-        + "}"
+        + "\n}"
     )
     api_request = api_request_template.format(
         process_id=process_id, api_request_kwargs=api_request_kwargs
