@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import enum
 import functools
 
 import cads_broker.config
@@ -22,9 +23,24 @@ import sqlalchemy
 import sqlalchemy.orm
 
 
+class ConnectionMode(str, enum.Enum):
+    """Database connection mode."""
+
+    read = "read"
+    write = "write"
+
+
 @functools.lru_cache()
-def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker[sqlalchemy.orm.Session]:
+def get_compute_sessionmaker(
+    mode: ConnectionMode = ConnectionMode.write,
+) -> sqlalchemy.orm.sessionmaker[sqlalchemy.orm.Session]:
     """Get an sqlalchemy.orm.sessionmaker object bound to the Broker database.
+
+    Parameters
+    ----------
+    mode: ConnectionMode
+        Connection mode to the database. If ConnectionMode.read, the sessionmaker
+        will open a connection to a read-only hostname.
 
     Returns
     -------
@@ -32,8 +48,14 @@ def get_compute_sessionmaker() -> sqlalchemy.orm.sessionmaker[sqlalchemy.orm.Ses
         sqlalchemy.orm.sessionmaker object bound to the Broker database.
     """
     broker_settings = cads_broker.config.ensure_settings()
+    if mode == ConnectionMode.write:
+        connection_string = broker_settings.connection_string
+    elif mode == ConnectionMode.read:
+        connection_string = broker_settings.connection_string_read
+    else:
+        raise ValueError(f"Invalid connection mode: {str(mode)}")
     broker_engine = sqlalchemy.create_engine(
-        broker_settings.connection_string,
+        connection_string,
         pool_timeout=broker_settings.pool_timeout,
         pool_recycle=broker_settings.pool_recycle,
     )

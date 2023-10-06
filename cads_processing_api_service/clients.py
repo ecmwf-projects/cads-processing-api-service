@@ -202,7 +202,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_kwargs = adaptors.make_system_job_kwargs(
             resource, execution_content, adaptor.resources
         )
-        compute_sessionmaker = db_utils.get_compute_sessionmaker()
+        compute_sessionmaker = db_utils.get_compute_sessionmaker(
+            mode=db_utils.ConnectionMode.write
+        )
         with compute_sessionmaker() as compute_session:
             job = cads_broker.database.create_request(
                 session=compute_session,
@@ -284,7 +286,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.job_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
-        compute_sessionmaker = db_utils.get_compute_sessionmaker()
+        compute_sessionmaker = db_utils.get_compute_sessionmaker(
+            mode=db_utils.ConnectionMode.read
+        )
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with compute_sessionmaker() as compute_session:
             job_entries = compute_session.scalars(statement).all()
@@ -351,9 +355,22 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         user_uid = auth.authenticate_user(auth_header, portal_header)
         portals = [p.strip() for p in portal_header.split(",")]
-        compute_sessionmaker = db_utils.get_compute_sessionmaker()
-        with compute_sessionmaker() as compute_session:
-            job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
+        try:
+            compute_sessionmaker = db_utils.get_compute_sessionmaker(
+                mode=db_utils.ConnectionMode.read
+            )
+            with compute_sessionmaker() as compute_session:
+                job = utils.get_job_from_broker_db(
+                    job_id=job_id, session=compute_session
+                )
+        except ogc_api_processes_fastapi.exceptions.NoSuchJob:
+            compute_sessionmaker = db_utils.get_compute_sessionmaker(
+                mode=db_utils.ConnectionMode.write
+            )
+            with compute_sessionmaker() as compute_session:
+                job = utils.get_job_from_broker_db(
+                    job_id=job_id, session=compute_session
+                )
         if job["portal"] not in portals:
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
         auth.verify_permission(user_uid, job)
@@ -407,12 +424,34 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         structlog.contextvars.bind_contextvars(job_id=job_id)
         user_uid = auth.authenticate_user(auth_header, portal_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
-        compute_sessionmaker = db_utils.get_compute_sessionmaker()
-        with compute_sessionmaker() as compute_session:
-            job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
-            auth.verify_permission(user_uid, job)
-            results = utils.get_results_from_broker_db(job=job, session=compute_session)
-            handle_download_metrics(job, results)
+        try:
+            compute_sessionmaker = db_utils.get_compute_sessionmaker(
+                mode=db_utils.ConnectionMode.read
+            )
+            with compute_sessionmaker() as compute_session:
+                job = utils.get_job_from_broker_db(
+                    job_id=job_id, session=compute_session
+                )
+                auth.verify_permission(user_uid, job)
+                results = utils.get_results_from_broker_db(
+                    job=job, session=compute_session
+                )
+        except (
+            ogc_api_processes_fastapi.exceptions.NoSuchJob,
+            ogc_api_processes_fastapi.exceptions.ResultsNotReady,
+        ):
+            compute_sessionmaker = db_utils.get_compute_sessionmaker(
+                mode=db_utils.ConnectionMode.write
+            )
+            with compute_sessionmaker() as compute_session:
+                job = utils.get_job_from_broker_db(
+                    job_id=job_id, session=compute_session
+                )
+                auth.verify_permission(user_uid, job)
+                results = utils.get_results_from_broker_db(
+                    job=job, session=compute_session
+                )
+        handle_download_metrics(job, results)
         return results
 
     def delete_job(
@@ -441,7 +480,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         structlog.contextvars.bind_contextvars(job_id=job_id)
         user_uid = auth.authenticate_user(auth_header, portal_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
-        compute_sessionmaker = db_utils.get_compute_sessionmaker()
+        compute_sessionmaker = db_utils.get_compute_sessionmaker(
+            mode=db_utils.ConnectionMode.write
+        )
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             auth.verify_permission(user_uid, job)
