@@ -392,7 +392,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 ),
             }
         if statistics:
-            kwargs["statistics"] = utils.collect_job_statistics(job, compute_session)
+            kwargs["statistics"] = {
+                **utils.collect_job_statistics(job, compute_session),
+                "qos_status": cads_broker.database.get_qos_status_from_request(job),
+            }
         if log:
             kwargs["log"] = utils.extract_job_log(job)
         status_info = utils.make_status_info(job=job, **kwargs)
