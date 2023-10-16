@@ -359,7 +359,7 @@ def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
 
 def get_job_from_broker_db(
     job_id: str, session: sqlalchemy.orm.Session
-) -> dict[str, Any]:
+) -> cads_broker.SystemRequest:
     """Get job description from the Broker database.
 
     Parameters
@@ -380,27 +380,21 @@ def get_job_from_broker_db(
         Raised if no job corresponding to the provided identifier is found.
     """
     try:
-        request = cads_broker.database.get_request(request_uid=job_id, session=session)
-        if request.status == "dismissed":
+        job = cads_broker.database.get_request(request_uid=job_id, session=session)
+        if job.status == "dismissed":
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
     except cads_broker.database.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-
-    job = dictify_job(request)
     return job
 
 
-def get_results_from_broker_db(
-    job: dict[str, Any], session: sqlalchemy.orm.Session
-) -> dict[str, Any]:
+def get_results_from_broker_db(job: cads_broker.SystemRequest) -> dict[str, Any]:
     """Get job results description from the Broker database.
 
     Parameters
     ----------
-    job : dict[str, Any]
+    job : cads_broker.SystemRequest
         Job status description.
-    session : sqlalchemy.orm.Session
-        Broker database session.
 
     Returns
     -------
@@ -414,21 +408,18 @@ def get_results_from_broker_db(
     results_not_ready_exc
         Raised if job's results are not yet ready.
     """
-    job_status = job["status"]
-    job_id = job["request_uid"]
+    job_status = job.status
+    job_id = job.request_uid
     if job_status == "successful":
         try:
-            # TODO: fix type annotation in cads_broker function
-            asset_value = cads_broker.database.get_request_result(  # type: ignore
-                request_uid=job_id, session=session
-            )["args"][0]
+            asset_value = job.cache_entry.result["args"][0]
             results = {"asset": {"value": asset_value}}
         except Exception:
             raise exceptions.JobResultsExpired()
     elif job_status == "failed":
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
-            traceback=job["response_error"]["message"],
+            traceback=job.response_error.message,
         )
     elif job_status in ("accepted", "running"):
         raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
@@ -437,21 +428,19 @@ def get_results_from_broker_db(
     return results
 
 
-def parse_results_from_broker_db(
-    job: dict[str, Any], session: sqlalchemy.orm.Session
-) -> dict[str, Any]:
+def parse_results_from_broker_db(job: cads_broker.SystemRequest) -> dict[str, Any]:
     try:
-        results = get_results_from_broker_db(job=job, session=session)
+        results = get_results_from_broker_db(job=job)
     except ogc_api_processes_fastapi.exceptions.OGCAPIException as exc:
         results = exceptions.format_exception_content(exc=exc)
     return results
 
 
 def collect_job_statistics(
-    job: dict[str, Any], session: sqlalchemy.orm.Session
+    job: cads_broker.SystemRequest, session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
-    entry_point = job["entry_point"]
-    user_uid = job["user_uid"]
+    entry_point = job.entry_point
+    user_uid = job.user_uid
     statistics = {
         "adaptor_entry_point": entry_point,
         "running_requests_per_user_adaptor": cads_broker.database.count_requests(
@@ -490,17 +479,17 @@ def collect_job_statistics(
     return statistics
 
 
-def extract_job_log(job: dict[str, Any]) -> list[str]:
+def extract_job_log(job: cads_broker.SystemRequest) -> list[str]:
     log = []
-    if job["response_user_visible_log"]:
-        job_log = json.loads(job["response_user_visible_log"])
+    if job.response_user_visible_log:
+        job_log = json.loads(job.response_user_visible_log)
         for log_timestamp, log_message in job_log:
             log.append(log_message)
     return log
 
 
 def make_status_info(
-    job: dict[str, Any],
+    job: cads_broker.SystemRequest | dict[str, Any],
     request: dict[str, Any] | None = None,
     results: dict[str, Any] | None = None,
     dataset_metadata: cads_catalogue.database.Resource | None = None,
@@ -511,7 +500,7 @@ def make_status_info(
 
     Parameters
     ----------
-    job : dict[str, Any]
+    job : cads_broker.SystemRequest | dict[str, Any]
         Job description.
     results : dict[str, Any] | None, optional
         Results description, by default None
@@ -527,6 +516,8 @@ def make_status_info(
     models.StatusInfo
         Job status information.
     """
+    if isinstance(job, cads_broker.SystemRequest):
+        job = dictify_job(request=job)
     status_info = models.StatusInfo(
         type=ogc_api_processes_fastapi.models.JobType.process,
         jobID=job["request_uid"],
