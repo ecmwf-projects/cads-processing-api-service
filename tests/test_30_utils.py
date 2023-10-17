@@ -242,33 +242,33 @@ def test_get_job_from_broker_db() -> None:
 
 def test_get_results_from_job() -> None:
     job = cads_broker.SystemRequest(
-        status="successful",
-        request_uid="1234",
-        cache_entry=cacholote.database.CacheEntry(result={"args": [{"key": "value"}]}),
+        **{
+            "status": "successful",
+            "request_uid": "1234",
+            "cache_entry": cacholote.database.CacheEntry(
+                result={"args": [{"key": "value"}]}
+            ),
+        }
     )
     results = utils.get_results_from_job(job)
     exp_results = {"asset": {"value": {"key": "value"}}}
     assert results == exp_results
 
     job = cads_broker.SystemRequest(
-        status="failed",
-        request_uid="1234",
-        response_error={"message": "traceback"},
+        **{
+            "status": "failed",
+            "request_uid": "1234",
+            "response_error": {"message": "traceback"},
+        }
     )
     with pytest.raises(ogc_api_processes_fastapi.exceptions.JobResultsFailed):
         results = utils.get_results_from_job(job)
 
-    job = cads_broker.SystemRequest(
-        status="accepted",
-        request_uid="1234",
-    )
+    job = cads_broker.SystemRequest(**{"status": "accepted", "request_uid": "1234"})
     with pytest.raises(ogc_api_processes_fastapi.exceptions.ResultsNotReady):
         results = utils.get_results_from_job(job)
 
-    job = cads_broker.SystemRequest(
-        status="running",
-        request_uid="1234",
-    )
+    job = cads_broker.SystemRequest(**{"status": "running", "request_uid": "1234"})
     with pytest.raises(ogc_api_processes_fastapi.exceptions.ResultsNotReady):
         results = utils.get_results_from_job(job)
 

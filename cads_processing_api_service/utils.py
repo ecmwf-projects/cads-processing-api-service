@@ -419,7 +419,7 @@ def get_results_from_job(job: cads_broker.SystemRequest) -> dict[str, Any]:
     elif job_status == "failed":
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
-            traceback=job.response_error["message"],
+            traceback=str(job.response_error["message"]),
         )
     elif job_status in ("accepted", "running"):
         raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
@@ -439,8 +439,8 @@ def parse_results_from_broker_db(job: cads_broker.SystemRequest) -> dict[str, An
 def collect_job_statistics(
     job: cads_broker.SystemRequest, session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
-    entry_point = job.entry_point
-    user_uid = job.user_uid
+    entry_point = str(job.entry_point)
+    user_uid = str(job.user_uid)
     statistics = {
         "adaptor_entry_point": entry_point,
         "running_requests_per_user_adaptor": cads_broker.database.count_requests(
@@ -482,7 +482,7 @@ def collect_job_statistics(
 def extract_job_log(job: cads_broker.SystemRequest) -> list[str]:
     log = []
     if job.response_user_visible_log:
-        job_log = json.loads(job.response_user_visible_log)
+        job_log = json.loads(str(job.response_user_visible_log))
         for log_timestamp, log_message in job_log:
             log.append(log_message)
     return log
