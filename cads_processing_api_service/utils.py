@@ -388,8 +388,8 @@ def get_job_from_broker_db(
     return job
 
 
-def get_results_from_broker_db(job: cads_broker.SystemRequest) -> dict[str, Any]:
-    """Get job results description from the Broker database.
+def get_results_from_job(job: cads_broker.SystemRequest) -> dict[str, Any]:
+    """Get job results description from SystemRequest instance.
 
     Parameters
     ----------
@@ -419,7 +419,7 @@ def get_results_from_broker_db(job: cads_broker.SystemRequest) -> dict[str, Any]
     elif job_status == "failed":
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
-            traceback=job.response_error.message,
+            traceback=job.response_error["message"],
         )
     elif job_status in ("accepted", "running"):
         raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
@@ -430,7 +430,7 @@ def get_results_from_broker_db(job: cads_broker.SystemRequest) -> dict[str, Any]
 
 def parse_results_from_broker_db(job: cads_broker.SystemRequest) -> dict[str, Any]:
     try:
-        results = get_results_from_broker_db(job=job)
+        results = get_results_from_job(job=job)
     except ogc_api_processes_fastapi.exceptions.OGCAPIException as exc:
         results = exceptions.format_exception_content(exc=exc)
     return results
