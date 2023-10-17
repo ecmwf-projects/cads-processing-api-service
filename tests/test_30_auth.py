@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import cads_broker
 import pytest
 
 from cads_processing_api_service import auth, exceptions
@@ -47,7 +48,7 @@ def test_check_licences() -> None:
 
 
 def test_verify_permission() -> None:
-    job = {"user_uid": "abc123"}
+    job = cads_broker.SystemRequest(user_uid="abc123")
     user_uid = "abc123"
     try:
         auth.verify_permission(user_uid, job)
