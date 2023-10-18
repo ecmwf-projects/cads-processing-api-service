@@ -14,6 +14,7 @@
 
 import time
 import urllib.parse
+import uuid
 from typing import Any
 
 import pytest
@@ -21,8 +22,9 @@ import requests
 
 EXISTING_PROCESS_ID = "reanalysis-era5-pressure-levels"
 EXISTING_PROCESS_LICENCE_ID = "licence-to-use-copernicus-products"
+EXISTING_PROCESS_LICENCE_DATA = {"revision": 12}
 NON_EXISTING_PROCESS_ID = "non-existing-dataset"
-NON_EXISTING_JOB_ID = "1234"
+NON_EXISTING_JOB_ID = str(uuid.uuid4())
 POST_PROCESS_REQUEST_BODY_SUCCESS = {
     "inputs": {
         "product_type": ["reanalysis"],
@@ -50,9 +52,9 @@ POST_PROCESS_REQUEST_BODY_SUCCESS_W_LICENCES = {
 }
 POST_PROCESS_REQUEST_BODY_FAIL = {
     "inputs": {
-        "product_type": ["non-existing-product-type"],
+        "product_type": ["reanalysis"],
         "format": ["grib"],
-        "variable": ["temperature"],
+        "variable": ["nno-existing-variable"],
         "pressure_level": ["1"],
         "year": ["1971"],
         "month": ["01"],
@@ -86,12 +88,13 @@ AUTH_HEADERS_MISSING: dict[str, str] = {}
 def accept_licence(
     dev_env_prof_api_url: str,
     licence_id: str = EXISTING_PROCESS_LICENCE_ID,
+    licence_data: dict[str, Any] = EXISTING_PROCESS_LICENCE_DATA,
     auth_headers: dict[str, str] = AUTH_HEADERS_VALID_1,
 ) -> requests.Response:
     request_url = urllib.parse.urljoin(
         dev_env_prof_api_url, f"account/licences/{licence_id}"
     )
-    response = requests.put(request_url, headers=auth_headers)
+    response = requests.put(request_url, headers=auth_headers, json=licence_data)
     return response
 
 
@@ -247,15 +250,12 @@ def test_post_process_execution_stored_accepted_licences(
         "created",
         "updated",
         "links",
-        "request",
     )
     assert all([key in response_body for key in exp_keys])
     exp_process_id = EXISTING_PROCESS_ID
     assert response_body["processID"] == exp_process_id
     exp_status = "accepted"
     assert response_body["status"] == exp_status
-    exp_request = POST_PROCESS_REQUEST_BODY_SUCCESS["inputs"]
-    assert response_body["request"] == exp_request
 
     response = delete_job(
         dev_env_proc_api_url,
@@ -380,13 +380,36 @@ def test_get_job(dev_env_proc_api_url: str, dev_env_prof_api_url: str) -> None:
         "created",
         "updated",
         "links",
-        "request",
     )
     assert all([key in response_body for key in exp_keys])
     exp_status = ("accepted", "running", "successful")
     assert response_body["status"] in exp_status
-    exp_request = POST_PROCESS_REQUEST_BODY_SUCCESS["inputs"]
-    assert response_body["request"] == exp_request
+
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"jobs/{job_id}?statistics=True&request=True&log=True"
+    )
+    response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
+    response_status_code = response.status_code
+    exp_status_code = 200
+    assert response_status_code == exp_status_code
+
+    response_body = response.json()
+    exp_add_keys = ("statistics", "request", "log")
+    assert all([key in response_body for key in exp_add_keys])
+    exp_statistics_keys = (
+        "adaptor_entry_point",
+        "running_requests_per_user_adaptor",
+        "queued_requests_per_user_adaptor",
+        "running_requests_per_adaptor",
+        "queued_requests_per_adaptor",
+        "active_users_per_adaptor",
+        "waiting_users_per_adaptor",
+        "qos_status",
+    )
+    assert all([key in response_body["statistics"] for key in exp_statistics_keys])
+    exp_request_keys = ("ids", "labels")
+    assert all([key in response_body["request"] for key in exp_request_keys])
+    assert isinstance(response_body["log"], list)
 
     response = delete_job(dev_env_proc_api_url, job_id)
 
@@ -415,8 +438,6 @@ def test_get_job_successful(
             "updated",
             "finished",
             "links",
-            "request",
-            "results",
         )
         assert all([key in response_body for key in exp_keys])
         exp_results_link = {
@@ -571,7 +592,7 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
 
 
 def test_get_jobs_different_user(dev_env_proc_api_url: str) -> None:
-    number_of_new_jobs = 2
+    number_of_new_jobs = 1
     job_ids: list[str] = []
     for _ in range(number_of_new_jobs):
         response = submit_job(
@@ -586,7 +607,7 @@ def test_get_jobs_different_user(dev_env_proc_api_url: str) -> None:
     exp_status_code = 200
     assert response_status_code == exp_status_code
     response_body = response.json()
-    exp_number_of_jobs = 2
+    exp_number_of_jobs = 1
     assert len(response_body["jobs"]) == exp_number_of_jobs
 
     for job_id in job_ids:
