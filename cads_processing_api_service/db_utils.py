@@ -63,8 +63,16 @@ def get_compute_sessionmaker(
 
 
 @functools.lru_cache()
-def get_catalogue_sessionmaker() -> sqlalchemy.orm.sessionmaker[sqlalchemy.orm.Session]:
+def get_catalogue_sessionmaker(
+    mode: ConnectionMode = ConnectionMode.read,
+) -> sqlalchemy.orm.sessionmaker[sqlalchemy.orm.Session]:
     """Get an sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
+
+    Parameters
+    ----------
+    mode: ConnectionMode
+        Connection mode to the database. If ConnectionMode.read, the sessionmaker
+        will open a connection to a read-only hostname.
 
     Returns
     -------
@@ -72,8 +80,14 @@ def get_catalogue_sessionmaker() -> sqlalchemy.orm.sessionmaker[sqlalchemy.orm.S
         sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
     """
     catalogue_settings = cads_catalogue.config.ensure_settings()
+    if mode == ConnectionMode.write:
+        connection_string = catalogue_settings.connection_string
+    elif mode == ConnectionMode.read:
+        connection_string = catalogue_settings.connection_string_read
+    else:
+        raise ValueError(f"Invalid connection mode: {str(mode)}")
     catalogue_engine = sqlalchemy.create_engine(
-        catalogue_settings.connection_string,
+        connection_string,
         pool_timeout=0.1,
         pool_recycle=catalogue_settings.pool_recycle,
     )
