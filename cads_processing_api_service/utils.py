@@ -54,20 +54,20 @@ class JobSortCriterion(str, enum.Enum):
         maxsize=config.ensure_settings().cache_resources_maxsize,
         ttl=config.ensure_settings().cache_resources_ttl,
     ),
-    key=lambda id, record, session: cachetools.keys.hashkey(id, record),
+    key=lambda resource_id, table, session: cachetools.keys.hashkey(resource_id, table),
 )
 def lookup_resource_by_id(
-    id: str,
-    record: type[cads_catalogue.database.Resource],
+    resource_id: str,
+    table: type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
 ) -> cads_catalogue.database.Resource:
     """Look for the resource identified by `id` into the Catalogue database.
 
     Parameters
     ----------
-    id : str
+    resource_id : str
         Resource identifier.
-    record : type[cads_catalogue.database.Resource]
+    table : type[cads_catalogue.database.Resource]
         Catalogue database table.
     session : sqlalchemy.orm.Session
         Catalogue database session.
@@ -83,9 +83,9 @@ def lookup_resource_by_id(
         Raised if no resource corresponding to the provided `id` is found.
     """
     statement = (
-        sa.select(record)
-        .options(sqlalchemy.orm.joinedload(record.licences))
-        .filter(record.resource_uid == id)
+        sa.select(table)
+        .options(sqlalchemy.orm.joinedload(table.licences))
+        .filter(table.resource_uid == resource_id)
     )
     try:
         row: cads_catalogue.database.Resource = (

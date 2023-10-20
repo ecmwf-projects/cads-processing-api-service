@@ -141,7 +141,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         with catalogue_sessionmaker() as catalogue_session:
             resource = utils.lookup_resource_by_id(
-                id=process_id, record=self.process_table, session=catalogue_session
+                resource_id=process_id,
+                table=self.process_table,
+                session=catalogue_session,
             )
         process_description = serializers.serialize_process_description(resource)
         process_description.outputs = {
@@ -198,7 +200,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         with catalogue_sessionmaker() as catalogue_session:
             resource: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
-                id=process_id, record=self.process_table, session=catalogue_session
+                resource_id=process_id,
+                table=self.process_table,
+                session=catalogue_session,
             )
         adaptor = adaptors.instantiate_adaptor(resource)
         licences = adaptor.get_licences(execution_content)

@@ -12,12 +12,14 @@ def apply_constraints(
     process_id: str = fastapi.Path(...),
     request: dict[str, Any] = fastapi.Body(...),
 ) -> dict[str, Any]:
-    record = cads_catalogue.database.Resource
+    table = cads_catalogue.database.Resource
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
         db_utils.ConnectionMode.read
     )
     with catalogue_sessionmaker() as catalogue_session:
-        dataset = utils.lookup_resource_by_id(process_id, record, catalogue_session)
+        dataset = utils.lookup_resource_by_id(
+            resource_id=process_id, table=table, session=catalogue_session
+        )
     adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
     try:
         constraints: dict[str, Any] = adaptor.apply_constraints(request=request)
