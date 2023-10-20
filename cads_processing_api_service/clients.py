@@ -299,6 +299,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             db_utils.ConnectionMode.read
         )
         with compute_sessionmaker() as compute_session:
+            import time
             start = time.time()
             job_entries = compute_session.scalars(statement).all()
             logger.info(f"----- get jobs from db time: {time.time() - start}")
