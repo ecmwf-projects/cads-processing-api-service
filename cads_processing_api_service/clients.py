@@ -291,9 +291,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
         with compute_sessionmaker() as compute_session:
+            start = time.time()
             job_entries = compute_session.scalars(statement).all()
+            logger.info(f"----- get jobs from db time: {time.time() - start}")
             if back:
                 job_entries = reversed(job_entries)
+            start = time.time()
             with catalogue_sessionmaker() as catalogue_session:
                 jobs = []
                 for job in job_entries:
@@ -309,6 +312,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                             dataset_metadata=dataset_metadata,
                         )
                     )
+        logger.info(f"----- catalogue session time: {time.time() - start}")
         job_list = models.JobList(
             jobs=jobs, links=[ogc_api_processes_fastapi.models.Link(href="")]
         )
