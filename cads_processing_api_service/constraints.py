@@ -13,7 +13,9 @@ def apply_constraints(
     request: dict[str, Any] = fastapi.Body(...),
 ) -> dict[str, Any]:
     record = cads_catalogue.database.Resource
-    catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+    catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
+        db_utils.ConnectionMode.read
+    )
     with catalogue_sessionmaker() as catalogue_session:
         dataset = utils.lookup_resource_by_id(process_id, record, catalogue_session)
     adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
