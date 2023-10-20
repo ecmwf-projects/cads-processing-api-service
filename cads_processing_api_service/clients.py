@@ -95,7 +95,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.process_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
-        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
+            db_utils.ConnectionMode.read
+        )
         with catalogue_sessionmaker() as catalogue_session:
             processes_entries = catalogue_session.scalars(statement).all()
         processes = [
@@ -134,7 +136,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.ProcessDescription
             Process description.
         """
-        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
+            db_utils.ConnectionMode.read
+        )
         with catalogue_sessionmaker() as catalogue_session:
             resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
@@ -189,7 +193,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
         stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
         execution_content = execution_content.model_dump()
-        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
+            db_utils.ConnectionMode.read
+        )
         with catalogue_sessionmaker() as catalogue_session:
             resource: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
                 id=process_id, record=self.process_table, session=catalogue_session
@@ -294,7 +300,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         if back:
             job_entries = reversed(job_entries)
         jobs = []
-        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
+            db_utils.ConnectionMode.read
+        )
         for job in job_entries:
             with catalogue_sessionmaker() as catalogue_session:
                 dataset_metadata = utils.lookup_resource_by_id(
@@ -380,7 +388,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         kwargs = {}
         if request:
             request_ids = job.request_body["request"]
-            catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker()
+            catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
+                db_utils.ConnectionMode.read
+            )
             with catalogue_sessionmaker() as catalogue_session:
                 resource: cads_catalogue.Resource = utils.lookup_resource_by_id(
                     id=job.process_id,
