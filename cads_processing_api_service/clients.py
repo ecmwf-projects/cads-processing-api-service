@@ -302,7 +302,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             import time
             start = time.time()
             job_entries = compute_session.scalars(statement).all()
-            logger.info(f"----- get jobs from db time: {time.time() - start}")
+            logger.info(f"----- get jobs from db time: {time.time() - start} {str(statement)}")
             if back:
                 job_entries = reversed(job_entries)
             start = time.time()
