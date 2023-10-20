@@ -61,6 +61,8 @@ def lookup_resource_by_id(
     id: str,
     record: type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
+    columns: str | list[str] | None = None,
+    load_licences: bool = True,
 ) -> cads_catalogue.database.Resource:
     """Look for the resource identified by `id` into the Catalogue database.
 
@@ -83,15 +85,18 @@ def lookup_resource_by_id(
     ogc_api_processes_fastapi.exceptions.NoSuchProcess
         Raised if no resource corresponding to the provided `id` is found.
     """
+    if columns is None:
+        statement = sa.select(record).filter(record.resource_uid == id)
+    else:
+        if isinstance(columns, str):
+            columns = [columns]
+        columns = [getattr(record, column) for column in columns]
+        statement = sa.select(columns).filter(record.resource_uid == id)
+    if load_licences:
+        statement = statement.options(sqlalchemy.orm.joinedload(record.licences))
     try:
         row: cads_catalogue.database.Resource = (
-            session.execute(
-                sa.select(record)
-                .options(sqlalchemy.orm.joinedload(record.licences))
-                .filter(record.resource_uid == id)
-            )
-            .unique()
-            .scalar_one()
+            session.execute(statement).unique().scalar_one()
         )
     except sqlalchemy.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
