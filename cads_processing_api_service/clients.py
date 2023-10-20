@@ -305,15 +305,18 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         for job in job_entries:
             with catalogue_sessionmaker() as catalogue_session:
-                dataset_metadata = utils.lookup_resource_by_id(
-                    job.process_id, self.process_table, catalogue_session
+                (dataset_title,) = utils.get_resource_properties(
+                    resource_id=job.process_id,
+                    properties="title",
+                    table=self.process_table,
+                    session=catalogue_session,
                 )
             results = utils.parse_results_from_broker_db(job)
             jobs.append(
                 utils.make_status_info(
                     job=job,
                     results=results,
-                    dataset_metadata=dataset_metadata,
+                    dataset_metadata={"title": dataset_title},
                 )
             )
         job_list = models.JobList(
@@ -392,16 +395,16 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 db_utils.ConnectionMode.read
             )
             with catalogue_sessionmaker() as catalogue_session:
-                resource: cads_catalogue.Resource = utils.lookup_resource_by_id(
-                    id=job.process_id,
-                    record=self.process_table,
+                (form_data,) = utils.get_resource_properties(
+                    resource_id=job.process_id,
+                    properties="form_data",
+                    table=self.process_table,
                     session=catalogue_session,
                 )
-            input_form = resource.form_data
             kwargs["request"] = {
                 "ids": request_ids,
                 "labels": translators.translate_request_ids_into_labels(
-                    request_ids, input_form
+                    request_ids, form_data
                 ),
             }
         if statistics:

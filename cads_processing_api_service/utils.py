@@ -55,14 +55,11 @@ class JobSortCriterion(str, enum.Enum):
         ttl=config.ensure_settings().cache_resources_ttl,
     ),
     key=lambda id, record, session: cachetools.keys.hashkey(id, record),
-    info=True,
 )
 def lookup_resource_by_id(
     id: str,
     record: type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
-    columns: str | list[str] | None = None,
-    load_licences: bool = True,
 ) -> cads_catalogue.database.Resource:
     """Look for the resource identified by `id` into the Catalogue database.
 
@@ -85,15 +82,11 @@ def lookup_resource_by_id(
     ogc_api_processes_fastapi.exceptions.NoSuchProcess
         Raised if no resource corresponding to the provided `id` is found.
     """
-    if columns is None:
-        statement = sa.select(record).filter(record.resource_uid == id)
-    else:
-        if isinstance(columns, str):
-            columns = [columns]
-        columns = [getattr(record, column) for column in columns]
-        statement = sa.select(columns).filter(record.resource_uid == id)
-    if load_licences:
-        statement = statement.options(sqlalchemy.orm.joinedload(record.licences))
+    statement = (
+        sa.select(record)
+        .options(sqlalchemy.orm.joinedload(record.licences))
+        .filter(record.resource_uid == id)
+    )
     try:
         row: cads_catalogue.database.Resource = (
             session.execute(statement).unique().scalar_one()
@@ -102,6 +95,55 @@ def lookup_resource_by_id(
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     session.expunge(row)
     return row
+
+
+@cachetools.cached(  # type: ignore
+    cache=cachetools.TTLCache(
+        maxsize=config.ensure_settings().cache_resources_maxsize,
+        ttl=config.ensure_settings().cache_resources_ttl,
+    ),
+    key=lambda resource_id, table, properties, session: cachetools.keys.hashkey(
+        resource_id, table, properties
+    ),
+)
+def get_resource_properties(
+    resource_id: str,
+    properties: str | tuple[str],
+    table: type[cads_catalogue.database.Resource],
+    session: sqlalchemy.orm.Session,
+) -> tuple[Any, ...]:
+    """Look for the resource identified by `id` into the Catalogue database.
+
+    Parameters
+    ----------
+    resource_id : str
+        Resource identifier.
+    properties : str | tuple[str]
+        Resource properties to be retrieved.
+    table : type[cads_catalogue.database.Resource]
+        Catalogue database table.
+    session : sqlalchemy.orm.Session
+        Catalogue database session.
+
+    Returns
+    -------
+    tuple[Any, ...]
+        Found properties.
+
+    Raises
+    ------
+    ogc_api_processes_fastapi.exceptions.NoSuchProcess
+        Raised if no resource corresponding to the provided `resource_id` is found.
+    """
+    if isinstance(properties, str):
+        properties = (properties,)
+    properties = tuple(getattr(table, property) for property in properties)
+    statement = sa.select(*properties).filter(table.resource_uid == resource_id)
+    try:
+        resource_properties: tuple[Any, ...] = session.execute(statement).one()
+    except sqlalchemy.exc.NoResultFound:
+        raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
+    return resource_properties
 
 
 def parse_sortby(sortby: str) -> tuple[str, str]:
@@ -497,7 +539,7 @@ def make_status_info(
     job: cads_broker.SystemRequest | dict[str, Any],
     request: dict[str, Any] | None = None,
     results: dict[str, Any] | None = None,
-    dataset_metadata: cads_catalogue.database.Resource | None = None,
+    dataset_metadata: dict[str, Any] | None = None,
     statistics: dict[str, Any] | None = None,
     log: list[str] | None = None,
 ) -> models.StatusInfo:
@@ -509,7 +551,7 @@ def make_status_info(
         Job description.
     results : dict[str, Any] | None, optional
         Results description, by default None
-    dataset_metadata : cads_catalogue.database.Resource | None, optional
+    dataset_metadata : dict[str, Any] | None, optional
         Dataset metadata, by default None
     statistics : dict[str, Any] | None, optional
         Job statistics, by default None
@@ -538,7 +580,7 @@ def make_status_info(
     if results:
         status_info.results = results
     if dataset_metadata:
-        status_info.processDescription = {"title": dataset_metadata.title}
+        status_info.processDescription = {"title": dataset_metadata["title"]}
     if statistics:
         status_info.statistics = statistics
     if log is not None:
