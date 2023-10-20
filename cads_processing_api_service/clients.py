@@ -293,7 +293,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         statement = utils.apply_limit(statement, limit)
         compute_sessionmaker = db_utils.get_compute_sessionmaker(
-            mode=db_utils.ConnectionMode.read
+            mode=db_utils.ConnectionMode.write
         )
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
             db_utils.ConnectionMode.read
