@@ -54,21 +54,20 @@ class JobSortCriterion(str, enum.Enum):
         maxsize=config.ensure_settings().cache_resources_maxsize,
         ttl=config.ensure_settings().cache_resources_ttl,
     ),
-    key=lambda id, record, session: cachetools.keys.hashkey(id, record),
-    info=True,
+    key=lambda resource_id, table, session: cachetools.keys.hashkey(resource_id, table),
 )
 def lookup_resource_by_id(
-    id: str,
-    record: type[cads_catalogue.database.Resource],
+    resource_id: str,
+    table: type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
 ) -> cads_catalogue.database.Resource:
     """Look for the resource identified by `id` into the Catalogue database.
 
     Parameters
     ----------
-    id : str
+    resource_id : str
         Resource identifier.
-    record : type[cads_catalogue.database.Resource]
+    table : type[cads_catalogue.database.Resource]
         Catalogue database table.
     session : sqlalchemy.orm.Session
         Catalogue database session.
@@ -83,20 +82,68 @@ def lookup_resource_by_id(
     ogc_api_processes_fastapi.exceptions.NoSuchProcess
         Raised if no resource corresponding to the provided `id` is found.
     """
+    statement = (
+        sa.select(table)
+        .options(sqlalchemy.orm.joinedload(table.licences))
+        .filter(table.resource_uid == resource_id)
+    )
     try:
         row: cads_catalogue.database.Resource = (
-            session.execute(
-                sa.select(record)
-                .options(sqlalchemy.orm.joinedload(record.licences))
-                .filter(record.resource_uid == id)
-            )
-            .unique()
-            .scalar_one()
+            session.execute(statement).unique().scalar_one()
         )
     except sqlalchemy.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     session.expunge(row)
     return row
+
+
+@cachetools.cached(  # type: ignore
+    cache=cachetools.TTLCache(
+        maxsize=config.ensure_settings().cache_resources_maxsize,
+        ttl=config.ensure_settings().cache_resources_ttl,
+    ),
+    key=lambda resource_id, table, properties, session: cachetools.keys.hashkey(
+        resource_id, table, properties
+    ),
+)
+def get_resource_properties(
+    resource_id: str,
+    properties: str | tuple[str],
+    table: type[cads_catalogue.database.Resource],
+    session: sqlalchemy.orm.Session,
+) -> tuple[Any, ...]:
+    """Look for the resource identified by `id` into the Catalogue database.
+
+    Parameters
+    ----------
+    resource_id : str
+        Resource identifier.
+    properties : str | tuple[str]
+        Resource properties to be retrieved.
+    table : type[cads_catalogue.database.Resource]
+        Catalogue database table.
+    session : sqlalchemy.orm.Session
+        Catalogue database session.
+
+    Returns
+    -------
+    tuple[Any, ...]
+        Found properties.
+
+    Raises
+    ------
+    ogc_api_processes_fastapi.exceptions.NoSuchProcess
+        Raised if no resource corresponding to the provided `resource_id` is found.
+    """
+    if isinstance(properties, str):
+        properties = (properties,)
+    properties = tuple(getattr(table, property) for property in properties)
+    statement = sa.select(*properties).filter(table.resource_uid == resource_id)
+    try:
+        resource_properties: tuple[Any, ...] = session.execute(statement).one()
+    except sqlalchemy.exc.NoResultFound:
+        raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
+    return resource_properties
 
 
 def parse_sortby(sortby: str) -> tuple[str, str]:
@@ -359,7 +406,7 @@ def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
 
 def get_job_from_broker_db(
     job_id: str, session: sqlalchemy.orm.Session
-) -> dict[str, Any]:
+) -> cads_broker.SystemRequest:
     """Get job description from the Broker database.
 
     Parameters
@@ -380,27 +427,21 @@ def get_job_from_broker_db(
         Raised if no job corresponding to the provided identifier is found.
     """
     try:
-        request = cads_broker.database.get_request(request_uid=job_id, session=session)
-        if request.status == "dismissed":
+        job = cads_broker.database.get_request(request_uid=job_id, session=session)
+        if job.status == "dismissed":
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
     except cads_broker.database.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
-
-    job = dictify_job(request)
     return job
 
 
-def get_results_from_broker_db(
-    job: dict[str, Any], session: sqlalchemy.orm.Session
-) -> dict[str, Any]:
-    """Get job results description from the Broker database.
+def get_results_from_job(job: cads_broker.SystemRequest) -> dict[str, Any]:
+    """Get job results description from SystemRequest instance.
 
     Parameters
     ----------
-    job : dict[str, Any]
+    job : cads_broker.SystemRequest
         Job status description.
-    session : sqlalchemy.orm.Session
-        Broker database session.
 
     Returns
     -------
@@ -414,21 +455,18 @@ def get_results_from_broker_db(
     results_not_ready_exc
         Raised if job's results are not yet ready.
     """
-    job_status = job["status"]
-    job_id = job["request_uid"]
+    job_status = job.status
+    job_id = job.request_uid
     if job_status == "successful":
         try:
-            # TODO: fix type annotation in cads_broker function
-            asset_value = cads_broker.database.get_request_result(  # type: ignore
-                request_uid=job_id, session=session
-            )["args"][0]
+            asset_value = job.cache_entry.result["args"][0]
             results = {"asset": {"value": asset_value}}
         except Exception:
             raise exceptions.JobResultsExpired()
     elif job_status == "failed":
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
-            traceback=job["response_error"]["message"],
+            traceback=str(job.response_error["message"]),
         )
     elif job_status in ("accepted", "running"):
         raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
@@ -437,21 +475,19 @@ def get_results_from_broker_db(
     return results
 
 
-def parse_results_from_broker_db(
-    job: dict[str, Any], session: sqlalchemy.orm.Session
-) -> dict[str, Any]:
+def parse_results_from_broker_db(job: cads_broker.SystemRequest) -> dict[str, Any]:
     try:
-        results = get_results_from_broker_db(job=job, session=session)
+        results = get_results_from_job(job=job)
     except ogc_api_processes_fastapi.exceptions.OGCAPIException as exc:
         results = exceptions.format_exception_content(exc=exc)
     return results
 
 
 def collect_job_statistics(
-    job: dict[str, Any], session: sqlalchemy.orm.Session
+    job: cads_broker.SystemRequest, session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
-    entry_point = job["entry_point"]
-    user_uid = job["user_uid"]
+    entry_point = str(job.entry_point)
+    user_uid = str(job.user_uid)
     statistics = {
         "adaptor_entry_point": entry_point,
         "running_requests_per_user_adaptor": cads_broker.database.count_requests(
@@ -490,20 +526,20 @@ def collect_job_statistics(
     return statistics
 
 
-def extract_job_log(job: dict[str, Any]) -> list[str]:
+def extract_job_log(job: cads_broker.SystemRequest) -> list[str]:
     log = []
-    if job["response_user_visible_log"]:
-        job_log = json.loads(job["response_user_visible_log"])
+    if job.response_user_visible_log:
+        job_log = json.loads(str(job.response_user_visible_log))
         for log_timestamp, log_message in job_log:
             log.append(log_message)
     return log
 
 
 def make_status_info(
-    job: dict[str, Any],
+    job: cads_broker.SystemRequest | dict[str, Any],
     request: dict[str, Any] | None = None,
     results: dict[str, Any] | None = None,
-    dataset_metadata: cads_catalogue.database.Resource | None = None,
+    dataset_metadata: dict[str, Any] | None = None,
     statistics: dict[str, Any] | None = None,
     log: list[str] | None = None,
 ) -> models.StatusInfo:
@@ -511,11 +547,11 @@ def make_status_info(
 
     Parameters
     ----------
-    job : dict[str, Any]
+    job : cads_broker.SystemRequest | dict[str, Any]
         Job description.
     results : dict[str, Any] | None, optional
         Results description, by default None
-    dataset_metadata : cads_catalogue.database.Resource | None, optional
+    dataset_metadata : dict[str, Any] | None, optional
         Dataset metadata, by default None
     statistics : dict[str, Any] | None, optional
         Job statistics, by default None
@@ -527,6 +563,8 @@ def make_status_info(
     models.StatusInfo
         Job status information.
     """
+    if isinstance(job, cads_broker.SystemRequest):
+        job = dictify_job(request=job)
     status_info = models.StatusInfo(
         type=ogc_api_processes_fastapi.models.JobType.process,
         jobID=job["request_uid"],
@@ -542,7 +580,7 @@ def make_status_info(
     if results:
         status_info.results = results
     if dataset_metadata:
-        status_info.processDescription = {"title": dataset_metadata.title}
+        status_info.processDescription = {"title": dataset_metadata["title"]}
     if statistics:
         status_info.statistics = statistics
     if log is not None:

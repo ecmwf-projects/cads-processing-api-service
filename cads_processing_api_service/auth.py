@@ -18,6 +18,7 @@ import urllib.parse
 from typing import Any
 
 import cachetools
+import cads_broker
 import fastapi
 import requests
 
@@ -127,7 +128,7 @@ def authenticate_user(
     return user_uid
 
 
-def verify_permission(user_uid: str, job: dict[str, Any]) -> None:
+def verify_permission(user_uid: str, job: cads_broker.SystemRequest) -> None:
     """Verify if a user has permission to interact with a job.
 
     Parameters
@@ -142,7 +143,7 @@ def verify_permission(user_uid: str, job: dict[str, Any]) -> None:
     exceptions.PermissionDenied
         Raised if the user has no permission to interact with the job.
     """
-    if job["user_uid"] != user_uid:
+    if job.user_uid != user_uid:
         raise exceptions.PermissionDenied()
 
 
