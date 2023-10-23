@@ -127,7 +127,7 @@ def get_resource_properties(
 
     Returns
     -------
-    tuple[Any, ...]
+    sqlalchemy.Row[Any]
         Found properties.
 
     Raises
@@ -137,10 +137,10 @@ def get_resource_properties(
     """
     if isinstance(properties, str):
         properties = (properties,)
-    properties = tuple(getattr(table, property) for property in properties)
-    statement = sa.select(*properties).filter(table.resource_uid == resource_id)
+    properties_values = tuple(getattr(table, property) for property in properties)
+    statement = sa.select(*properties_values).filter(table.resource_uid == resource_id)
     try:
-        resource_properties: tuple[Any, ...] = session.execute(statement).one()
+        resource_properties = tuple(session.execute(statement).one())
     except sqlalchemy.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     return resource_properties
