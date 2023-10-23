@@ -194,6 +194,14 @@ def get_stored_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str,
     settings = config.ensure_settings()
     request_url = urllib.parse.urljoin(settings.profiles_api_url, "account/licences")
     response = requests.get(request_url, headers={auth_header[0]: auth_header[1]})
+    if response.status_code in (
+        fastapi.status.HTTP_401_UNAUTHORIZED,
+        fastapi.status.HTTP_403_FORBIDDEN,
+    ):
+        raise exceptions.PermissionDenied(
+            status_code=response.status_code,
+            title=response.json()["title"],
+        )
     response.raise_for_status()
     licences = response.json()["licences"]
     accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}
