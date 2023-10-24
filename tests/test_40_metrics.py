@@ -18,19 +18,19 @@ from cads_processing_api_service import metrics
 
 
 def test_handle_download_metrics() -> None:
-    test_job = {"process_id": "test_process_id"}
+    test_dataset_id = "test_dataset_id"
     test_results = {"asset": {"value": {"file:size": 100}}}
     for _ in range(2):
-        metrics.handle_download_metrics(test_job, test_results)
+        metrics.handle_download_metrics(test_dataset_id, test_results)
 
     exp_download_bytes_count = 2
     res_download_bytes_count = prometheus_client.REGISTRY.get_sample_value(
-        "download_bytes_count", labels={"dataset_id": "test_process_id"}
+        "download_bytes_count", labels={"dataset_id": "test_dataset_id"}
     )
     assert res_download_bytes_count == exp_download_bytes_count
 
     exp_download_bytes_sum = 200
     res_download_bytes_sum = prometheus_client.REGISTRY.get_sample_value(
-        "download_bytes_sum", labels={"dataset_id": "test_process_id"}
+        "download_bytes_sum", labels={"dataset_id": "test_dataset_id"}
     )
     assert res_download_bytes_sum == exp_download_bytes_sum
