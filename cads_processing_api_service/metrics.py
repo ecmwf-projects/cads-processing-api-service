@@ -36,10 +36,9 @@ def handle_metrics(
     return starlette_exporter.handle_metrics(request)
 
 
-def handle_download_metrics(job: dict[str, Any], results: dict[str, Any]) -> None:
+def handle_download_metrics(dataset_id: str, results: dict[str, Any]) -> None:
     """Update the download metrics when a user downloads a dataset."""
     try:
-        dataset_id = job["process_id"]
         result_size = int(results["asset"]["value"]["file:size"])
         DOWNLOAD_BYTES.labels(dataset_id).observe(result_size)
     except Exception as e:

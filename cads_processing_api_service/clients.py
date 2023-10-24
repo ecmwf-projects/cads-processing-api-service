@@ -470,7 +470,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 )
             auth.verify_permission(user_uid, job)
             results = utils.get_results_from_job(job=job)
-        handle_download_metrics(job, results)
+        handle_download_metrics(job.process_id, results)
         return results
 
     def delete_job(
