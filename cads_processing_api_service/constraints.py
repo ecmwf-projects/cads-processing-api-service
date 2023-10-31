@@ -17,10 +17,12 @@ def apply_constraints(
         db_utils.ConnectionMode.read
     )
     with catalogue_sessionmaker() as catalogue_session:
-        dataset = utils.lookup_resource_by_id(
+        dataset, dataset_data = utils.lookup_resource_by_id(
             resource_id=process_id, table=table, session=catalogue_session
         )
-    adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
+    adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(
+        dataset, dataset_data
+    )
     try:
         constraints: dict[str, Any] = adaptor.apply_constraints(request=request)
     except cads_adaptors.constraints.ParameterError as exc:

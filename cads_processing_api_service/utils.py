@@ -91,10 +91,12 @@ def lookup_resource_by_id(
         row: cads_catalogue.database.Resource = (
             session.execute(statement).unique().scalar_one()
         )
+        row_data: cads_catalogue.database.ResourceData = row.resource_data
     except sqlalchemy.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     session.expunge(row)
-    return row
+    session.expunge(row_data)
+    return row, row_data
 
 
 @cachetools.cached(  # type: ignore
@@ -109,7 +111,8 @@ def lookup_resource_by_id(
 def get_resource_properties(
     resource_id: str,
     properties: str | tuple[str],
-    table: type[cads_catalogue.database.Resource],
+    table: type[cads_catalogue.database.Resource]
+    | type[cads_catalogue.database.ResourceData],
     session: sqlalchemy.orm.Session,
 ) -> tuple[Any, ...]:
     """Look for the resource identified by `id` into the Catalogue database.

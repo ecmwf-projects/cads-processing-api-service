@@ -24,6 +24,7 @@ DEFAULT_ENTRY_POINT = "cads_adaptors:UrlCdsAdaptor"
 
 def get_adaptor_properties(
     dataset: cads_catalogue.database.Resource,
+    dataset_data: cads_catalogue.database.ResourceData,
 ) -> dict[str, Any]:
     config: dict[str, Any] = dataset.adaptor_configuration
     if config:
@@ -35,10 +36,10 @@ def get_adaptor_properties(
     setup_code = dataset.adaptor
     resources = config.pop("resources", {})
 
-    constraints = dataset.constraints_data
+    constraints = dataset_data.constraints_data
     if constraints is not None:
         config["constraints"] = constraints
-    mapping = dataset.mapping
+    mapping = dataset_data.mapping
     if mapping is not None:
         config["mapping"] = mapping
     licences: list[cads_catalogue.database.Licence] = dataset.licences
@@ -46,7 +47,7 @@ def get_adaptor_properties(
         config["licences"] = [
             (licence.licence_uid, licence.revision) for licence in licences
         ]
-    form = dataset.form_data
+    form = dataset_data.form_data
     hash = dataset.adaptor_properties_hash
 
     adaptor_properties: dict[str, Any] = {
@@ -63,10 +64,11 @@ def get_adaptor_properties(
 
 def make_system_job_kwargs(
     dataset: cads_catalogue.database.Resource,
+    dataset_data: cads_catalogue.database.ResourceData,
     request: dict[str, Any],
     adaptor_resources: dict[str, int],
 ) -> dict[str, Any]:
-    adaptor_properties = get_adaptor_properties(dataset)
+    adaptor_properties = get_adaptor_properties(dataset, dataset_data)
     # merge adaptor and dataset resources
     resources = dict(adaptor_resources, **adaptor_properties["resources"])
     system_job_kwargs = {
@@ -83,8 +85,9 @@ def make_system_job_kwargs(
 
 def instantiate_adaptor(
     dataset: cads_catalogue.database.Resource,
+    dataset_data: cads_catalogue.database.ResourceData,
 ) -> cads_adaptors.AbstractAdaptor:
-    adaptor_properties = get_adaptor_properties(dataset)
+    adaptor_properties = get_adaptor_properties(dataset, dataset_data)
     adaptor_class = cads_adaptors.get_adaptor_class(
         entry_point=adaptor_properties["entry_point"],
         setup_code=adaptor_properties["setup_code"],
