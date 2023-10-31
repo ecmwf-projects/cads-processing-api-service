@@ -60,9 +60,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     job_table: type[cads_broker.database.SystemRequest] = attrs.field(
         default=cads_broker.database.SystemRequest
     )
-    process_data_table: type[cads_catalogue.database.ResourceData] = attrs.field(
-        default=cads_catalogue.database.ResourceData
-    )
 
     def get_processes(
         self,
@@ -143,14 +140,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             db_utils.ConnectionMode.read
         )
         with catalogue_sessionmaker() as catalogue_session:
-            resource, resource_data = utils.lookup_resource_by_id(
+            resource = utils.lookup_resource_by_id(
                 resource_id=process_id,
                 table=self.process_table,
                 session=catalogue_session,
             )
-        process_description = serializers.serialize_process_description(
-            resource, resource_data
-        )
+        process_description = serializers.serialize_process_description(resource)
         process_description.outputs = {
             "asset": ogc_api_processes_fastapi.models.OutputDescription(
                 title="Asset",
@@ -204,18 +199,18 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             db_utils.ConnectionMode.read
         )
         with catalogue_sessionmaker() as catalogue_session:
-            resource, resource_data = utils.lookup_resource_by_id(
+            resource: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
                 resource_id=process_id,
                 table=self.process_table,
                 session=catalogue_session,
             )
-        adaptor = adaptors.instantiate_adaptor(resource, resource_data)
+        adaptor = adaptors.instantiate_adaptor(resource)
         licences = adaptor.get_licences(execution_content)
         auth.validate_licences(execution_content, stored_accepted_licences, licences)
         job_id = str(uuid.uuid4())
         structlog.contextvars.bind_contextvars(job_id=job_id)
         job_kwargs = adaptors.make_system_job_kwargs(
-            resource, resource_data, execution_content, adaptor.resources
+            resource, execution_content, adaptor.resources
         )
         compute_sessionmaker = db_utils.get_compute_sessionmaker(
             mode=db_utils.ConnectionMode.write
@@ -407,7 +402,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 (form_data,) = utils.get_resource_properties(
                     resource_id=job.process_id,
                     properties="form_data",
-                    table=self.process_data_table,
+                    table=self.process_table,
                     session=catalogue_session,
                 )
             kwargs["request"] = {
