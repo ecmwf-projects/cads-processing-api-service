@@ -53,6 +53,7 @@ def serialize_process_summary(
 
 def serialize_process_description(
     db_model: cads_catalogue.database.Resource,
+    db_data_model: cads_catalogue.database.ResourceData,
 ) -> ogc_api_processes_fastapi.models.ProcessDescription:
     """Convert provided database entry into a representation of the related process description.
 
@@ -67,7 +68,7 @@ def serialize_process_description(
         Process description representation.
     """
     process_summary = serialize_process_summary(db_model)
-    cds_form = db_model.form_data
+    cds_form = db_data_model.form_data
     process_inputs = {}
     if cds_form:
         process_inputs = translators.translate_cds_form(cds_form)
