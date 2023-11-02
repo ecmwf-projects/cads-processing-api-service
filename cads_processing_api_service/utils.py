@@ -140,7 +140,7 @@ def get_resource_properties(
     if isinstance(properties, str):
         properties = (properties,)
     properties_values = tuple(getattr(table, property) for property in properties)
-    statement = sa.select(*properties_values).filter(table.resource_uid == resource_id)
+    statement = sa.select(*properties_values).filter(table.resource_uid == resource_id)  # type: ignore
     try:
         resource_properties = tuple(session.execute(statement).one())
     except sqlalchemy.exc.NoResultFound:

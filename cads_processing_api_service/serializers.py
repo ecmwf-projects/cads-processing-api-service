@@ -67,10 +67,10 @@ def serialize_process_description(
         Process description representation.
     """
     process_summary = serialize_process_summary(db_model)
-    cds_form = db_model.resource_data.form_data
+    cds_form = db_model.resource_data.form_data  # type: ignore
     process_inputs = {}
     if cds_form:
-        process_inputs = translators.translate_cds_form(cds_form)
+        process_inputs = translators.translate_cds_form(cds_form)  # type: ignore
     retval = ogc_api_processes_fastapi.models.ProcessDescription(
         **process_summary.model_dump(),
         inputs=process_inputs,
