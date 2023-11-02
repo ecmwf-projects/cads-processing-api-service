@@ -202,7 +202,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             db_utils.ConnectionMode.read
         )
         with catalogue_sessionmaker() as catalogue_session:
-            resource = utils.lookup_resource_by_id(
+            resource: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
                 resource_id=process_id,
                 table=self.process_table,
                 session=catalogue_session,
