@@ -21,7 +21,7 @@ from cads_processing_api_service import adaptors
 
 
 def test_get_adaptor_properties() -> None:
-    adaptors_configuration = {
+    adaptor_configuration = {
         "entry_point": "test_entry_point",
         "resources": {"test_resource_key": "test_resource_value"},
         "test_configuration_key": "test_configuration_value",
@@ -33,20 +33,22 @@ def test_get_adaptor_properties() -> None:
     setup_code = "test_setup_code"
     adaptor_properties_hash = "test_adaptor_properties_hash"
     dataset = cads_catalogue.database.Resource(
-        adaptor_configuration=adaptors_configuration,
-        constraints_data=constraints_data,
-        mapping=mapping,
         licences=licences,  # type: ignore
-        form_data=form_data,
         adaptor=setup_code,
         adaptor_properties_hash=adaptor_properties_hash,
+        resource_data=cads_catalogue.database.ResourceData(
+            adaptor_configuration=adaptor_configuration,
+            constraints_data=constraints_data,
+            mapping=mapping,
+            form_data=form_data,
+        ),
     )
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
 
     exp_adaptor_properties = {
-        "entry_point": adaptors_configuration["entry_point"],
+        "entry_point": adaptor_configuration["entry_point"],
         "setup_code": setup_code,
-        "resources": adaptors_configuration["resources"],
+        "resources": adaptor_configuration["resources"],
         "form": form_data,
         "config": {
             "test_configuration_key": "test_configuration_value",
@@ -58,16 +60,18 @@ def test_get_adaptor_properties() -> None:
     }
     assert adaptor_properties == exp_adaptor_properties
 
-    adaptors_configuration = {
+    adaptor_configuration = {
         "resources": {"test_resource_key": "test_resource_value"},
         "test_configuration_key": "test_configuration_value",
     }
     dataset = cads_catalogue.database.Resource(
-        adaptor_configuration=adaptors_configuration,
-        constraints_data=constraints_data,
-        mapping=mapping,
         licences=licences,  # type: ignore
-        form_data=form_data,
+        resource_data=cads_catalogue.database.ResourceData(
+            adaptor_configuration=adaptor_configuration,
+            constraints_data=constraints_data,
+            mapping=mapping,
+            form_data=form_data,
+        ),
     )
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
     assert adaptor_properties["entry_point"] == adaptors.DEFAULT_ENTRY_POINT
@@ -75,7 +79,7 @@ def test_get_adaptor_properties() -> None:
 
 
 def test_instantiate_adaptor() -> None:
-    adaptors_configuration = {
+    adaptor_configuration = {
         "resources": {"test_resource_key": "test_resource_value"},
         "test_configuration_key": "test_configuration_value",
     }
@@ -84,12 +88,14 @@ def test_instantiate_adaptor() -> None:
     licences = [cads_catalogue.database.Licence(licence_uid="licence_uid", revision=1)]
     form_data: dict[str, Any] = {}
     dataset = cads_catalogue.database.Resource(
-        adaptor_configuration=adaptors_configuration,
-        constraints_data=constraints_data,
-        mapping=mapping,
         licences=licences,  # type: ignore
-        form_data=form_data,
         adaptor_properties_hash="test_adaptor_properties_hash",
+        resource_data=cads_catalogue.database.ResourceData(
+            adaptor_configuration=adaptor_configuration,
+            constraints_data=constraints_data,
+            mapping=mapping,
+            form_data=form_data,
+        ),
     )
     adaptor = adaptors.instantiate_adaptor(dataset)
 
