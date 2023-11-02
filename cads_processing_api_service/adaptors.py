@@ -26,7 +26,7 @@ def get_adaptor_properties(
     dataset: cads_catalogue.database.Resource,
     dataset_data: cads_catalogue.database.ResourceData,
 ) -> dict[str, Any]:
-    config: dict[str, Any] = dataset.adaptor_configuration
+    config: dict[str, Any] = dataset_data.adaptor_configuration
     if config:
         config = config.copy()
     else:
