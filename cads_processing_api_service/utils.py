@@ -84,6 +84,7 @@ def lookup_resource_by_id(
     """
     statement = (
         sa.select(table)
+        .options(sqlalchemy.orm.joinedload(table.resource_data))
         .options(sqlalchemy.orm.joinedload(table.licences))
         .filter(table.resource_uid == resource_id)
     )
@@ -91,12 +92,10 @@ def lookup_resource_by_id(
         row: cads_catalogue.database.Resource = (
             session.execute(statement).unique().scalar_one()
         )
-        row_data: cads_catalogue.database.ResourceData = row.resource_data
     except sqlalchemy.exc.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
     session.expunge(row)
-    session.expunge(row_data)
-    return row, row_data
+    return row
 
 
 @cachetools.cached(  # type: ignore
