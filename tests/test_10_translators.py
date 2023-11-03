@@ -16,7 +16,7 @@ from typing import Any
 
 import cads_processing_api_service.translators
 
-TEST_INPUT: dict[str, Any] = {
+TEST_INPUT_CDS_SCHEMAS: dict[str, Any] = {
     "string_list": {
         "details": {"labels": {"val1": "Val1", "val2": "Val2", "val3": "Val3"}},
         "type": "StringListWidget",
@@ -64,7 +64,7 @@ TEST_INPUT: dict[str, Any] = {
 
 
 def test_extract_groups_labels() -> None:
-    test_groups = TEST_INPUT["string_list_array"]["details"]["groups"]
+    test_groups = TEST_INPUT_CDS_SCHEMAS["string_list_array"]["details"]["groups"]
     test_values = {"test_value": "Test Value"}
     exp_output = {
         "test_value": "Test Value",
@@ -77,14 +77,16 @@ def test_extract_groups_labels() -> None:
     )
     assert res_output == exp_output
 
-    test_groups = TEST_INPUT["string_list_array"]["details"]["groups"]
+    test_groups = TEST_INPUT_CDS_SCHEMAS["string_list_array"]["details"]["groups"]
     exp_output = {"val1": "Val1", "val2": "Val2", "val3": "Val3"}
     res_output = cads_processing_api_service.translators.extract_groups_labels(
         test_groups
     )
     assert res_output == exp_output
 
-    test_groups = TEST_INPUT["string_list_array_groups"]["details"]["groups"]
+    test_groups = TEST_INPUT_CDS_SCHEMAS["string_list_array_groups"]["details"][
+        "groups"
+    ]
     exp_output = {
         "val1": "Val1",
         "val2": "Val2",
@@ -100,14 +102,14 @@ def test_extract_groups_labels() -> None:
 
 
 def test_extract_labels() -> None:
-    test_inputs_cds_schema = TEST_INPUT["string_list_array"]
+    test_inputs_cds_schema = TEST_INPUT_CDS_SCHEMAS["string_list_array"]
     exp_output = {"val1": "Val1", "val2": "Val2", "val3": "Val3"}
     res_output = cads_processing_api_service.translators.extract_labels(
         test_inputs_cds_schema
     )
     assert res_output == exp_output
 
-    test_inputs_cds_schema = TEST_INPUT["string_list"]
+    test_inputs_cds_schema = TEST_INPUT_CDS_SCHEMAS["string_list"]
     exp_output = {"val1": "Val1", "val2": "Val2", "val3": "Val3"}
     res_output = cads_processing_api_service.translators.extract_labels(
         test_inputs_cds_schema
@@ -116,7 +118,7 @@ def test_extract_labels() -> None:
 
 
 def test_translate_string_list() -> None:
-    test_input = TEST_INPUT["string_list"]
+    test_input = TEST_INPUT_CDS_SCHEMAS["string_list"]
     exp_ouput = {
         "type": "array",
         "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
@@ -129,7 +131,7 @@ def test_translate_string_list() -> None:
 
 
 def test_translate_string_list_array() -> None:
-    test_input = TEST_INPUT["string_list_array"]
+    test_input = TEST_INPUT_CDS_SCHEMAS["string_list_array"]
     exp_ouput = {
         "type": "array",
         "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
@@ -140,7 +142,7 @@ def test_translate_string_list_array() -> None:
 
     assert res_output == exp_ouput
 
-    test_input = TEST_INPUT["string_list_array_groups"]
+    test_input = TEST_INPUT_CDS_SCHEMAS["string_list_array_groups"]
     exp_ouput = {
         "type": "array",
         "items": {
@@ -156,7 +158,7 @@ def test_translate_string_list_array() -> None:
 
 
 def test_translate_string_choice() -> None:
-    test_input = TEST_INPUT["string_choice"]
+    test_input = TEST_INPUT_CDS_SCHEMAS["string_choice"]
     exp_ouput = {"type": "string", "enum": ["val1", "val2", "val3"], "default": "val1"}
     res_output = cads_processing_api_service.translators.translate_string_choice(
         test_input
@@ -166,7 +168,7 @@ def test_translate_string_choice() -> None:
 
 
 def test_translate_geographic_extent_map() -> None:
-    test_input = TEST_INPUT["geographic_extent_map"]
+    test_input = TEST_INPUT_CDS_SCHEMAS["geographic_extent_map"]
     exp_ouput = {
         "type": "array",
         "minItems": 4,
@@ -181,6 +183,32 @@ def test_translate_geographic_extent_map() -> None:
     )
 
     assert res_output == exp_ouput
+
+
+def test_make_request_labels() -> None:
+    test_input_value_ids = [1, 1, 1, 1]
+    test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["geographic_extent_map"]
+    exp_output = ["Nord: 1°", "West: 1°", "South: 1°", "East: 1°"]
+    res_output = cads_processing_api_service.translators.make_request_labels(
+        test_input_value_ids, test_input_cds_schema
+    )
+    assert res_output == exp_output
+
+    test_input_value_ids = ["val1", "val2"]
+    test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["string_list"]
+    exp_output = ["Val1", "Val2"]
+    res_output = cads_processing_api_service.translators.make_request_labels(
+        test_input_value_ids, test_input_cds_schema
+    )
+    assert res_output == exp_output
+
+    test_input_value_ids = ["val1", "val4"]
+    test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["string_list"]
+    exp_output = ["Val1", "val4"]
+    res_output = cads_processing_api_service.translators.make_request_labels(
+        test_input_value_ids, test_input_cds_schema
+    )
+    assert res_output == exp_output
 
 
 def test_format_request_value() -> None:
