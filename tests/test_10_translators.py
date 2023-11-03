@@ -186,7 +186,7 @@ def test_translate_geographic_extent_map() -> None:
 
 
 def test_make_request_labels() -> None:
-    test_input_value_ids = [1, 1, 1, 1]
+    test_input_value_ids = ["1", "1", "1", "1"]
     test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["geographic_extent_map"]
     exp_output = ["North: 1°", "West: 1°", "South: 1°", "East: 1°"]
     res_output = cads_processing_api_service.translators.make_request_labels(
