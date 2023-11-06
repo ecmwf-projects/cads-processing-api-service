@@ -58,6 +58,8 @@ def get_compute_sessionmaker(
         connection_string,
         pool_timeout=broker_settings.pool_timeout,
         pool_recycle=broker_settings.pool_recycle,
+        pool_size=broker_settings.pool_size,
+        max_overflow=broker_settings.max_overflow,
     )
     return sqlalchemy.orm.sessionmaker(broker_engine)
 
