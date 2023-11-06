@@ -92,8 +92,6 @@ def instantiate_adaptor(
     )
     config = adaptor_properties["config"]
     config.update({"process_id": process_id})
-    adaptor = adaptor_class(
-        form=adaptor_properties["form"], **config
-    )
+    adaptor = adaptor_class(form=adaptor_properties["form"], **config)
 
     return adaptor
