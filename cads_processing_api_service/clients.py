@@ -205,7 +205,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 session=catalogue_session,
             )
         job_id = str(uuid.uuid4())
-        adaptor = adaptors.instantiate_adaptor(resource, job_id=job_id)
+        adaptor = adaptors.instantiate_adaptor(resource, request_uid=job_id)
         licences = adaptor.get_licences(execution_content)
         auth.validate_licences(execution_content, stored_accepted_licences, licences)
         structlog.contextvars.bind_contextvars(job_id=job_id)
