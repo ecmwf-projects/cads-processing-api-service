@@ -83,7 +83,7 @@ def make_system_job_kwargs(
 
 def instantiate_adaptor(
     dataset: cads_catalogue.database.Resource,
-    process_id: Any = None,
+    request_uid: Any = None,
 ) -> cads_adaptors.AbstractAdaptor:
     adaptor_properties = get_adaptor_properties(dataset)
     adaptor_class = cads_adaptors.get_adaptor_class(
@@ -91,7 +91,7 @@ def instantiate_adaptor(
         setup_code=adaptor_properties["setup_code"],
     )
     config = adaptor_properties["config"]
-    config.update({"process_id": process_id})
+    config.update({"request_uid": request_uid})
     adaptor = adaptor_class(form=adaptor_properties["form"], **config)
 
     return adaptor
