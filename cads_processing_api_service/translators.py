@@ -136,7 +136,10 @@ def make_request_labels(
     input_value_ids: list[str],
     cds_input_schema: dict[str, Any],
 ) -> list[str]:
-    if cds_input_schema["type"] == "GeographicExtentWidget":
+    if cds_input_schema["type"] in (
+        "GeographicExtentWidget",
+        "GeographicExtentMapWidget",
+    ):
         request_labels = [
             f"{label}: {value}°"
             for label, value in zip(
@@ -146,9 +149,12 @@ def make_request_labels(
         ]
     else:
         input_value_label = extract_labels(cds_input_schema)
-        request_labels = [
-            input_value_label[input_value_id] for input_value_id in input_value_ids
-        ]
+        request_labels = []
+        for input_value_id in input_value_ids:
+            if input_value_id in input_value_label:
+                request_labels.append(input_value_label[input_value_id])
+            else:
+                request_labels.append(input_value_id)
     return request_labels
 
 
