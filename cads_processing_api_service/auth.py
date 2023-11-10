@@ -147,28 +147,6 @@ def verify_permission(user_uid: str, job: cads_broker.SystemRequest) -> None:
         raise exceptions.PermissionDenied()
 
 
-def get_contextual_accepted_licences(
-    execution_content: dict[str, Any]
-) -> set[tuple[str, int]]:
-    """Get licences accepted in the context of a process execution request.
-
-    Parameters
-    ----------
-    execution_content : dict[str, Any]
-        Process execution request's payload.
-
-    Returns
-    -------
-    set[tuple[str, int]]
-        Accepted licences.
-    """
-    licences = execution_content.get("acceptedLicences")
-    if not licences:
-        licences = []
-    accepted_licences = {(licence["id"], licence["revision"]) for licence in licences}
-    return accepted_licences
-
-
 @cachetools.cached(
     cache=cachetools.TTLCache(
         maxsize=config.ensure_settings().cache_users_maxsize,
@@ -176,7 +154,7 @@ def get_contextual_accepted_licences(
     ),
     info=True,
 )
-def get_stored_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
+def get_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
     """Get licences accepted by a user stored in the Extended Profiles database.
 
     The user is identified by the provided authentication header.
@@ -246,22 +224,17 @@ def check_licences(
 
 
 def validate_licences(
-    execution_content: dict[str, Any],
-    stored_accepted_licences: set[tuple[str, str]],
+    accepted_licences: set[tuple[str, str]],
     licences: list[tuple[str, int]],
 ) -> None:
     """Validate process execution request's payload in terms of required licences.
 
     Parameters
     ----------
-    execution_content : dict[str, Any]
-        Process execution request's payload.
     stored_accepted_licences : set[tuple[str, str]]
         Licences accepted by a user stored in the Extended Profiles database.
     licences : list[tuple[str, int]]
         Licences bound to the required process/dataset.
     """
     required_licences = set(licences)
-    contextual_accepted_licences = get_contextual_accepted_licences(execution_content)
-    accepted_licences = contextual_accepted_licences.union(stored_accepted_licences)
     check_licences(required_licences, accepted_licences)  # type: ignore
