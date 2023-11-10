@@ -17,25 +17,6 @@
 from typing import Any
 
 import ogc_api_processes_fastapi.models
-import pydantic
-
-
-class Licence(pydantic.BaseModel):
-    id: str
-    revision: int
-
-
-class Request(pydantic.BaseModel):
-    ids: dict[
-        str,
-        ogc_api_processes_fastapi.models.InlineOrRefData
-        | list[ogc_api_processes_fastapi.models.InlineOrRefData],
-    ] | None = None
-    labels: dict[str, str | list[str]] | None = None
-
-
-class Execute(ogc_api_processes_fastapi.models.Execute):
-    acceptedLicences: list[Licence] | None = None
 
 
 class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
