@@ -25,7 +25,7 @@ DEFAULT_ENTRY_POINT = "cads_adaptors:UrlCdsAdaptor"
 def get_adaptor_properties(
     dataset: cads_catalogue.database.Resource,
 ) -> dict[str, Any]:
-    config: dict[str, Any] = dataset.adaptor_configuration
+    config: dict[str, Any] = dataset.resource_data.adaptor_configuration  # type: ignore
     if config:
         config = config.copy()
     else:
@@ -35,10 +35,10 @@ def get_adaptor_properties(
     setup_code = dataset.adaptor
     resources = config.pop("resources", {})
 
-    constraints = dataset.constraints_data
+    constraints = dataset.resource_data.constraints_data  # type: ignore
     if constraints is not None:
         config["constraints"] = constraints
-    mapping = dataset.mapping
+    mapping = dataset.resource_data.mapping  # type: ignore
     if mapping is not None:
         config["mapping"] = mapping
     licences: list[cads_catalogue.database.Licence] = dataset.licences
@@ -46,7 +46,7 @@ def get_adaptor_properties(
         config["licences"] = [
             (licence.licence_uid, licence.revision) for licence in licences
         ]
-    form = dataset.form_data
+    form = dataset.resource_data.form_data  # type: ignore
     hash = dataset.adaptor_properties_hash
 
     adaptor_properties: dict[str, Any] = {

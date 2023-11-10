@@ -54,12 +54,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         Job record/table.
     """
 
-    process_table: type[cads_catalogue.database.Resource] = attrs.field(
-        default=cads_catalogue.database.Resource
-    )
-    job_table: type[cads_broker.database.SystemRequest] = attrs.field(
-        default=cads_broker.database.SystemRequest
-    )
+    process_table = cads_catalogue.database.Resource
+    process_data_table = cads_catalogue.database.ResourceData
+    job_table = cads_broker.database.SystemRequest
 
     def get_processes(
         self,
@@ -402,7 +399,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 (form_data,) = utils.get_resource_properties(
                     resource_id=job.process_id,
                     properties="form_data",
-                    table=self.process_table,
+                    table=self.process_data_table,
                     session=catalogue_session,
                 )
             kwargs["request"] = {

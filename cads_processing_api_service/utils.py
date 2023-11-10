@@ -84,6 +84,7 @@ def lookup_resource_by_id(
     """
     statement = (
         sa.select(table)
+        .options(sqlalchemy.orm.joinedload(table.resource_data))
         .options(sqlalchemy.orm.joinedload(table.licences))
         .filter(table.resource_uid == resource_id)
     )
@@ -109,7 +110,8 @@ def lookup_resource_by_id(
 def get_resource_properties(
     resource_id: str,
     properties: str | tuple[str],
-    table: type[cads_catalogue.database.Resource],
+    table: type[cads_catalogue.database.Resource]
+    | type[cads_catalogue.database.ResourceData],
     session: sqlalchemy.orm.Session,
 ) -> tuple[Any, ...]:
     """Look for the resource identified by `id` into the Catalogue database.
@@ -138,7 +140,7 @@ def get_resource_properties(
     if isinstance(properties, str):
         properties = (properties,)
     properties_values = tuple(getattr(table, property) for property in properties)
-    statement = sa.select(*properties_values).filter(table.resource_uid == resource_id)
+    statement = sa.select(*properties_values).filter(table.resource_uid == resource_id)  # type: ignore
     try:
         resource_properties = tuple(session.execute(statement).one())
     except sqlalchemy.exc.NoResultFound:
