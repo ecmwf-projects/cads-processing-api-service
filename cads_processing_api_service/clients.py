@@ -306,12 +306,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         for job in job_entries:
             with catalogue_sessionmaker() as catalogue_session:
-                (dataset_title,) = utils.get_resource_properties(
-                    resource_id=job.process_id,
-                    properties="title",
-                    table=self.process_table,
-                    session=catalogue_session,
-                )
+                try:
+                    (dataset_title,) = utils.get_resource_properties(
+                        resource_id=job.process_id,
+                        properties="title",
+                        table=self.process_table,
+                        session=catalogue_session,
+                    )
+                except ogc_api_processes_fastapi.exceptions.NoSuchProcess:
+                    dataset_title = config.ensure_settings().missing_dataset_title
             results = utils.parse_results_from_broker_db(job)
             jobs.append(
                 utils.make_status_info(
