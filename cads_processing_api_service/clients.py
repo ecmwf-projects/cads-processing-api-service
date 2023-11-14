@@ -329,6 +329,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     job=job,
                     results=results,
                     dataset_metadata={"title": dataset_title},
+                    statistics={
+                        "qos_status": cads_broker.database.get_qos_status_from_request(
+                            job
+                        )
+                    },
                 )
             )
         job_list = models.JobList(
