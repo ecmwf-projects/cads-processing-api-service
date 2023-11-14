@@ -297,6 +297,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             mode=db_utils.ConnectionMode.read
         )
         with compute_sessionmaker() as compute_session:
+            cads_broker.database.count_requests(
+                session=compute_session,
+                **job_filters,
+            )
             job_entries = compute_session.scalars(statement).all()
         if back:
             job_entries = reversed(job_entries)
