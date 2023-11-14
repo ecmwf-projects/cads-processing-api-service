@@ -45,6 +45,7 @@ class Settings(pydantic_settings.BaseSettings):
         "client = cads_api_client.ApiClient()\n"
         "client.retrieve(collection_id, **request)\n"
     )
+    missing_dataset_title: str = "Dataset not available"
 
     @property
     def profiles_api_url(self) -> str:
