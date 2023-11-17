@@ -220,10 +220,8 @@ def test_get_job_from_broker_db() -> None:
     test_job_id = "1234"
     mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
     with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
-        mock_get_request.return_value = (
-            cads_broker.database.SystemRequest(  # type:ignore
-                request_uid=test_job_id
-            )
+        mock_get_request.return_value = cads_broker.database.SystemRequest(  # type:ignore
+            request_uid=test_job_id
         )
         job = utils.get_job_from_broker_db(test_job_id, session=mock_session)
     assert isinstance(job, cads_broker.SystemRequest)

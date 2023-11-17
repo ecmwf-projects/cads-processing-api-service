@@ -27,8 +27,13 @@ class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
     log: list[str] | None = None
 
 
+class JobListAdditionalInfo(pydantic.BaseModel):
+    totalCount: int | None = None
+
+
 class JobList(ogc_api_processes_fastapi.models.JobList):
     jobs: list[StatusInfo]  # type: ignore
+    additionalInfo: JobListAdditionalInfo | None = None
 
 
 class Exception(ogc_api_processes_fastapi.models.Exception):

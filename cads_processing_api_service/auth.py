@@ -33,12 +33,12 @@ REQUEST_ORIGIN = {"PRIVATE-TOKEN": "api", "Authorization": "ui"}
 
 
 def get_auth_header(
-    pat: str
-    | None = fastapi.Header(
+    pat: str | None = fastapi.Header(
         None, description="Personal Access Token", alias="PRIVATE-TOKEN"
     ),
-    jwt: str
-    | None = fastapi.Header(None, description="JSON Web Token", alias="Authorization"),
+    jwt: str | None = fastapi.Header(
+        None, description="JSON Web Token", alias="Authorization"
+    ),
 ) -> tuple[str, str]:
     """Get authentication header from the incoming HTTP request.
 
