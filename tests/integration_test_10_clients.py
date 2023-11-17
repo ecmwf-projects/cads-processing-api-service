@@ -37,19 +37,6 @@ POST_PROCESS_REQUEST_BODY_SUCCESS = {
         "time": ["06:00"],
     }
 }
-POST_PROCESS_REQUEST_BODY_SUCCESS_W_LICENCES = {
-    "inputs": {
-        "product_type": ["reanalysis"],
-        "format": ["grib"],
-        "variable": ["temperature"],
-        "pressure_level": ["1"],
-        "year": ["1971"],
-        "month": ["01"],
-        "day": ["25"],
-        "time": ["06:00"],
-    },
-    "acceptedLicences": [{"id": "licence-to-use-copernicus-products", "revision": 12}],
-}
 POST_PROCESS_REQUEST_BODY_FAIL = {
     "inputs": {
         "product_type": ["reanalysis"],
@@ -263,25 +250,7 @@ def test_post_process_execution_stored_accepted_licences(
     )
 
 
-def test_post_process_execution_context_accepted_licences(
-    dev_env_proc_api_url: str,
-) -> None:
-    response = submit_job(
-        dev_env_proc_api_url,
-        request_body=POST_PROCESS_REQUEST_BODY_SUCCESS_W_LICENCES,
-        auth_headers=AUTH_HEADERS_VALID_2,
-    )
-    response_status_code = response.status_code
-    exp_status_code = 201
-    assert response_status_code == exp_status_code
-
-    response = delete_job(
-        dev_env_proc_api_url,
-        response.json()["jobID"],
-        auth_headers=AUTH_HEADERS_VALID_2,
-    )
-
-
+@pytest.mark.skip(reason="Submission of jobs with accepted licences is no more allowed")
 def test_post_process_execution_anon_user(
     dev_env_proc_api_url: str,
 ) -> None:
@@ -292,7 +261,7 @@ def test_post_process_execution_anon_user(
 
     response = submit_job(
         dev_env_proc_api_url,
-        request_body=POST_PROCESS_REQUEST_BODY_SUCCESS_W_LICENCES,
+        request_body=POST_PROCESS_REQUEST_BODY_SUCCESS,
         auth_headers=AUTH_HEADERS_VALID_ANON,
     )
     response_status_code = response.status_code
@@ -318,6 +287,7 @@ def test_post_process_execution_not_authorized(
     assert response.status_code == exp_status_code
 
 
+@pytest.mark.skip(reason="Test is not valid anymore")
 def test_post_process_execution_missing_licences(
     dev_env_proc_api_url: str,
 ) -> None:
@@ -591,13 +561,16 @@ def test_get_jobs(dev_env_proc_api_url: str) -> None:
     assert all([key in response_body for key in exp_keys])
 
 
-def test_get_jobs_different_user(dev_env_proc_api_url: str) -> None:
+def test_get_jobs_different_user(
+    dev_env_prof_api_url: str, dev_env_proc_api_url: str
+) -> None:
+    response = accept_licence(dev_env_prof_api_url, auth_headers=AUTH_HEADERS_VALID_2)
     number_of_new_jobs = 1
     job_ids: list[str] = []
     for _ in range(number_of_new_jobs):
         response = submit_job(
             dev_env_proc_api_url,
-            request_body=POST_PROCESS_REQUEST_BODY_SUCCESS_W_LICENCES,
+            request_body=POST_PROCESS_REQUEST_BODY_SUCCESS,
             auth_headers=AUTH_HEADERS_VALID_2,
         )
         job_ids.append(response.json()["jobID"])

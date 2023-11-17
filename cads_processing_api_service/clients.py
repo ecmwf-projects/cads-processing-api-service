@@ -166,7 +166,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def post_process_execution(
         self,
         process_id: str = fastapi.Path(...),
-        execution_content: models.Execute = fastapi.Body(...),
+        execution_content: ogc_api_processes_fastapi.models.Execute = fastapi.Body(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         portal_header: str | None = fastapi.Header(
             None, alias=config.PORTAL_HEADER_NAME
@@ -192,7 +192,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         user_uid = auth.authenticate_user(auth_header, portal_header)
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
-        stored_accepted_licences = auth.get_stored_accepted_licences(auth_header)
+        accepted_licences = auth.get_accepted_licences(auth_header)
         execution_content = execution_content.model_dump()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
             db_utils.ConnectionMode.read
@@ -205,7 +205,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             )
         adaptor = adaptors.instantiate_adaptor(resource)
         licences = adaptor.get_licences(execution_content)
-        auth.validate_licences(execution_content, stored_accepted_licences, licences)
+        auth.validate_licences(accepted_licences, licences)
         job_id = str(uuid.uuid4())
         structlog.contextvars.bind_contextvars(job_id=job_id)
         job_kwargs = adaptors.make_system_job_kwargs(

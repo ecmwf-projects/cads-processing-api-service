@@ -18,23 +18,6 @@ import pytest
 from cads_processing_api_service import auth, exceptions
 
 
-def test_get_contextual_accepted_licences() -> None:
-    execution_content: dict[str, list[dict[str, str | int]] | None] = {
-        "acceptedLicences": [
-            {"id": "licence", "revision": 0},
-            {"id": "licence", "revision": 0},
-        ]
-    }
-    licences = auth.get_contextual_accepted_licences(execution_content)
-    exp_licences = {("licence", 0)}
-    assert licences == exp_licences
-
-    execution_content = {"acceptedLicences": None}
-    licences = auth.get_contextual_accepted_licences(execution_content)
-    exp_licences = set()
-    assert licences == exp_licences
-
-
 def test_check_licences() -> None:
     required_licences = {("licence_1", 1), ("licence_2", 2)}
     accepted_licences = {("licence_1", 1), ("licence_2", 2), ("licence_3", 3)}
