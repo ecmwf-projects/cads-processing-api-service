@@ -17,6 +17,7 @@
 from typing import Any
 
 import ogc_api_processes_fastapi.models
+import pydantic
 
 
 class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
