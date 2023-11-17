@@ -49,7 +49,7 @@ class JobSortCriterion(str, enum.Enum):
     created_at_desc: str = "-created"
 
 
-@cachetools.cached(  # type: ignore
+@cachetools.cached(
     cache=cachetools.TTLCache(
         maxsize=config.ensure_settings().cache_resources_maxsize,
         ttl=config.ensure_settings().cache_resources_ttl,
@@ -98,7 +98,7 @@ def lookup_resource_by_id(
     return row
 
 
-@cachetools.cached(  # type: ignore
+@cachetools.cached(
     cache=cachetools.TTLCache(
         maxsize=config.ensure_settings().cache_resources_maxsize,
         ttl=config.ensure_settings().cache_resources_ttl,
