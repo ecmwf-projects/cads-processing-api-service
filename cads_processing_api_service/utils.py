@@ -60,6 +60,7 @@ def lookup_resource_by_id(
     resource_id: str,
     table: type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
+    load_messages: bool = False,
 ) -> cads_catalogue.database.Resource:
     """Look for the resource identified by `id` into the Catalogue database.
 
@@ -71,6 +72,8 @@ def lookup_resource_by_id(
         Catalogue database table.
     session : sqlalchemy.orm.Session
         Catalogue database session.
+    load_messages : bool, optional
+        If True, load resource messages, by default False.
 
     Returns
     -------
@@ -86,8 +89,10 @@ def lookup_resource_by_id(
         sa.select(table)
         .options(sqlalchemy.orm.joinedload(table.resource_data))
         .options(sqlalchemy.orm.joinedload(table.licences))
-        .filter(table.resource_uid == resource_id)
     )
+    if load_messages:
+        statement = statement.options(sqlalchemy.orm.joinedload(table.messages))
+    statement = statement.filter(table.resource_uid == resource_id)
     try:
         row: cads_catalogue.database.Resource = (
             session.execute(statement).unique().scalar_one()
