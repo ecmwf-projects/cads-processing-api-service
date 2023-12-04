@@ -202,6 +202,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 resource_id=process_id,
                 table=self.process_table,
                 session=catalogue_session,
+                load_messages=True,
             )
         adaptor = adaptors.instantiate_adaptor(resource)
         licences = adaptor.get_licences(execution_content)
@@ -225,7 +226,17 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 qos_tags=resource.qos_tags,
                 **job_kwargs,
             )
-        status_info = utils.make_status_info(job)
+        dataset_messages = [
+            models.DatasetMessage(
+                date=message.date,
+                severity=message.severity,
+                content=message.content,
+            )
+            for message in resource.messages
+        ]
+        status_info = utils.make_status_info(
+            job, dataset_metadata={"messages": dataset_messages}
+        )
         return status_info
 
     def get_jobs(

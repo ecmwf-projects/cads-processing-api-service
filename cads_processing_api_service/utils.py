@@ -54,7 +54,9 @@ class JobSortCriterion(str, enum.Enum):
         maxsize=config.ensure_settings().cache_resources_maxsize,
         ttl=config.ensure_settings().cache_resources_ttl,
     ),
-    key=lambda resource_id, table, session: cachetools.keys.hashkey(resource_id, table),
+    key=lambda resource_id, table, session, load_messages: cachetools.keys.hashkey(
+        resource_id, table, load_messages
+    ),
 )
 def lookup_resource_by_id(
     resource_id: str,
