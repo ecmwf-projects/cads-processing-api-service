@@ -340,10 +340,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     job=job,
                     results=results,
                     dataset_metadata={"title": dataset_title},
-                    statistics={
-                        "qos_status": cads_broker.database.get_qos_status_from_request(
-                            job
-                        )
+                    qos={
+                        "status": cads_broker.database.get_qos_status_from_request(job)
                     },
                 )
             )
@@ -366,7 +364,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         portal_header: str | None = fastapi.Header(
             None, alias=config.PORTAL_HEADER_NAME
         ),
-        statistics: bool = fastapi.Query(False),
+        qos: bool = fastapi.Query(False),
         request: bool = fastapi.Query(False),
         log: bool = fastapi.Query(False),
     ) -> models.StatusInfo:
@@ -382,8 +380,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Authorization header
         portal_header : str | None, optional
             Portal header
-        statistics : bool, optional
-            Whether to include job statistics in the response
+        qos : bool, optional
+            Whether to include job qos info in the response
         request : bool, optional
             Whether to include the request in the response
         log : bool, optional
@@ -404,8 +402,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 job = utils.get_job_from_broker_db(
                     job_id=job_id, session=compute_session
                 )
-                if statistics:
-                    job_statistics = utils.collect_job_statistics(job, compute_session)
+                if qos:
+                    job_qos_info = utils.collect_job_qos_info(job, compute_session)
         except ogc_api_processes_fastapi.exceptions.NoSuchJob:
             compute_sessionmaker = db_utils.get_compute_sessionmaker(
                 mode=db_utils.ConnectionMode.write
@@ -414,8 +412,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 job = utils.get_job_from_broker_db(
                     job_id=job_id, session=compute_session
                 )
-                if statistics:
-                    job_statistics = utils.collect_job_statistics(job, compute_session)
+                if qos:
+                    job_qos_info = utils.collect_job_qos_info(job, compute_session)
         if job.portal not in portals:
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
         auth.verify_permission(user_uid, job)
@@ -438,10 +436,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     request_ids, form_data
                 ),
             }
-        if statistics:
-            kwargs["statistics"] = {
-                **job_statistics,
-                "qos_status": cads_broker.database.get_qos_status_from_request(job),
+        if qos:
+            kwargs["qos"] = {
+                **job_qos_info,
+                "status": cads_broker.database.get_qos_status_from_request(job),
             }
         if log:
             kwargs["log"] = utils.extract_job_log(job)

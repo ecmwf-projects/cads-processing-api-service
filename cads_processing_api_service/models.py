@@ -25,7 +25,7 @@ class StatusInfoMetadata(pydantic.BaseModel):
     request: dict[str, Any] | None = None
     results: dict[str, Any] | None = None
     datasetMetadata: dict[str, Any] | None = None
-    statistics: dict[str, Any] | None = None
+    qos: dict[str, Any] | None = None
     log: list[str] | None = None
 
 
