@@ -339,7 +339,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_list = models.JobList(
             jobs=jobs,
             links=[ogc_api_processes_fastapi.models.Link(href="")],
-            additionalInfo=models.JobListAdditionalInfo(totalCount=jobs_count),
+            metadata=models.JobListMetadata(totalCount=jobs_count),
         )
         pagination_query_params = utils.make_pagination_query_params(
             jobs, sort_key=sortby.lstrip("-")

@@ -577,14 +577,11 @@ def make_status_info(
         finished=job["finished_at"],
         updated=job["updated_at"],
     )
-    if request:
-        status_info.request = request
-    if results:
-        status_info.results = results
-    if dataset_metadata:
-        status_info.processDescription = {"title": dataset_metadata["title"]}
-    if statistics:
-        status_info.statistics = statistics
-    if log is not None:
-        status_info.log = log
+    status_info.metadata = models.StatusInfoMetadata(
+        request=request,
+        results=results,
+        datasetMetadata=dataset_metadata,
+        statistics=statistics,
+        log=log,
+    )
     return status_info

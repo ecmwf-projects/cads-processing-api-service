@@ -14,27 +14,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import datetime
 from typing import Any
 
 import ogc_api_processes_fastapi.models
 import pydantic
 
 
-class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
+class StatusInfoMetadata(pydantic.BaseModel):
     request: dict[str, Any] | None = None
     results: dict[str, Any] | None = None
-    processDescription: dict[str, Any] | None = None
+    datasetMetadata: dict[str, Any] | None = None
     statistics: dict[str, Any] | None = None
     log: list[str] | None = None
 
 
-class JobListAdditionalInfo(pydantic.BaseModel):
+class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
+    metadata: StatusInfoMetadata | None = None
+
+
+class JobListMetadata(pydantic.BaseModel):
     totalCount: int | None = None
+
+
+class DatasetMessage(pydantic.BaseModel):
+    date: datetime.datetime | None = None
+    severity: str | None = None
+    content: str | None = None
+
+
+class DatasetMetadata(pydantic.BaseModel):
+    title: str | None = None
+    messages: list[DatasetMessage] | None = None
 
 
 class JobList(ogc_api_processes_fastapi.models.JobList):
     jobs: list[StatusInfo]  # type: ignore
-    additionalInfo: JobListAdditionalInfo | None = None
+    metadata: JobListMetadata | None = None
 
 
 class Exception(ogc_api_processes_fastapi.models.Exception):
