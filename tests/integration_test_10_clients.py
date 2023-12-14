@@ -356,7 +356,7 @@ def test_get_job(dev_env_proc_api_url: str, dev_env_prof_api_url: str) -> None:
     assert response_body["status"] in exp_status
 
     request_url = urllib.parse.urljoin(
-        dev_env_proc_api_url, f"jobs/{job_id}?statistics=True&request=True&log=True"
+        dev_env_proc_api_url, f"jobs/{job_id}?qos=True&request=True&log=True"
     )
     response = requests.get(request_url, headers=AUTH_HEADERS_VALID_1)
     response_status_code = response.status_code
@@ -364,9 +364,12 @@ def test_get_job(dev_env_proc_api_url: str, dev_env_prof_api_url: str) -> None:
     assert response_status_code == exp_status_code
 
     response_body = response.json()
-    exp_add_keys = ("statistics", "request", "log")
-    assert all([key in response_body for key in exp_add_keys])
-    exp_statistics_keys = (
+    exp_add_key = "metadata"
+    assert exp_add_key in response_body
+    metadata = response_body["metadata"]
+    exp_metadata_keys = ("qos", "request", "log")
+    assert all([key in metadata for key in exp_metadata_keys])
+    exp_qos_keys = (
         "adaptor_entry_point",
         "running_requests_per_user_adaptor",
         "queued_requests_per_user_adaptor",
@@ -374,12 +377,12 @@ def test_get_job(dev_env_proc_api_url: str, dev_env_prof_api_url: str) -> None:
         "queued_requests_per_adaptor",
         "active_users_per_adaptor",
         "waiting_users_per_adaptor",
-        "qos_status",
+        "status",
     )
-    assert all([key in response_body["statistics"] for key in exp_statistics_keys])
+    assert all([key in metadata["qos"] for key in exp_qos_keys])
     exp_request_keys = ("ids", "labels")
-    assert all([key in response_body["request"] for key in exp_request_keys])
-    assert isinstance(response_body["log"], list)
+    assert all([key in metadata["request"] for key in exp_request_keys])
+    assert isinstance(metadata["log"], list)
 
     response = delete_job(dev_env_proc_api_url, job_id)
 

@@ -54,12 +54,16 @@ class JobSortCriterion(str, enum.Enum):
         maxsize=config.ensure_settings().cache_resources_maxsize,
         ttl=config.ensure_settings().cache_resources_ttl,
     ),
-    key=lambda resource_id, table, session: cachetools.keys.hashkey(resource_id, table),
+    key=lambda resource_id,
+    table,
+    session,
+    load_messages=False: cachetools.keys.hashkey(resource_id, table, load_messages),
 )
 def lookup_resource_by_id(
     resource_id: str,
     table: type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
+    load_messages: bool = False,
 ) -> cads_catalogue.database.Resource:
     """Look for the resource identified by `id` into the Catalogue database.
 
@@ -71,6 +75,8 @@ def lookup_resource_by_id(
         Catalogue database table.
     session : sqlalchemy.orm.Session
         Catalogue database session.
+    load_messages : bool, optional
+        If True, load resource messages, by default False.
 
     Returns
     -------
@@ -86,8 +92,10 @@ def lookup_resource_by_id(
         sa.select(table)
         .options(sqlalchemy.orm.joinedload(table.resource_data))
         .options(sqlalchemy.orm.joinedload(table.licences))
-        .filter(table.resource_uid == resource_id)
     )
+    if load_messages:
+        statement = statement.options(sqlalchemy.orm.joinedload(table.messages))
+    statement = statement.filter(table.resource_uid == resource_id)
     try:
         row: cads_catalogue.database.Resource = (
             session.execute(statement).unique().scalar_one()
@@ -485,12 +493,12 @@ def parse_results_from_broker_db(job: cads_broker.SystemRequest) -> dict[str, An
     return results
 
 
-def collect_job_statistics(
+def collect_job_qos_info(
     job: cads_broker.SystemRequest, session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
     entry_point = str(job.entry_point)
     user_uid = str(job.user_uid)
-    statistics = {
+    qos = {
         "adaptor_entry_point": entry_point,
         "running_requests_per_user_adaptor": cads_broker.database.count_requests(
             session=session,
@@ -525,7 +533,7 @@ def collect_job_statistics(
             entry_point=entry_point,
         ),
     }
-    return statistics
+    return qos
 
 
 def extract_job_log(job: cads_broker.SystemRequest) -> list[str]:
@@ -542,7 +550,7 @@ def make_status_info(
     request: dict[str, Any] | None = None,
     results: dict[str, Any] | None = None,
     dataset_metadata: dict[str, Any] | None = None,
-    statistics: dict[str, Any] | None = None,
+    qos: dict[str, Any] | None = None,
     log: list[str] | None = None,
 ) -> models.StatusInfo:
     """Compose job's status information.
@@ -555,8 +563,8 @@ def make_status_info(
         Results description, by default None
     dataset_metadata : dict[str, Any] | None, optional
         Dataset metadata, by default None
-    statistics : dict[str, Any] | None, optional
-        Job statistics, by default None
+    qos : dict[str, Any] | None, optional
+        Job qos info, by default None
     log : list[str] | None, optional
         Job log, by default None
 
@@ -577,14 +585,14 @@ def make_status_info(
         finished=job["finished_at"],
         updated=job["updated_at"],
     )
-    if request:
-        status_info.request = request
-    if results:
-        status_info.results = results
-    if dataset_metadata:
-        status_info.processDescription = {"title": dataset_metadata["title"]}
-    if statistics:
-        status_info.statistics = statistics
-    if log is not None:
-        status_info.log = log
+    if any(
+        field is not None for field in [request, results, dataset_metadata, qos, log]
+    ):
+        status_info.metadata = models.StatusInfoMetadata(
+            request=request,
+            results=results,
+            datasetMetadata=dataset_metadata,
+            qos=qos,
+            log=log,
+        )
     return status_info
