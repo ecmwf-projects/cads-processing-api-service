@@ -12,7 +12,7 @@ dependencies:
 - asyncpg
 - cachetools
 - DateTimeRange
-- fastapi>=0.93.0
+- fastapi>=0.93.0,<=0.105.0
 - pip
 - pydantic>2
 - pydantic-settings>2
