@@ -450,6 +450,10 @@ def get_job_from_broker_db(
         raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
             detail=f"job {job_id} not found"
         )
+    except cads_broker.database.InvalidRequestID:
+        raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
+            detail=f"invalid job id {job_id}"
+        )
     return job
 
 
