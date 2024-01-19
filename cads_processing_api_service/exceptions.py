@@ -75,7 +75,7 @@ def format_exception_content(
         instance=instance,
         trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
         traceback=exc.traceback,
-    ).dict(exclude_none=True)
+    ).model_dump(exclude_none=True)
 
     return exception_content
 
@@ -168,7 +168,7 @@ def general_exception_handler(
             traceback="".join(
                 traceback.TracebackException.from_exception(exc).format()
             ),
-        ).dict(exclude_none=True),
+        ).model_dump(exclude_none=True),
     )
 
 
