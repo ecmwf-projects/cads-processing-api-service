@@ -415,7 +415,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 if qos:
                     job_qos_info = utils.collect_job_qos_info(job, compute_session)
         if job.portal not in portals:
-            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
+            raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
+                detail=f"job {job_id} not found"
+            )
         auth.verify_permission(user_uid, job)
         kwargs = {}
         if request:

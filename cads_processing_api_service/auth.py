@@ -121,6 +121,7 @@ def authenticate_user(
         raise exceptions.PermissionDenied(
             status_code=response.status_code,
             title=response.json()["title"],
+            detail="operation not allowed",
         )
     response.raise_for_status()
     user: dict[str, Any] = response.json()
@@ -144,7 +145,9 @@ def verify_permission(user_uid: str, job: cads_broker.SystemRequest) -> None:
         Raised if the user has no permission to interact with the job.
     """
     if job.user_uid != user_uid:
-        raise exceptions.PermissionDenied()
+        raise exceptions.PermissionDenied(
+            detail="operation not allowed",
+        )
 
 
 @cachetools.cached(
@@ -179,6 +182,7 @@ def get_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
         raise exceptions.PermissionDenied(
             status_code=response.status_code,
             title=response.json()["title"],
+            detail="operation not allowed",
         )
     response.raise_for_status()
     licences = response.json()["licences"]
@@ -216,6 +220,7 @@ def check_licences(
         raise exceptions.PermissionDenied(
             title="required licences not accepted",
             detail=(
+                "required licences not accepted; "
                 "please accept the following licences to proceed: "
                 f"{missing_licences_detail}"
             ),
