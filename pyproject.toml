@@ -19,13 +19,14 @@ dependencies = [
   "cads-broker@git+https://github.com/ecmwf-projects/cads-broker.git",
   "cads-catalogue@git+https://github.com/ecmwf-projects/cads-catalogue.git",
   "cads-common@git+https://github.com/ecmwf-projects/cads-common.git",
-  "fastapi",
+  "fastapi>=0.93",
   "ogc-api-processes-fastapi@git+https://github.com/ecmwf-projects/ogc-api-processes-fastapi.git",
   "pydantic>2",
   "pydantic-settings>2",
   "prometheus_client",
   "requests",
   "sqlalchemy>=2.0.9",
+  "starlette<0.15",
   "starlette_exporter",
   "structlog"
 ]
