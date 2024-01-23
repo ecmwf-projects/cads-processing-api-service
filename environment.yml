@@ -12,12 +12,12 @@ dependencies:
 - asyncpg
 - cachetools
 - DateTimeRange
-- fastapi>=0.93.0,<=0.105.0
+- fastapi>=0.93.0,<=0.108.0
 - pip
 - pydantic>2
 - pydantic-settings>2
 - sqlalchemy>=2.0.9
+# - starlette<=0.32.0
+- starlette-exporter
 - structlog
-- uvicorn
-- pip:
-  - starlette-exporter
+- uvicorn<=0.25.0
