@@ -17,7 +17,7 @@ dependencies:
 - pydantic>2
 - pydantic-settings>2
 - sqlalchemy>=2.0.9
-- starlette<0.35
+- starlette<=0.34
 - structlog
 - uvicorn
 - pip:
