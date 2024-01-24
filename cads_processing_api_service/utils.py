@@ -101,7 +101,9 @@ def lookup_resource_by_id(
             session.execute(statement).unique().scalar_one()
         )
     except sqlalchemy.exc.NoResultFound:
-        raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
+        raise ogc_api_processes_fastapi.exceptions.NoSuchProcess(
+            detail=f"dataset {resource_id} not found"
+        )
     session.expunge(row)
     return row
 
@@ -152,7 +154,9 @@ def get_resource_properties(
     try:
         resource_properties = tuple(session.execute(statement).one())
     except sqlalchemy.exc.NoResultFound:
-        raise ogc_api_processes_fastapi.exceptions.NoSuchProcess()
+        raise ogc_api_processes_fastapi.exceptions.NoSuchProcess(
+            detail=f"dataset {resource_id} not found"
+        )
     return resource_properties
 
 
@@ -439,9 +443,17 @@ def get_job_from_broker_db(
     try:
         job = cads_broker.database.get_request(request_uid=job_id, session=session)
         if job.status == "dismissed":
-            raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
+            raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
+                detail=f"job {job_id} dismissed"
+            )
     except cads_broker.database.NoResultFound:
-        raise ogc_api_processes_fastapi.exceptions.NoSuchJob()
+        raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
+            detail=f"job {job_id} not found"
+        )
+    except cads_broker.database.InvalidRequestID:
+        raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
+            detail=f"invalid job id {job_id}"
+        )
     return job
 
 
@@ -472,7 +484,9 @@ def get_results_from_job(job: cads_broker.SystemRequest) -> dict[str, Any]:
             asset_value = job.cache_entry.result["args"][0]
             results = {"asset": {"value": asset_value}}
         except Exception:
-            raise exceptions.JobResultsExpired()
+            raise exceptions.JobResultsExpired(
+                detail=f"results of job {job_id} expired"
+            )
     elif job_status == "failed":
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
