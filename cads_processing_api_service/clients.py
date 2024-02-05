@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import datetime
 import uuid
 
 import attrs
@@ -242,8 +243,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_jobs(
         self,
         processID: list[str] | None = fastapi.Query(None),
-        status: list[ogc_api_processes_fastapi.models.StatusCode]
-        | None = fastapi.Query(None),
+        status: (
+            list[ogc_api_processes_fastapi.models.StatusCode] | None
+        ) = fastapi.Query(None),
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
         sortby: utils.JobSortCriterion | None = fastapi.Query(
             utils.JobSortCriterion.created_at_desc
@@ -367,6 +369,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         qos: bool = fastapi.Query(False),
         request: bool = fastapi.Query(False),
         log: bool = fastapi.Query(False),
+        log_start_time: datetime.datetime | None = fastapi.Query(
+            None, alias="logStartTime"
+        ),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -386,6 +391,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Whether to include the request in the response
         log : bool, optional
             Whether to include the job's log in the response
+        log_start_time: datetime.datetime, optional
+            Datetime of the first log message to be returned
 
         Returns
         -------
@@ -404,6 +411,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 )
                 if qos:
                     job_qos_info = utils.collect_job_qos_info(job, compute_session)
+                # These lines are inside the session context because the related fields
+                # are lazy loaded
+                if log:
+                    job_log = utils.extract_job_events(
+                        job, compute_session, "user_visible_log", log_start_time
+                    )
         except ogc_api_processes_fastapi.exceptions.NoSuchJob:
             compute_sessionmaker = db_utils.get_compute_sessionmaker(
                 mode=db_utils.ConnectionMode.write
@@ -414,6 +427,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 )
                 if qos:
                     job_qos_info = utils.collect_job_qos_info(job, compute_session)
+                # These lines are inside the session context because the related fields
+                # are lazy loaded
+                if log:
+                    job_log = utils.extract_job_events(
+                        job, compute_session, "user_visible_log", log_start_time
+                    )
         if job.portal not in portals:
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 detail=f"job {job_id} not found"
@@ -438,13 +457,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     request_ids, form_data
                 ),
             }
+        if log:
+            kwargs["log"] = job_log
         if qos:
             kwargs["qos"] = {
                 **job_qos_info,
                 "status": cads_broker.database.get_qos_status_from_request(job),
             }
-        if log:
-            kwargs["log"] = utils.extract_job_log(job)
         status_info = utils.make_status_info(job=job, **kwargs)
         return status_info
 

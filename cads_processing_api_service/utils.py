@@ -15,8 +15,8 @@
 # limitations under the License.
 
 import base64
+import datetime
 import enum
-import json
 from typing import Any, Callable, Mapping
 
 import cachetools
@@ -120,8 +120,10 @@ def lookup_resource_by_id(
 def get_resource_properties(
     resource_id: str,
     properties: str | tuple[str],
-    table: type[cads_catalogue.database.Resource]
-    | type[cads_catalogue.database.ResourceData],
+    table: (
+        type[cads_catalogue.database.Resource]
+        | type[cads_catalogue.database.ResourceData]
+    ),
     session: sqlalchemy.orm.Session,
 ) -> tuple[Any, ...]:
     """Look for the resource identified by `id` into the Catalogue database.
@@ -270,8 +272,10 @@ def apply_bookmark(
     statement: sqlalchemy.sql.selectable.Select[
         tuple[cads_broker.database.SystemRequest]
     ],
-    resource: type[cads_catalogue.database.Resource]
-    | type[cads_broker.database.SystemRequest],
+    resource: (
+        type[cads_catalogue.database.Resource]
+        | type[cads_broker.database.SystemRequest]
+    ),
     cursor: str,
     back: bool,
     sort_key: str,
@@ -316,8 +320,10 @@ def apply_sorting(
     statement: sqlalchemy.sql.selectable.Select[
         tuple[cads_broker.database.SystemRequest]
     ],
-    resource: type[cads_catalogue.database.Resource]
-    | type[cads_broker.database.SystemRequest],
+    resource: (
+        type[cads_catalogue.database.Resource]
+        | type[cads_broker.database.SystemRequest]
+    ),
     back: bool,
     sort_key: str,
     sort_dir: str,
@@ -379,8 +385,10 @@ def apply_limit(
 
 
 def make_cursor(
-    entries: list[ogc_api_processes_fastapi.models.StatusInfo]
-    | list[ogc_api_processes_fastapi.models.ProcessSummary],
+    entries: (
+        list[ogc_api_processes_fastapi.models.StatusInfo]
+        | list[ogc_api_processes_fastapi.models.ProcessSummary]
+    ),
     sort_key: str,
     page: str,
 ) -> str:
@@ -395,8 +403,10 @@ def make_cursor(
 
 
 def make_pagination_query_params(
-    entries: list[ogc_api_processes_fastapi.models.StatusInfo]
-    | list[ogc_api_processes_fastapi.models.ProcessSummary],
+    entries: (
+        list[ogc_api_processes_fastapi.models.StatusInfo]
+        | list[ogc_api_processes_fastapi.models.ProcessSummary]
+    ),
     sort_key: str,
 ) -> ogc_api_processes_fastapi.models.PaginationQueryParameters:
     pagination_qs = ogc_api_processes_fastapi.models.PaginationQueryParameters(
@@ -419,7 +429,8 @@ def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
 
 
 def get_job_from_broker_db(
-    job_id: str, session: sqlalchemy.orm.Session
+    job_id: str,
+    session: sqlalchemy.orm.Session,
 ) -> cads_broker.SystemRequest:
     """Get job description from the Broker database.
 
@@ -550,13 +561,21 @@ def collect_job_qos_info(
     return qos
 
 
-def extract_job_log(job: cads_broker.SystemRequest) -> list[str]:
-    log = []
-    if job.response_user_visible_log:
-        job_log = json.loads(str(job.response_user_visible_log))
-        for log_timestamp, log_message in job_log:
-            log.append(log_message)
-    return log
+def extract_job_events(
+    job: cads_broker.SystemRequest,
+    session: sqlalchemy.orm.Session,
+    event_type: str | None = None,
+    start_time: datetime.datetime | None = None,
+) -> list[tuple[datetime.datetime, str]]:
+    events = []
+    request_events: list[
+        cads_broker.Events
+    ] = cads_broker.database.get_events_from_request(
+        job, session, event_type, start_time
+    )
+    for request_event in request_events:
+        events.append((request_event.timestamp, request_event.message))
+    return events
 
 
 def make_status_info(
