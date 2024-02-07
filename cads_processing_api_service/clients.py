@@ -415,7 +415,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 # are lazy loaded
                 if log:
                     job_log = utils.extract_job_events(
-                        job, compute_session, "user_visible_log", log_start_time
+                        job,
+                        compute_session,
+                        "user_visible_log",
+                        log_start_time,
                     )
         except ogc_api_processes_fastapi.exceptions.NoSuchJob:
             compute_sessionmaker = db_utils.get_compute_sessionmaker(
@@ -431,7 +434,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 # are lazy loaded
                 if log:
                     job_log = utils.extract_job_events(
-                        job, compute_session, "user_visible_log", log_start_time
+                        job,
+                        compute_session,
+                        "user_visible_log",
+                        log_start_time,
                     )
         if job.portal not in portals:
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
