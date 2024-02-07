@@ -26,7 +26,7 @@ class StatusInfoMetadata(pydantic.BaseModel):
     results: dict[str, Any] | None = None
     datasetMetadata: dict[str, Any] | None = None
     qos: dict[str, Any] | None = None
-    log: list[str] | None = None
+    log: list[tuple[datetime.datetime, str]] | None = None
 
 
 class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
