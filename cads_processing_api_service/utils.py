@@ -120,8 +120,10 @@ def lookup_resource_by_id(
 def get_resource_properties(
     resource_id: str,
     properties: str | tuple[str],
-    table: type[cads_catalogue.database.Resource]
-    | type[cads_catalogue.database.ResourceData],
+    table: (
+        type[cads_catalogue.database.Resource]
+        | type[cads_catalogue.database.ResourceData]
+    ),
     session: sqlalchemy.orm.Session,
 ) -> tuple[Any, ...]:
     """Look for the resource identified by `id` into the Catalogue database.
@@ -270,8 +272,10 @@ def apply_bookmark(
     statement: sqlalchemy.sql.selectable.Select[
         tuple[cads_broker.database.SystemRequest]
     ],
-    resource: type[cads_catalogue.database.Resource]
-    | type[cads_broker.database.SystemRequest],
+    resource: (
+        type[cads_catalogue.database.Resource]
+        | type[cads_broker.database.SystemRequest]
+    ),
     cursor: str,
     back: bool,
     sort_key: str,
@@ -316,8 +320,10 @@ def apply_sorting(
     statement: sqlalchemy.sql.selectable.Select[
         tuple[cads_broker.database.SystemRequest]
     ],
-    resource: type[cads_catalogue.database.Resource]
-    | type[cads_broker.database.SystemRequest],
+    resource: (
+        type[cads_catalogue.database.Resource]
+        | type[cads_broker.database.SystemRequest]
+    ),
     back: bool,
     sort_key: str,
     sort_dir: str,
@@ -379,8 +385,10 @@ def apply_limit(
 
 
 def make_cursor(
-    entries: list[ogc_api_processes_fastapi.models.StatusInfo]
-    | list[ogc_api_processes_fastapi.models.ProcessSummary],
+    entries: (
+        list[ogc_api_processes_fastapi.models.StatusInfo]
+        | list[ogc_api_processes_fastapi.models.ProcessSummary]
+    ),
     sort_key: str,
     page: str,
 ) -> str:
@@ -395,8 +403,10 @@ def make_cursor(
 
 
 def make_pagination_query_params(
-    entries: list[ogc_api_processes_fastapi.models.StatusInfo]
-    | list[ogc_api_processes_fastapi.models.ProcessSummary],
+    entries: (
+        list[ogc_api_processes_fastapi.models.StatusInfo]
+        | list[ogc_api_processes_fastapi.models.ProcessSummary]
+    ),
     sort_key: str,
 ) -> ogc_api_processes_fastapi.models.PaginationQueryParameters:
     pagination_qs = ogc_api_processes_fastapi.models.PaginationQueryParameters(
@@ -481,7 +491,7 @@ def get_results_from_job(job: cads_broker.SystemRequest) -> dict[str, Any]:
     job_id = job.request_uid
     if job_status == "successful":
         try:
-            asset_value = job.cache_entry.result["args"][0]
+            asset_value = job.cache_entry.result["args"][0]  # type: ignore
             results = {"asset": {"value": asset_value}}
         except Exception:
             raise exceptions.JobResultsExpired(
@@ -490,7 +500,7 @@ def get_results_from_job(job: cads_broker.SystemRequest) -> dict[str, Any]:
     elif job_status == "failed":
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
-            traceback=str(job.response_error["message"]),
+            traceback=str(job.response_error["message"]),  # type: ignore
         )
     elif job_status in ("accepted", "running"):
         raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(

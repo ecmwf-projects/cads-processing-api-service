@@ -186,9 +186,9 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     fastapi.FastAPI
         FastAPI application including CADS Processes API exceptions handlers.
     """
-    app.add_exception_handler(PermissionDenied, exception_handler)
-    app.add_exception_handler(InvalidParameter, exception_handler)
-    app.add_exception_handler(JobResultsExpired, exception_handler)
-    app.add_exception_handler(requests.exceptions.ReadTimeout, exception_handler)
+    app.add_exception_handler(PermissionDenied, exception_handler)  # type: ignore
+    app.add_exception_handler(InvalidParameter, exception_handler)  # type: ignore
+    app.add_exception_handler(JobResultsExpired, exception_handler)  # type: ignore
+    app.add_exception_handler(requests.exceptions.ReadTimeout, exception_handler)  # type: ignore
     app.add_exception_handler(Exception, general_exception_handler)
     return app
