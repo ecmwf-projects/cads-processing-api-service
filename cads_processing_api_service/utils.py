@@ -590,7 +590,7 @@ def make_status_info(
     results: dict[str, Any] | None = None,
     dataset_metadata: dict[str, Any] | None = None,
     qos: dict[str, Any] | None = None,
-    log: list[str] | None = None,
+    log: list[tuple[str, str]] | None = None,
 ) -> models.StatusInfo:
     """Compose job's status information.
 

@@ -464,7 +464,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 ),
             }
         if log:
-            kwargs["log"] = job_log
+            kwargs["log"] = [
+                (message[0].isoformat(), message[1]) for message in job_log
+            ]
         if qos:
             kwargs["qos"] = {
                 **job_qos_info,
