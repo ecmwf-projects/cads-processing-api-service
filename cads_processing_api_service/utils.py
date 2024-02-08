@@ -518,7 +518,7 @@ def parse_results_from_broker_db(job: cads_broker.SystemRequest) -> dict[str, An
     return results
 
 
-def collect_job_qos_info(
+def get_job_qos_info(
     job: cads_broker.SystemRequest, session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
     entry_point = str(job.entry_point)
@@ -561,7 +561,7 @@ def collect_job_qos_info(
     return qos
 
 
-def extract_job_events(
+def get_job_events(
     job: cads_broker.SystemRequest,
     session: sqlalchemy.orm.Session,
     event_type: str | None = None,

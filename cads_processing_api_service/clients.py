@@ -410,11 +410,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     job_id=job_id, session=compute_session
                 )
                 if qos:
-                    job_qos_info = utils.collect_job_qos_info(job, compute_session)
+                    job_qos_info = utils.get_job_qos_info(job, compute_session)
                 # These lines are inside the session context because the related fields
                 # are lazy loaded
                 if log:
-                    job_log = utils.extract_job_events(
+                    job_log = utils.get_job_events(
                         job,
                         compute_session,
                         "user_visible_log",
@@ -429,11 +429,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     job_id=job_id, session=compute_session
                 )
                 if qos:
-                    job_qos_info = utils.collect_job_qos_info(job, compute_session)
+                    job_qos_info = utils.get_job_qos_info(job, compute_session)
                 # These lines are inside the session context because the related fields
                 # are lazy loaded
                 if log:
-                    job_log = utils.extract_job_events(
+                    job_log = utils.get_job_events(
                         job,
                         compute_session,
                         "user_visible_log",
