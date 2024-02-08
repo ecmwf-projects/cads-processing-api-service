@@ -508,8 +508,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 job = utils.get_job_from_broker_db(
                     job_id=job_id, session=compute_session
                 )
+                results = utils.get_results_from_job(job=job, session=compute_session)
             auth.verify_permission(user_uid, job)
-            results = utils.get_results_from_job(job=job)
         except (
             ogc_api_processes_fastapi.exceptions.NoSuchJob,
             ogc_api_processes_fastapi.exceptions.ResultsNotReady,
@@ -521,8 +521,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 job = utils.get_job_from_broker_db(
                     job_id=job_id, session=compute_session
                 )
+                results = utils.get_results_from_job(job=job, session=compute_session)
             auth.verify_permission(user_uid, job)
-            results = utils.get_results_from_job(job=job)
         handle_download_metrics(job.process_id, results)
         return results
 

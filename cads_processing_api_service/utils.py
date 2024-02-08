@@ -468,7 +468,9 @@ def get_job_from_broker_db(
     return job
 
 
-def get_results_from_job(job: cads_broker.SystemRequest) -> dict[str, Any]:
+def get_results_from_job(
+    job: cads_broker.SystemRequest, session: sqlalchemy.orm.Session
+) -> dict[str, Any]:
     """Get job results description from SystemRequest instance.
 
     Parameters
