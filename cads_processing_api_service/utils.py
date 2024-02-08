@@ -501,9 +501,12 @@ def get_results_from_job(
                 detail=f"results of job {job_id} expired"
             )
     elif job_status == "failed":
+        error_messages = get_job_events(
+            job=job, session=session, event_type="user_visible_error"
+        )
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
-            traceback=str(job.response_error["message"]),
+            messages=error_messages,
         )
     elif job_status in ("accepted", "running"):
         raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
