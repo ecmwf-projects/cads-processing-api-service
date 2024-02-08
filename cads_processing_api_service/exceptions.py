@@ -67,6 +67,7 @@ def format_exception_content(
         Formatted exception.
     """
     instance = str(request.url) if request else None
+    messages = [(str(message[0]), message[1]) for message in exc.messages]
     exception_content = models.Exception(
         type=exc.type,
         title=exc.title,
@@ -74,7 +75,7 @@ def format_exception_content(
         detail=exc.detail,
         instance=instance,
         trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
-        messages=exc.messages,
+        messages=messages,
     ).model_dump(exclude_none=True)
 
     return exception_content
