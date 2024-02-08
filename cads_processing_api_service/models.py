@@ -56,4 +56,4 @@ class JobList(ogc_api_processes_fastapi.models.JobList):
 class Exception(ogc_api_processes_fastapi.models.Exception):
     trace_id: str | None = None
     traceback: str | None = None
-    messages: list[tuple[datetime.datetime, str]] | None = None
+    messages: list[tuple[str, str]] | None = None
