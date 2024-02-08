@@ -74,7 +74,7 @@ def format_exception_content(
         detail=exc.detail,
         instance=instance,
         trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
-        traceback=exc.traceback,
+        messages=exc.messages,
     ).model_dump(exclude_none=True)
 
     return exception_content
