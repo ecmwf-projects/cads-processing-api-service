@@ -319,34 +319,38 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 **job_filters,
             )
             job_entries = compute_session.scalars(statement).all()
-        if back:
-            job_entries = reversed(job_entries)
-        jobs = []
-        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
-            db_utils.ConnectionMode.read
-        )
-        for job in job_entries:
-            with catalogue_sessionmaker() as catalogue_session:
-                try:
-                    (dataset_title,) = utils.get_resource_properties(
-                        resource_id=job.process_id,
-                        properties="title",
-                        table=self.process_table,
-                        session=catalogue_session,
-                    )
-                except ogc_api_processes_fastapi.exceptions.NoSuchProcess:
-                    dataset_title = config.ensure_settings().missing_dataset_title
-            results = utils.parse_results_from_broker_db(job)
-            jobs.append(
-                utils.make_status_info(
-                    job=job,
-                    results=results,
-                    dataset_metadata={"title": dataset_title},
-                    qos={
-                        "status": cads_broker.database.get_qos_status_from_request(job)
-                    },
-                )
+            if back:
+                job_entries = reversed(job_entries)
+            jobs = []
+            catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
+                db_utils.ConnectionMode.read
             )
+            for job in job_entries:
+                with catalogue_sessionmaker() as catalogue_session:
+                    try:
+                        (dataset_title,) = utils.get_resource_properties(
+                            resource_id=job.process_id,
+                            properties="title",
+                            table=self.process_table,
+                            session=catalogue_session,
+                        )
+                    except ogc_api_processes_fastapi.exceptions.NoSuchProcess:
+                        dataset_title = config.ensure_settings().missing_dataset_title
+                results = utils.parse_results_from_broker_db(
+                    job, session=compute_session
+                )
+                jobs.append(
+                    utils.make_status_info(
+                        job=job,
+                        results=results,
+                        dataset_metadata={"title": dataset_title},
+                        qos={
+                            "status": cads_broker.database.get_qos_status_from_request(
+                                job
+                            )
+                        },
+                    )
+                )
         job_list = models.JobList(
             jobs=jobs,
             links=[ogc_api_processes_fastapi.models.Link(href="")],
