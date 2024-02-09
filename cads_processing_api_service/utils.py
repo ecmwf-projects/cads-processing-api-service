@@ -516,9 +516,11 @@ def get_results_from_job(
     return results
 
 
-def parse_results_from_broker_db(job: cads_broker.SystemRequest) -> dict[str, Any]:
+def parse_results_from_broker_db(
+    job: cads_broker.SystemRequest, session: sqlalchemy.orm.Session
+) -> dict[str, Any]:
     try:
-        results = get_results_from_job(job=job)
+        results = get_results_from_job(job=job, session=session)
     except ogc_api_processes_fastapi.exceptions.OGCAPIException as exc:
         results = exceptions.format_exception_content(exc=exc)
     return results
