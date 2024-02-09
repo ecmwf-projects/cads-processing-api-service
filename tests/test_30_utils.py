@@ -261,12 +261,16 @@ def test_get_results_from_job() -> None:
             "request_uid": "1234",
         }
     )
-    with pytest.raises(ogc_api_processes_fastapi.exceptions.JobResultsFailed):
+    with pytest.raises(ogc_api_processes_fastapi.exceptions.JobResultsFailed) as exc:
         with unittest.mock.patch(
             "cads_processing_api_service.utils.get_job_events"
         ) as mock_get_job_events:
-            mock_get_job_events.return_value = None
+            mock_get_job_events.return_value = [
+                "2024-01-01T16:20:12.175021",
+                "error message",
+            ]
             results = utils.get_results_from_job(job, session=mock_session)
+        assert exc.value.traceback == "error message"
 
     job = cads_broker.SystemRequest(**{"status": "accepted", "request_uid": "1234"})
     with pytest.raises(ogc_api_processes_fastapi.exceptions.ResultsNotReady):
