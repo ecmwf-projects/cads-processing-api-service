@@ -494,7 +494,7 @@ def get_results_from_job(
     job_id = job.request_uid
     if job_status == "successful":
         try:
-            asset_value = job.cache_entry.result["args"][0]
+            asset_value = job.cache_entry.result["args"][0]  # type: ignore
             results = {"asset": {"value": asset_value}}
         except Exception:
             raise exceptions.JobResultsExpired(

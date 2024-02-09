@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# mypy: ignore-errors
+
 import datetime
 import unittest.mock
 from typing import Any
@@ -209,7 +211,7 @@ def test_make_pagination_query_params() -> None:
 
 
 def test_dictify_job() -> None:
-    request = cads_broker.database.SystemRequest(request_id=0, status="failed")  # type: ignore
+    request = cads_broker.database.SystemRequest(request_id=0, status="failed")
     exp_job = {"request_id": 0, "status": "failed"}
     res_job = utils.dictify_job(request)
     assert isinstance(res_job, dict)
@@ -220,7 +222,7 @@ def test_get_job_from_broker_db() -> None:
     test_job_id = "1234"
     mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
     with unittest.mock.patch("cads_broker.database.get_request") as mock_get_request:
-        mock_get_request.return_value = cads_broker.database.SystemRequest(  # type:ignore
+        mock_get_request.return_value = cads_broker.database.SystemRequest(
             request_uid=test_job_id
         )
         job = utils.get_job_from_broker_db(test_job_id, session=mock_session)
