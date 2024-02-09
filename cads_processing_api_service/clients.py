@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import datetime
 import uuid
 
 import attrs
@@ -242,8 +243,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_jobs(
         self,
         processID: list[str] | None = fastapi.Query(None),
-        status: list[ogc_api_processes_fastapi.models.StatusCode]
-        | None = fastapi.Query(None),
+        status: (
+            list[ogc_api_processes_fastapi.models.StatusCode] | None
+        ) = fastapi.Query(None),
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
         sortby: utils.JobSortCriterion | None = fastapi.Query(
             utils.JobSortCriterion.created_at_desc
@@ -317,34 +319,38 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 **job_filters,
             )
             job_entries = compute_session.scalars(statement).all()
-        if back:
-            job_entries = reversed(job_entries)
-        jobs = []
-        catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
-            db_utils.ConnectionMode.read
-        )
-        for job in job_entries:
-            with catalogue_sessionmaker() as catalogue_session:
-                try:
-                    (dataset_title,) = utils.get_resource_properties(
-                        resource_id=job.process_id,
-                        properties="title",
-                        table=self.process_table,
-                        session=catalogue_session,
-                    )
-                except ogc_api_processes_fastapi.exceptions.NoSuchProcess:
-                    dataset_title = config.ensure_settings().missing_dataset_title
-            results = utils.parse_results_from_broker_db(job)
-            jobs.append(
-                utils.make_status_info(
-                    job=job,
-                    results=results,
-                    dataset_metadata={"title": dataset_title},
-                    qos={
-                        "status": cads_broker.database.get_qos_status_from_request(job)
-                    },
-                )
+            if back:
+                job_entries = reversed(job_entries)
+            jobs = []
+            catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
+                db_utils.ConnectionMode.read
             )
+            for job in job_entries:
+                with catalogue_sessionmaker() as catalogue_session:
+                    try:
+                        (dataset_title,) = utils.get_resource_properties(
+                            resource_id=job.process_id,
+                            properties="title",
+                            table=self.process_table,
+                            session=catalogue_session,
+                        )
+                    except ogc_api_processes_fastapi.exceptions.NoSuchProcess:
+                        dataset_title = config.ensure_settings().missing_dataset_title
+                results = utils.parse_results_from_broker_db(
+                    job, session=compute_session
+                )
+                jobs.append(
+                    utils.make_status_info(
+                        job=job,
+                        results=results,
+                        dataset_metadata={"title": dataset_title},
+                        qos={
+                            "status": cads_broker.database.get_qos_status_from_request(
+                                job
+                            )
+                        },
+                    )
+                )
         job_list = models.JobList(
             jobs=jobs,
             links=[ogc_api_processes_fastapi.models.Link(href="")],
@@ -367,6 +373,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         qos: bool = fastapi.Query(False),
         request: bool = fastapi.Query(False),
         log: bool = fastapi.Query(False),
+        log_start_time: datetime.datetime | None = fastapi.Query(
+            None, alias="logStartTime"
+        ),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -386,6 +395,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Whether to include the request in the response
         log : bool, optional
             Whether to include the job's log in the response
+        log_start_time: datetime.datetime, optional
+            Datetime of the first log message to be returned
 
         Returns
         -------
@@ -403,7 +414,16 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     job_id=job_id, session=compute_session
                 )
                 if qos:
-                    job_qos_info = utils.collect_job_qos_info(job, compute_session)
+                    job_qos_info = utils.get_job_qos_info(job, compute_session)
+                # These lines are inside the session context because the related fields
+                # are lazy loaded
+                if log:
+                    job_log = utils.get_job_events(
+                        job,
+                        compute_session,
+                        "user_visible_log",
+                        log_start_time,
+                    )
         except ogc_api_processes_fastapi.exceptions.NoSuchJob:
             compute_sessionmaker = db_utils.get_compute_sessionmaker(
                 mode=db_utils.ConnectionMode.write
@@ -413,7 +433,16 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     job_id=job_id, session=compute_session
                 )
                 if qos:
-                    job_qos_info = utils.collect_job_qos_info(job, compute_session)
+                    job_qos_info = utils.get_job_qos_info(job, compute_session)
+                # These lines are inside the session context because the related fields
+                # are lazy loaded
+                if log:
+                    job_log = utils.get_job_events(
+                        job,
+                        compute_session,
+                        "user_visible_log",
+                        log_start_time,
+                    )
         if job.portal not in portals:
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 detail=f"job {job_id} not found"
@@ -438,13 +467,15 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     request_ids, form_data
                 ),
             }
+        if log:
+            kwargs["log"] = [
+                (message[0].isoformat(), message[1]) for message in job_log
+            ]
         if qos:
             kwargs["qos"] = {
                 **job_qos_info,
                 "status": cads_broker.database.get_qos_status_from_request(job),
             }
-        if log:
-            kwargs["log"] = utils.extract_job_log(job)
         status_info = utils.make_status_info(job=job, **kwargs)
         return status_info
 
@@ -483,8 +514,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 job = utils.get_job_from_broker_db(
                     job_id=job_id, session=compute_session
                 )
+                results = utils.get_results_from_job(job=job, session=compute_session)
             auth.verify_permission(user_uid, job)
-            results = utils.get_results_from_job(job=job)
         except (
             ogc_api_processes_fastapi.exceptions.NoSuchJob,
             ogc_api_processes_fastapi.exceptions.ResultsNotReady,
@@ -496,8 +527,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 job = utils.get_job_from_broker_db(
                     job_id=job_id, session=compute_session
                 )
+                results = utils.get_results_from_job(job=job, session=compute_session)
             auth.verify_permission(user_uid, job)
-            results = utils.get_results_from_job(job=job)
         handle_download_metrics(job.process_id, results)
         return results
 

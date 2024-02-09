@@ -241,6 +241,7 @@ def test_get_job_from_broker_db() -> None:
 
 
 def test_get_results_from_job() -> None:
+    mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
     job = cads_broker.SystemRequest(
         **{
             "status": "successful",
@@ -250,7 +251,7 @@ def test_get_results_from_job() -> None:
             ),
         }
     )
-    results = utils.get_results_from_job(job)
+    results = utils.get_results_from_job(job, session=mock_session)
     exp_results = {"asset": {"value": {"key": "value"}}}
     assert results == exp_results
 
@@ -258,19 +259,26 @@ def test_get_results_from_job() -> None:
         **{
             "status": "failed",
             "request_uid": "1234",
-            "response_error": {"message": "traceback"},
         }
     )
-    with pytest.raises(ogc_api_processes_fastapi.exceptions.JobResultsFailed):
-        results = utils.get_results_from_job(job)
+    with pytest.raises(ogc_api_processes_fastapi.exceptions.JobResultsFailed) as exc:
+        with unittest.mock.patch(
+            "cads_processing_api_service.utils.get_job_events"
+        ) as mock_get_job_events:
+            mock_get_job_events.return_value = [
+                "2024-01-01T16:20:12.175021",
+                "error message",
+            ]
+            results = utils.get_results_from_job(job, session=mock_session)
+        assert exc.value.traceback == "error message"
 
     job = cads_broker.SystemRequest(**{"status": "accepted", "request_uid": "1234"})
     with pytest.raises(ogc_api_processes_fastapi.exceptions.ResultsNotReady):
-        results = utils.get_results_from_job(job)
+        results = utils.get_results_from_job(job, session=mock_session)
 
     job = cads_broker.SystemRequest(**{"status": "running", "request_uid": "1234"})
     with pytest.raises(ogc_api_processes_fastapi.exceptions.ResultsNotReady):
-        results = utils.get_results_from_job(job)
+        results = utils.get_results_from_job(job, session=mock_session)
 
 
 def test_make_status_info() -> None:
