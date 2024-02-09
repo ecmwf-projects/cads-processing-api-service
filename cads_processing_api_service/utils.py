@@ -576,15 +576,15 @@ def get_job_events(
     start_time: datetime.datetime | None = None,
 ) -> list[tuple[datetime.datetime, str]]:
     events = []
-    request_uid = job.request_uid
+    request_uid = str(job.request_uid)
     request_events: list[
-        cads_broker.Events
+        cads_broker.database.Events
     ] = cads_broker.database.get_events_from_request(
         request_uid, session, event_type, start_time
     )
     for request_event in request_events:
         events.append((request_event.timestamp, request_event.message))
-    return events
+    return events  # type: ignore
 
 
 def make_status_info(
