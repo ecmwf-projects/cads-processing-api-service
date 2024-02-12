@@ -405,44 +405,44 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         user_uid = auth.authenticate_user(auth_header, portal_header)
         portals = [p.strip() for p in portal_header.split(",")]
-        try:
-            compute_sessionmaker = db_utils.get_compute_sessionmaker(
-                mode=db_utils.ConnectionMode.read
+        # try:
+        compute_sessionmaker = db_utils.get_compute_sessionmaker(
+            mode=db_utils.ConnectionMode.read
+        )
+        with compute_sessionmaker() as compute_session:
+            job = utils.get_job_from_broker_db(
+                job_id=job_id, session=compute_session
             )
-            with compute_sessionmaker() as compute_session:
-                job = utils.get_job_from_broker_db(
-                    job_id=job_id, session=compute_session
+            if qos:
+                job_qos_info = utils.get_job_qos_info(job, compute_session)
+            # These lines are inside the session context because the related fields
+            # are lazy loaded
+            if log:
+                job_log = utils.get_job_events(
+                    job,
+                    compute_session,
+                    "user_visible_log",
+                    log_start_time,
                 )
-                if qos:
-                    job_qos_info = utils.get_job_qos_info(job, compute_session)
-                # These lines are inside the session context because the related fields
-                # are lazy loaded
-                if log:
-                    job_log = utils.get_job_events(
-                        job,
-                        compute_session,
-                        "user_visible_log",
-                        log_start_time,
-                    )
-        except ogc_api_processes_fastapi.exceptions.NoSuchJob:
-            compute_sessionmaker = db_utils.get_compute_sessionmaker(
-                mode=db_utils.ConnectionMode.write
-            )
-            with compute_sessionmaker() as compute_session:
-                job = utils.get_job_from_broker_db(
-                    job_id=job_id, session=compute_session
-                )
-                if qos:
-                    job_qos_info = utils.get_job_qos_info(job, compute_session)
-                # These lines are inside the session context because the related fields
-                # are lazy loaded
-                if log:
-                    job_log = utils.get_job_events(
-                        job,
-                        compute_session,
-                        "user_visible_log",
-                        log_start_time,
-                    )
+        # except ogc_api_processes_fastapi.exceptions.NoSuchJob:
+        #     compute_sessionmaker = db_utils.get_compute_sessionmaker(
+        #         mode=db_utils.ConnectionMode.write
+        #     )
+        #     with compute_sessionmaker() as compute_session:
+        #         job = utils.get_job_from_broker_db(
+        #             job_id=job_id, session=compute_session
+        #         )
+        #         if qos:
+        #             job_qos_info = utils.get_job_qos_info(job, compute_session)
+        #         # These lines are inside the session context because the related fields
+        #         # are lazy loaded
+        #         if log:
+        #             job_log = utils.get_job_events(
+        #                 job,
+        #                 compute_session,
+        #                 "user_visible_log",
+        #                 log_start_time,
+        #             )
         if job.portal not in portals:
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 detail=f"job {job_id} not found"
@@ -506,29 +506,29 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         structlog.contextvars.bind_contextvars(job_id=job_id)
         user_uid = auth.authenticate_user(auth_header, portal_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
-        try:
-            compute_sessionmaker = db_utils.get_compute_sessionmaker(
-                mode=db_utils.ConnectionMode.read
+        # try:
+        compute_sessionmaker = db_utils.get_compute_sessionmaker(
+            mode=db_utils.ConnectionMode.read
+        )
+        with compute_sessionmaker() as compute_session:
+            job = utils.get_job_from_broker_db(
+                job_id=job_id, session=compute_session
             )
-            with compute_sessionmaker() as compute_session:
-                job = utils.get_job_from_broker_db(
-                    job_id=job_id, session=compute_session
-                )
-                results = utils.get_results_from_job(job=job, session=compute_session)
-            auth.verify_permission(user_uid, job)
-        except (
-            ogc_api_processes_fastapi.exceptions.NoSuchJob,
-            ogc_api_processes_fastapi.exceptions.ResultsNotReady,
-        ):
-            compute_sessionmaker = db_utils.get_compute_sessionmaker(
-                mode=db_utils.ConnectionMode.write
-            )
-            with compute_sessionmaker() as compute_session:
-                job = utils.get_job_from_broker_db(
-                    job_id=job_id, session=compute_session
-                )
-                results = utils.get_results_from_job(job=job, session=compute_session)
-            auth.verify_permission(user_uid, job)
+            results = utils.get_results_from_job(job=job, session=compute_session)
+        auth.verify_permission(user_uid, job)
+        # except (
+        #     ogc_api_processes_fastapi.exceptions.NoSuchJob,
+        #     ogc_api_processes_fastapi.exceptions.ResultsNotReady,
+        # ):
+        #     compute_sessionmaker = db_utils.get_compute_sessionmaker(
+        #         mode=db_utils.ConnectionMode.write
+        #     )
+        #     with compute_sessionmaker() as compute_session:
+        #         job = utils.get_job_from_broker_db(
+        #             job_id=job_id, session=compute_session
+        #         )
+        #         results = utils.get_results_from_job(job=job, session=compute_session)
+        #     auth.verify_permission(user_uid, job)
         handle_download_metrics(job.process_id, results)
         return results
 
