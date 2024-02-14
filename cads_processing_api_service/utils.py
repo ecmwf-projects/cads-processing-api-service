@@ -15,8 +15,8 @@
 # limitations under the License.
 
 import base64
+import datetime
 import enum
-import json
 from typing import Any, Callable, Mapping
 
 import cachetools
@@ -429,7 +429,8 @@ def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
 
 
 def get_job_from_broker_db(
-    job_id: str, session: sqlalchemy.orm.Session
+    job_id: str,
+    session: sqlalchemy.orm.Session,
 ) -> cads_broker.SystemRequest:
     """Get job description from the Broker database.
 
@@ -467,7 +468,9 @@ def get_job_from_broker_db(
     return job
 
 
-def get_results_from_job(job: cads_broker.SystemRequest) -> dict[str, Any]:
+def get_results_from_job(
+    job: cads_broker.SystemRequest, session: sqlalchemy.orm.Session
+) -> dict[str, Any]:
     """Get job results description from SystemRequest instance.
 
     Parameters
@@ -498,9 +501,13 @@ def get_results_from_job(job: cads_broker.SystemRequest) -> dict[str, Any]:
                 detail=f"results of job {job_id} expired"
             )
     elif job_status == "failed":
+        error_messages = get_job_events(
+            job=job, session=session, event_type="user_visible_error"
+        )
+        traceback = "\n".join([message[1] for message in error_messages])
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
-            traceback=str(job.response_error["message"]),  # type: ignore
+            traceback=traceback,
         )
     elif job_status in ("accepted", "running"):
         raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
@@ -509,15 +516,17 @@ def get_results_from_job(job: cads_broker.SystemRequest) -> dict[str, Any]:
     return results
 
 
-def parse_results_from_broker_db(job: cads_broker.SystemRequest) -> dict[str, Any]:
+def parse_results_from_broker_db(
+    job: cads_broker.SystemRequest, session: sqlalchemy.orm.Session
+) -> dict[str, Any]:
     try:
-        results = get_results_from_job(job=job)
+        results = get_results_from_job(job=job, session=session)
     except ogc_api_processes_fastapi.exceptions.OGCAPIException as exc:
         results = exceptions.format_exception_content(exc=exc)
     return results
 
 
-def collect_job_qos_info(
+def get_job_qos_info(
     job: cads_broker.SystemRequest, session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
     entry_point = str(job.entry_point)
@@ -560,13 +569,22 @@ def collect_job_qos_info(
     return qos
 
 
-def extract_job_log(job: cads_broker.SystemRequest) -> list[str]:
-    log = []
-    if job.response_user_visible_log:
-        job_log = json.loads(str(job.response_user_visible_log))
-        for log_timestamp, log_message in job_log:
-            log.append(log_message)
-    return log
+def get_job_events(
+    job: cads_broker.SystemRequest,
+    session: sqlalchemy.orm.Session,
+    event_type: str | None = None,
+    start_time: datetime.datetime | None = None,
+) -> list[tuple[datetime.datetime, str]]:
+    events = []
+    request_uid = str(job.request_uid)
+    request_events: list[
+        cads_broker.database.Events
+    ] = cads_broker.database.get_events_from_request(
+        request_uid, session, event_type, start_time
+    )
+    for request_event in request_events:
+        events.append((request_event.timestamp, request_event.message))
+    return events  # type: ignore
 
 
 def make_status_info(
@@ -575,7 +593,7 @@ def make_status_info(
     results: dict[str, Any] | None = None,
     dataset_metadata: dict[str, Any] | None = None,
     qos: dict[str, Any] | None = None,
-    log: list[str] | None = None,
+    log: list[tuple[str, str]] | None = None,
 ) -> models.StatusInfo:
     """Compose job's status information.
 

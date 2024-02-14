@@ -26,7 +26,7 @@ class StatusInfoMetadata(pydantic.BaseModel):
     results: dict[str, Any] | None = None
     datasetMetadata: dict[str, Any] | None = None
     qos: dict[str, Any] | None = None
-    log: list[str] | None = None
+    log: list[tuple[str, str]] | None = None
 
 
 class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
@@ -56,6 +56,7 @@ class JobList(ogc_api_processes_fastapi.models.JobList):
 class Exception(ogc_api_processes_fastapi.models.Exception):
     trace_id: str | None = None
     traceback: str | None = None
+    messages: list[tuple[str, str]] | None = None
 
 
 class Costing(pydantic.BaseModel):
