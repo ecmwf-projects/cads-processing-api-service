@@ -23,7 +23,7 @@ def estimate_costs(
         )
         adaptor_configuration: dict[
             str, Any
-        ] = dataset.resource_data.adaptor_configuration
+        ] = dataset.resource_data.adaptor_configuration  # type: ignore
     costing_config: dict[str, Any] = adaptor_configuration.get("costing", {})
     max_costs: dict[str, Any] = costing_config.get("max_costs", {})
     adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
