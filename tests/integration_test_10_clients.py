@@ -730,7 +730,7 @@ def test_delete_job(dev_env_proc_api_url: str, dev_env_prof_api_url: str) -> Non
     assert response_status_code == exp_status_code
 
 
-def test_delete_job_not_athorized(
+def test_delete_job_not_authorized(
     dev_env_proc_api_url: str, dev_env_prof_api_url: str
 ) -> None:
     response = accept_licence(dev_env_prof_api_url)
@@ -761,7 +761,7 @@ def test_delete_job_not_athorized(
     response = delete_job(dev_env_proc_api_url, job_id)
 
 
-def test_constraints(dev_env_proc_api_url: str) -> None:
+def test_post_constraints(dev_env_proc_api_url: str) -> None:
     process_id = EXISTING_PROCESS_ID
     request_url = urllib.parse.urljoin(
         dev_env_proc_api_url, f"processes/{process_id}/constraints"
@@ -774,3 +774,23 @@ def test_constraints(dev_env_proc_api_url: str) -> None:
     )
 
     assert response.status_code == 200
+
+
+def test_post_costing(dev_env_proc_api_url: str) -> None:
+    process_id = EXISTING_PROCESS_ID
+    request_url = urllib.parse.urljoin(
+        dev_env_proc_api_url, f"processes/{process_id}/costing"
+    )
+    request_body: dict[str, dict[str, Any]] = {
+        "inputs": {"years": ["1971", "1972"], "months": ["01", "02"]}
+    }
+
+    response = requests.post(
+        request_url,
+        json=request_body,
+    )
+
+    assert response.status_code == 200
+    response_body = response.json()
+    assert "costs" in response_body
+    assert "max_costs_exceeded" in response_body
