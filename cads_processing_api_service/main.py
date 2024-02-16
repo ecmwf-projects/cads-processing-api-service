@@ -26,7 +26,7 @@ import ogc_api_processes_fastapi
 import starlette_exporter
 import structlog
 
-from . import clients, constraints, exceptions, middlewares, translators
+from . import clients, constraints, costing, exceptions, middlewares, translators
 
 
 def add_user_request_flag(
@@ -57,6 +57,11 @@ app.router.lifespan_context = lifespan
 app.router.add_api_route(
     "/processes/{process_id}/constraints",
     constraints.apply_constraints,
+    methods=["POST"],
+)
+app.router.add_api_route(
+    "/processes/{process_id}/costing",
+    costing.estimate_costs,
     methods=["POST"],
 )
 app.router.add_api_route(

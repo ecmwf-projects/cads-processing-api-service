@@ -57,3 +57,8 @@ class Exception(ogc_api_processes_fastapi.models.Exception):
     trace_id: str | None = None
     traceback: str | None = None
     messages: list[tuple[str, str]] | None = None
+
+
+class Costing(pydantic.BaseModel):
+    costs: dict[str, float] | None = None
+    max_costs_exceeded: dict[str, float] | None = None
