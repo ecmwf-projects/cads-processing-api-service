@@ -205,7 +205,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 session=catalogue_session,
                 load_messages=True,
             )
-        auth.verify_if_disabled(resource, user_role)
+        auth.verify_if_disabled(resource.disabled_reason, user_role)
         adaptor = adaptors.instantiate_adaptor(resource)
         licences = adaptor.get_licences(execution_content)
         auth.validate_licences(accepted_licences, licences)

@@ -19,7 +19,6 @@ from typing import Any
 
 import cachetools
 import cads_broker
-import cads_catalogue.database
 import fastapi
 import requests
 
@@ -247,26 +246,24 @@ def validate_licences(
     check_licences(required_licences, accepted_licences)  # type: ignore
 
 
-def verify_if_disabled(
-    dataset: cads_catalogue.database.Resource, user_role: str | None
-) -> None:
-    """Verify if a dataset is disabled for the provided user role.
+def verify_if_disabled(disabled_reason: str | None, user_role: str | None) -> None:
+    """Verify if a dataset's disabling reason grant access to the dataset for a specific user role.
 
     Parameters
     ----------
-    dataset : cads_catalogue.database.Resource
-        Dataset description.
+    disabled_reason : str | None
+        Dataset's disabling reason.
     user_role : str | None
         User role.
 
     Raises
     ------
     exceptions.PermissionDenied
-        Raised if the user has no permission to interact with the dataset.
+        Raised if the user role has no permission to interact with the dataset.
     """
-    if dataset.disabled_reason and user_role != "manager":
+    if disabled_reason and user_role != "manager":
         raise exceptions.PermissionDenied(
-            detail=dataset.disabled_reason,
+            detail=disabled_reason,
         )
     else:
         return
