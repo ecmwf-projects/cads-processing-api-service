@@ -82,7 +82,7 @@ def get_auth_header(
 )
 def authenticate_user(
     auth_header: tuple[str, str], portal_header: str | None = None
-) -> tuple[str, str] | None:
+) -> tuple[str | None, str | None]:
     """Verify user authentication.
 
     Verify if the provided authentication header corresponds to a registered user.
