@@ -268,3 +268,5 @@ def verify_if_disabled(
         raise exceptions.PermissionDenied(
             detail=dataset.disabled_reason,
         )
+    else:
+        return
