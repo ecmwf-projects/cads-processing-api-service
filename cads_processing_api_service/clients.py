@@ -191,7 +191,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Submitted job's status information.
         """
-        user_uid = auth.authenticate_user(auth_header, portal_header)
+        user_uid, user_role = auth.authenticate_user(auth_header, portal_header)
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
         accepted_licences = auth.get_accepted_licences(auth_header)
         execution_content = execution_content.model_dump()
@@ -205,6 +205,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 session=catalogue_session,
                 load_messages=True,
             )
+        auth.verify_if_disabled(resource.disabled_reason, user_role)
         adaptor = adaptors.instantiate_adaptor(resource)
         licences = adaptor.get_licences(execution_content)
         auth.validate_licences(accepted_licences, licences)
@@ -286,7 +287,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             List of jobs status information.
         """
-        user_uid = auth.authenticate_user(auth_header, portal_header)
+        user_uid, _ = auth.authenticate_user(auth_header, portal_header)
         portals = [p.strip() for p in portal_header.split(",")]
         job_filters = {
             "process_id": processID,
@@ -403,7 +404,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Job status information.
         """
-        user_uid = auth.authenticate_user(auth_header, portal_header)
+        user_uid, _ = auth.authenticate_user(auth_header, portal_header)
         portals = [p.strip() for p in portal_header.split(",")]
         try:
             compute_sessionmaker = db_utils.get_compute_sessionmaker(
@@ -504,7 +505,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job results.
         """
         structlog.contextvars.bind_contextvars(job_id=job_id)
-        user_uid = auth.authenticate_user(auth_header, portal_header)
+        user_uid, _ = auth.authenticate_user(auth_header, portal_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
         try:
             compute_sessionmaker = db_utils.get_compute_sessionmaker(
@@ -557,7 +558,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job status information
         """
         structlog.contextvars.bind_contextvars(job_id=job_id)
-        user_uid = auth.authenticate_user(auth_header, portal_header)
+        user_uid, _ = auth.authenticate_user(auth_header, portal_header)
         structlog.contextvars.bind_contextvars(user_id=user_uid)
         compute_sessionmaker = db_utils.get_compute_sessionmaker(
             mode=db_utils.ConnectionMode.write

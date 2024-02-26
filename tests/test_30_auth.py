@@ -43,3 +43,18 @@ def test_verify_permission() -> None:
     user_uid = "def456"
     with pytest.raises(exceptions.PermissionDenied):
         auth.verify_permission(user_uid, job)
+
+
+def test_verify_if_disabled() -> None:
+    test_disabled_reason = "test_disabled_reason"
+    test_user_role = None
+    with pytest.raises(exceptions.PermissionDenied):
+        auth.verify_if_disabled(test_disabled_reason, test_user_role)
+
+    test_disabled_reason = "test_disabled_reason"
+    test_user_role = "manager"
+    auth.verify_if_disabled(test_disabled_reason, test_user_role)
+
+    test_disabled_reason = None
+    test_user_role = None
+    auth.verify_if_disabled(test_disabled_reason, test_user_role)

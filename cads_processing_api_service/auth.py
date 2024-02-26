@@ -82,7 +82,7 @@ def get_auth_header(
 )
 def authenticate_user(
     auth_header: tuple[str, str], portal_header: str | None = None
-) -> str | None:
+) -> tuple[str | None, str | None]:
     """Verify user authentication.
 
     Verify if the provided authentication header corresponds to a registered user.
@@ -95,8 +95,8 @@ def authenticate_user(
 
     Returns
     -------
-    str | None
-        Registerd user identifier.
+    tuple[str, str] | None
+        User identifier and role.
 
     Raises
     ------
@@ -126,7 +126,8 @@ def authenticate_user(
     response.raise_for_status()
     user: dict[str, Any] = response.json()
     user_uid: str | None = user.get("sub", None)
-    return user_uid
+    user_role: str | None = user.get("role", None)
+    return user_uid, user_role
 
 
 def verify_permission(user_uid: str, job: cads_broker.SystemRequest) -> None:
@@ -243,3 +244,26 @@ def validate_licences(
     """
     required_licences = set(licences)
     check_licences(required_licences, accepted_licences)  # type: ignore
+
+
+def verify_if_disabled(disabled_reason: str | None, user_role: str | None) -> None:
+    """Verify if a dataset's disabling reason grant access to the dataset for a specific user role.
+
+    Parameters
+    ----------
+    disabled_reason : str | None
+        Dataset's disabling reason.
+    user_role : str | None
+        User role.
+
+    Raises
+    ------
+    exceptions.PermissionDenied
+        Raised if the user role has no permission to interact with the dataset.
+    """
+    if disabled_reason and user_role != "manager":
+        raise exceptions.PermissionDenied(
+            detail=disabled_reason,
+        )
+    else:
+        return
