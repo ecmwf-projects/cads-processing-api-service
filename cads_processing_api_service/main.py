@@ -15,6 +15,7 @@
 # limitations under the License
 
 import logging
+import os
 import uuid
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Awaitable, Callable, Mapping, MutableMapping
@@ -85,11 +86,11 @@ async def initialize_logger(
     return response
 
 
-# FIXME: temporary workaround
-app.add_middleware(
-    fastapi.middleware.cors.CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if os.environ.get("DEBUG", "0") == "1":
+    app.add_middleware(
+        fastapi.middleware.cors.CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
