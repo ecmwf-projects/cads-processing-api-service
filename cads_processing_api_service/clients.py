@@ -288,7 +288,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             List of jobs status information.
         """
         user_uid, _ = auth.authenticate_user(auth_header, portal_header)
-        portals = [p.strip() for p in portal_header.split(",")]
+        portals = (
+            [p.strip() for p in portal_header.split(",")] if portal_header else None
+        )
         job_filters = {
             "process_id": processID,
             "status": status,
@@ -405,7 +407,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job status information.
         """
         user_uid, _ = auth.authenticate_user(auth_header, portal_header)
-        portals = [p.strip() for p in portal_header.split(",")]
+        portals = (
+            [p.strip() for p in portal_header.split(",")] if portal_header else None
+        )
         try:
             compute_sessionmaker = db_utils.get_compute_sessionmaker(
                 mode=db_utils.ConnectionMode.read
