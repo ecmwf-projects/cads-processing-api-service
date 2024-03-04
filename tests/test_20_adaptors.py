@@ -16,6 +16,7 @@ from typing import Any
 
 import cads_adaptors.adaptors.url
 import cads_catalogue.database
+import pytest
 
 from cads_processing_api_service import adaptors
 
@@ -98,5 +99,20 @@ def test_instantiate_adaptor() -> None:
         ),
     )
     adaptor = adaptors.instantiate_adaptor(dataset)
-
     assert isinstance(adaptor, cads_adaptors.adaptors.url.UrlCdsAdaptor)
+
+    adaptor_properties = {
+        "entry_point": "cads_adaptors:UrlCdsAdaptor",
+        "setup_code": None,
+        "form": form_data,
+        "config": {
+            "constraints": constraints_data,
+            "mapping": mapping,
+            "licences": licences,
+        },
+    }
+    adaptor = adaptors.instantiate_adaptor(adaptor_properties=adaptor_properties)
+    assert isinstance(adaptor, cads_adaptors.adaptors.url.UrlCdsAdaptor)
+
+    with pytest.raises(ValueError):
+        adaptors.instantiate_adaptor(adaptor_properties={})
