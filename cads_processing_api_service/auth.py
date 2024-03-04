@@ -22,7 +22,7 @@ import cads_broker
 import fastapi
 import requests
 
-from . import adaptors, config, exceptions
+from . import config, costing, exceptions
 
 VERIFICATION_ENDPOINT = {
     "PRIVATE-TOKEN": "/account/verification/pat",
@@ -284,8 +284,8 @@ def verify_cost(request: dict[str, Any], adaptor_properties: dict[str, Any]) -> 
     exceptions.PermissionDenied
         Raised if the cost of the process execution request exceeds the allowed limits.
     """
-    costing = adaptors.compute_costing(request, adaptor_properties)
-    max_costs_exceeded = costing.max_costs_exceeded
+    costing_info = costing.compute_costing(request, adaptor_properties)
+    max_costs_exceeded = costing_info.max_costs_exceeded
     if max_costs_exceeded:
         raise exceptions.PermissionDenied(
             detail=(
