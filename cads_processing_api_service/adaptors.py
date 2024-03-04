@@ -19,6 +19,8 @@ from typing import Any
 import cads_adaptors
 import cads_catalogue.database
 
+from . import models
+
 DEFAULT_ENTRY_POINT = "cads_adaptors:UrlCdsAdaptor"
 
 
@@ -98,3 +100,23 @@ def instantiate_adaptor(
     )
 
     return adaptor
+
+
+def compute_costing(
+    request: dict[str, Any],
+    adaptor_properties: dict[str, Any],
+) -> models.Costing:
+    adaptor: cads_adaptors.AbstractAdaptor = instantiate_adaptor(
+        adaptor_properties=adaptor_properties
+    )
+    costs: dict[str, float] = adaptor.estimate_costs(request=request.model_dump())
+    max_costs: dict[str, Any] = adaptor_properties["config"]["costing"].get(
+        "max_costs", {}
+    )
+    max_costs_exceeded = {}
+    for max_cost_id, max_cost_value in max_costs.items():
+        if max_cost_id in costs.keys():
+            if costs[max_cost_id] > max_cost_value:
+                max_costs_exceeded[max_cost_id] = max_cost_value
+    costing = models.Costing(costs=costs, max_costs_exceeded=max_costs_exceeded)
+    return costing

@@ -22,7 +22,7 @@ import cads_broker
 import fastapi
 import requests
 
-from . import config, exceptions
+from . import adaptors, config, exceptions
 
 VERIFICATION_ENDPOINT = {
     "PRIVATE-TOKEN": "/account/verification/pat",
@@ -264,6 +264,34 @@ def verify_if_disabled(disabled_reason: str | None, user_role: str | None) -> No
     if disabled_reason and user_role != "manager":
         raise exceptions.PermissionDenied(
             detail=disabled_reason,
+        )
+    else:
+        return
+
+
+def verify_cost(request: dict[str, Any], adaptor_properties: dict[str, Any]) -> None:
+    """Verify if the cost of a process execution request is within the allowed limits.
+
+    Parameters
+    ----------
+    request : dict[str, Any]
+        Process execution request.
+    adaptor_properties : dict[str, Any]
+        Adaptor properties.
+
+    Raises
+    ------
+    exceptions.PermissionDenied
+        Raised if the cost of the process execution request exceeds the allowed limits.
+    """
+    costing = adaptors.compute_costing(request, adaptor_properties)
+    max_costs_exceeded = costing.max_costs_exceeded
+    if max_costs_exceeded:
+        raise exceptions.PermissionDenied(
+            detail=(
+                "the cost of the process execution request exceeds the allowed limits; "
+                f"the following costs exceed the allowed limits: {max_costs_exceeded}"
+            ),
         )
     else:
         return

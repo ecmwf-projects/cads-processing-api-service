@@ -199,20 +199,22 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             db_utils.ConnectionMode.read
         )
         with catalogue_sessionmaker() as catalogue_session:
-            resource: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
+            dataset: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
                 resource_id=process_id,
                 table=self.process_table,
                 session=catalogue_session,
                 load_messages=True,
             )
-        auth.verify_if_disabled(resource.disabled_reason, user_role)
-        adaptor = adaptors.instantiate_adaptor(resource)
+        auth.verify_if_disabled(dataset.disabled_reason, user_role)
+        adaptor_properties = adaptors.get_adaptor_properties(dataset)
+        auth.verify_cost(execution_content, adaptor_properties)
+        adaptor = adaptors.instantiate_adaptor(adaptor_properties=adaptor_properties)
         licences = adaptor.get_licences(execution_content)
         auth.validate_licences(accepted_licences, licences)
         job_id = str(uuid.uuid4())
         structlog.contextvars.bind_contextvars(job_id=job_id)
         job_kwargs = adaptors.make_system_job_kwargs(
-            resource, execution_content, adaptor.resources
+            dataset, execution_content, adaptor.resources
         )
         compute_sessionmaker = db_utils.get_compute_sessionmaker(
             mode=db_utils.ConnectionMode.write
@@ -224,8 +226,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 origin=auth.REQUEST_ORIGIN[auth_header[0]],
                 user_uid=user_uid,
                 process_id=process_id,
-                portal=resource.portal,
-                qos_tags=resource.qos_tags,
+                portal=dataset.portal,
+                qos_tags=dataset.qos_tags,
                 **job_kwargs,
             )
         dataset_messages = [
@@ -234,7 +236,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 severity=message.severity,
                 content=message.content,
             )
-            for message in resource.messages
+            for message in dataset.messages
         ]
         status_info = utils.make_status_info(
             job, dataset_metadata={"messages": dataset_messages}
