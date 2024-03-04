@@ -37,7 +37,7 @@ def estimate_costs(
             resource_id=process_id, table=table, session=catalogue_session
         )
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
-    costing_info = costing.compute_costing(request, adaptor_properties)
+    costing_info = costing.compute_costing(request.model_dump(), adaptor_properties)
     return costing_info
 
 

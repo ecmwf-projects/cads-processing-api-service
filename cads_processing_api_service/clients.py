@@ -194,7 +194,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         user_uid, user_role = auth.authenticate_user(auth_header, portal_header)
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
         accepted_licences = auth.get_accepted_licences(auth_header)
-        execution_content = execution_content.model_dump()
+        request = execution_content.model_dump()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
             db_utils.ConnectionMode.read
         )
@@ -207,14 +207,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             )
         auth.verify_if_disabled(dataset.disabled_reason, user_role)
         adaptor_properties = adaptors.get_adaptor_properties(dataset)
-        auth.verify_cost(execution_content, adaptor_properties)
+        auth.verify_cost(request, adaptor_properties)
         adaptor = adaptors.instantiate_adaptor(adaptor_properties=adaptor_properties)
-        licences = adaptor.get_licences(execution_content)
+        licences = adaptor.get_licences(request)
         auth.validate_licences(accepted_licences, licences)
         job_id = str(uuid.uuid4())
         structlog.contextvars.bind_contextvars(job_id=job_id)
         job_kwargs = adaptors.make_system_job_kwargs(
-            dataset, execution_content, adaptor.resources
+            dataset, request, adaptor.resources
         )
         compute_sessionmaker = db_utils.get_compute_sessionmaker(
             mode=db_utils.ConnectionMode.write
