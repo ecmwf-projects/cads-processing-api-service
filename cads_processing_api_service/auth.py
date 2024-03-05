@@ -285,7 +285,7 @@ def verify_cost(request: dict[str, Any], adaptor_properties: dict[str, Any]) -> 
         Raised if the cost of the process execution request exceeds the allowed limits.
     """
     costing_info = costing.compute_costing(request, adaptor_properties)
-    max_costs_exceeded: dict[str, Any] = costing_info.max_costs_exceeded
+    max_costs_exceeded = costing_info.max_costs_exceeded
     if max_costs_exceeded:
         raise exceptions.PermissionDenied(
             title="cost limits exceeded",
