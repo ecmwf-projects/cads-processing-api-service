@@ -56,5 +56,7 @@ def compute_costing(
         if max_cost_id in costs.keys():
             if costs[max_cost_id] > max_cost_value:
                 max_costs_exceeded[max_cost_id] = max_cost_value
-    costing_info = models.Costing(costs=costs, max_costs_exceeded=max_costs_exceeded)
+    costing_info = models.Costing(
+        costs=costs, max_costs=max_costs, max_costs_exceeded=max_costs_exceeded
+    )
     return costing_info
