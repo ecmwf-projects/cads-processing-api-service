@@ -14,10 +14,12 @@
 
 # mypy: ignore-errors
 
+import unittest.mock
+
 import cads_broker
 import pytest
 
-from cads_processing_api_service import auth, exceptions
+from cads_processing_api_service import auth, exceptions, models
 
 
 def test_check_licences() -> None:
@@ -58,3 +60,21 @@ def test_verify_if_disabled() -> None:
     test_disabled_reason = None
     test_user_role = None
     auth.verify_if_disabled(test_disabled_reason, test_user_role)
+
+
+def test_verify_cost() -> None:
+    with unittest.mock.patch(
+        "cads_processing_api_service.costing.compute_costing"
+    ) as mock_compute_costing:
+        mock_compute_costing.return_value = models.Costing(
+            costs={"cost_1": 1.0, "cost_2": 2.0},
+            max_costs_exceeded={},
+        )
+        auth.verify_cost({}, {})
+
+        mock_compute_costing.return_value = models.Costing(
+            costs={"cost_1": 1.0, "cost_2": 2.0},
+            max_costs_exceeded={"cost_1": 0},
+        )
+        with pytest.raises(exceptions.PermissionDenied):
+            auth.verify_cost({}, {})

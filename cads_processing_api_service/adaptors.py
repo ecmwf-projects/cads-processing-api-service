@@ -82,9 +82,13 @@ def make_system_job_kwargs(
 
 
 def instantiate_adaptor(
-    dataset: cads_catalogue.database.Resource,
+    dataset: cads_catalogue.database.Resource | None = None,
+    adaptor_properties: dict[str, Any] | None = None,
 ) -> cads_adaptors.AbstractAdaptor:
-    adaptor_properties = get_adaptor_properties(dataset)
+    if not adaptor_properties:
+        if dataset is None:
+            raise ValueError("Either adaptor_properties or dataset must be provided")
+        adaptor_properties = get_adaptor_properties(dataset)
     adaptor_class = cads_adaptors.get_adaptor_class(
         entry_point=adaptor_properties["entry_point"],
         setup_code=adaptor_properties["setup_code"],
