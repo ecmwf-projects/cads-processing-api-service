@@ -60,6 +60,10 @@ TEST_INPUT_CDS_SCHEMAS: dict[str, Any] = {
         },
         "type": "StringListArrayWidget",
     },
+    "free_edition_widget": {
+        "type": "FreeEditionWidget",
+        "details": {},
+    },
 }
 
 
@@ -111,6 +115,13 @@ def test_extract_labels() -> None:
 
     test_inputs_cds_schema = TEST_INPUT_CDS_SCHEMAS["string_list"]
     exp_output = {"val1": "Val1", "val2": "Val2", "val3": "Val3"}
+    res_output = cads_processing_api_service.translators.extract_labels(
+        test_inputs_cds_schema
+    )
+    assert res_output == exp_output
+
+    test_inputs_cds_schema = TEST_INPUT_CDS_SCHEMAS["free_edition_widget"]
+    exp_output = {}
     res_output = cads_processing_api_service.translators.extract_labels(
         test_inputs_cds_schema
     )
