@@ -35,11 +35,11 @@ def extract_groups_labels(
 
 
 def extract_labels(input_cds_schema: dict[str, Any]) -> dict[str, str]:
-    details = input_cds_schema["details"]
+    details: dict[str, Any] = input_cds_schema["details"]
     if "groups" in details:
         values = extract_groups_labels(details["groups"])
     else:
-        values = details["labels"]
+        values = details.get("labels", {})
     return values
 
 
