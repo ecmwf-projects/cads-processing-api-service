@@ -63,3 +63,7 @@ class Costing(pydantic.BaseModel):
     costs: dict[str, float] | None = None
     max_costs: dict[str, float] | None = None
     max_costs_exceeded: dict[str, float] | None = None
+
+
+class Execute(ogc_api_processes_fastapi.models.Execute):
+    inputs: dict[str, Any] | None = None
