@@ -167,7 +167,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def post_process_execution(
         self,
         process_id: str = fastapi.Path(...),
-        execution_content: ogc_api_processes_fastapi.models.Execute = fastapi.Body(...),
+        execution_content: models.Execute = fastapi.Body(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         portal_header: str | None = fastapi.Header(
             None, alias=config.PORTAL_HEADER_NAME

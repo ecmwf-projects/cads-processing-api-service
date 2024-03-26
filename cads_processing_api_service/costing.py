@@ -19,14 +19,13 @@ from typing import Any
 import cads_adaptors
 import cads_catalogue
 import fastapi
-import ogc_api_processes_fastapi.models
 
 from . import adaptors, costing, db_utils, models, utils
 
 
 def estimate_costs(
     process_id: str = fastapi.Path(...),
-    request: ogc_api_processes_fastapi.models.Execute = fastapi.Body(...),
+    request: models.Execute = fastapi.Body(...),
 ) -> models.Costing:
     table = cads_catalogue.database.Resource
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
