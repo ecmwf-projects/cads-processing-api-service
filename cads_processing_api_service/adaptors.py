@@ -69,6 +69,8 @@ def make_system_job_kwargs(
     adaptor_properties = get_adaptor_properties(dataset)
     # merge adaptor and dataset resources
     resources = dict(adaptor_resources, **adaptor_properties["resources"])
+    request_inputs: dict[str, Any] = request["inputs"]
+    request_inputs_sorted = dict(sorted(request_inputs.items()))
     system_job_kwargs = {
         "entry_point": adaptor_properties["entry_point"],
         "setup_code": adaptor_properties["setup_code"],
@@ -76,7 +78,7 @@ def make_system_job_kwargs(
         "adaptor_form": adaptor_properties["form"],
         "adaptor_config": adaptor_properties["config"],
         "adaptor_properties_hash": adaptor_properties["hash"],
-        "request": request["inputs"],
+        "request": request_inputs_sorted,
     }
     return system_job_kwargs
 
