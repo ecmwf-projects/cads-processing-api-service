@@ -16,6 +16,7 @@
 
 import datetime
 import unittest.mock
+import uuid
 from typing import Any
 
 import cacholote
@@ -211,8 +212,11 @@ def test_make_pagination_query_params() -> None:
 
 
 def test_dictify_job() -> None:
-    request = cads_broker.database.SystemRequest(request_id=0, status="failed")
-    exp_job = {"request_id": 0, "status": "failed"}
+    request_uid = uuid.uuid4()
+    request = cads_broker.database.SystemRequest(
+        request_uid=request_uid, status="failed"
+    )
+    exp_job = {"request_uid": request_uid, "status": "failed"}
     res_job = utils.dictify_job(request)
     assert isinstance(res_job, dict)
     assert all([key in res_job and res_job[key] == exp_job[key] for key in exp_job])
