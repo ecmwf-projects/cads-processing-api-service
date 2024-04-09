@@ -17,7 +17,6 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import pydantic_settings
 
 general_settings = None

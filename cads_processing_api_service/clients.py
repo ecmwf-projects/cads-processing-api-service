@@ -158,9 +158,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             ),
         }
 
-        response.headers[
-            "cache-control"
-        ] = config.ensure_settings().public_cache_control
+        response.headers["cache-control"] = (
+            config.ensure_settings().public_cache_control
+        )
 
         return process_description
 

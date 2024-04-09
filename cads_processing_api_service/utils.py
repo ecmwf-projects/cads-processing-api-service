@@ -577,10 +577,10 @@ def get_job_events(
 ) -> list[tuple[datetime.datetime, str]]:
     events = []
     request_uid = str(job.request_uid)
-    request_events: list[
-        cads_broker.database.Events
-    ] = cads_broker.database.get_events_from_request(
-        request_uid, session, event_type, start_time
+    request_events: list[cads_broker.database.Events] = (
+        cads_broker.database.get_events_from_request(
+            request_uid, session, event_type, start_time
+        )
     )
     for request_event in request_events:
         events.append((request_event.timestamp, request_event.message))
