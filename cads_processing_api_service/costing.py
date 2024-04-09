@@ -52,6 +52,7 @@ def compute_costing(
     max_costs: dict[str, Any] = costing_config.get("max_costs", {})
     max_costs_exceeded = {}
     for max_cost_id, max_cost_value in max_costs.items():
+        max_cost_value = float(max_cost_value)
         if max_cost_id in costs.keys():
             if costs[max_cost_id] > max_cost_value:
                 max_costs_exceeded[max_cost_id] = max_cost_value
