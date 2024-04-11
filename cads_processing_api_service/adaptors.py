@@ -63,7 +63,7 @@ def get_adaptor_properties(
 
 def make_system_job_kwargs(
     dataset: cads_catalogue.database.Resource,
-    request: dict[str, Any],
+    request_inputs: dict[str, Any],
     adaptor_resources: dict[str, int],
 ) -> dict[str, Any]:
     adaptor_properties = get_adaptor_properties(dataset)
@@ -76,7 +76,7 @@ def make_system_job_kwargs(
         "adaptor_form": adaptor_properties["form"],
         "adaptor_config": adaptor_properties["config"],
         "adaptor_properties_hash": adaptor_properties["hash"],
-        "request": request["inputs"],
+        "request": request_inputs,
     }
     return system_job_kwargs
 
