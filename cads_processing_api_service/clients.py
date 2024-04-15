@@ -422,7 +422,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     job_id=job_id, session=compute_session
                 )
                 if qos:
-                    job_qos_info = utils.get_job_qos_info(job, compute_session)
+                    job_qos_info = {
+                        **utils.get_job_qos_info(job, compute_session),
+                        "status": cads_broker.database.get_qos_status_from_request(job),
+                    }
                 # These lines are inside the session context because the related fields
                 # are lazy loaded
                 if log:
@@ -441,7 +444,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     job_id=job_id, session=compute_session
                 )
                 if qos:
-                    job_qos_info = utils.get_job_qos_info(job, compute_session)
+                    job_qos_info = {
+                        **utils.get_job_qos_info(job, compute_session),
+                        "status": cads_broker.database.get_qos_status_from_request(job),
+                    }
                 # These lines are inside the session context because the related fields
                 # are lazy loaded
                 if log:
@@ -482,7 +488,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         if qos:
             kwargs["qos"] = {
                 **job_qos_info,
-                "status": cads_broker.database.get_qos_status_from_request(job),
             }
         status_info = utils.make_status_info(job=job, **kwargs)
         return status_info
