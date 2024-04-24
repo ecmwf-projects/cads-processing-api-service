@@ -19,6 +19,15 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 
 import pydantic_settings
 
+API_REQUEST_TEMPLATE = """import cdsapi
+
+dataset = "{process_id}"
+request = {api_request_kwargs}
+
+client = cdsapi.Client()
+client.retrieve(dataset, request)
+"""
+
 general_settings = None
 
 
@@ -37,13 +46,7 @@ class Settings(pydantic_settings.BaseSettings):
     cache_resources_maxsize: int = 1000
     cache_resources_ttl: int = 10
 
-    api_request_template: str = (
-        "import cads_api_client\n\n"
-        "collection_id = '{process_id}'\n"
-        "request = {api_request_kwargs}\n\n"
-        "client = cads_api_client.ApiClient()\n"
-        "client.retrieve(collection_id, **request)\n"
-    )
+    api_request_template: str = API_REQUEST_TEMPLATE
     missing_dataset_title: str = "Dataset not available"
 
     @property
