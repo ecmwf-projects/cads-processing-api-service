@@ -21,6 +21,7 @@ import uuid
 
 import attrs
 import cacholote.extra_encoders
+import cads_adaptors.exceptions
 import cads_broker.database
 import cads_catalogue.config
 import cads_catalogue.database
@@ -37,7 +38,17 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import adaptors, auth, config, db_utils, models, serializers, translators, utils
+from . import (
+    adaptors,
+    auth,
+    config,
+    db_utils,
+    exceptions,
+    models,
+    serializers,
+    translators,
+    utils,
+)
 from .metrics import handle_download_metrics
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -208,7 +219,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         auth.verify_if_disabled(dataset.disabled_reason, user_role)
         adaptor_properties = adaptors.get_adaptor_properties(dataset)
         adaptor = adaptors.instantiate_adaptor(adaptor_properties=adaptor_properties)
-        request_inputs = adaptor.normalise_request(request.get("inputs", {}))
+        try:
+            request_inputs = adaptor.normalise_request(request.get("inputs", {}))
+        except cads_adaptors.exceptions.InvalidRequest as exc:
+            raise exceptions.InvalidRequest(detail=str(exc)) from exc
         auth.verify_cost(request_inputs, adaptor_properties)
         licences = adaptor.get_licences(request_inputs)
         auth.validate_licences(accepted_licences, licences)
