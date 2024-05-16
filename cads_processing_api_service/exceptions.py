@@ -48,6 +48,13 @@ class JobResultsExpired(ogc_api_processes_fastapi.exceptions.OGCAPIException):
     title: str = "results expired"
 
 
+@attrs.define
+class InvalidRequest(ogc_api_processes_fastapi.exceptions.OGCAPIException):
+    type: str = "invalid request"
+    status_code: int = fastapi.status.HTTP_400_BAD_REQUEST
+    title: str = "invalid request"
+
+
 def format_exception_content(
     exc: ogc_api_processes_fastapi.exceptions.OGCAPIException,
     request: fastapi.Request | None = None,
@@ -188,6 +195,7 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     """
     app.add_exception_handler(PermissionDenied, exception_handler)  # type: ignore
     app.add_exception_handler(InvalidParameter, exception_handler)  # type: ignore
+    app.add_exception_handler(InvalidRequest, exception_handler)  # type: ignore
     app.add_exception_handler(JobResultsExpired, exception_handler)  # type: ignore
     app.add_exception_handler(requests.exceptions.ReadTimeout, exception_handler)  # type: ignore
     app.add_exception_handler(Exception, general_exception_handler)
