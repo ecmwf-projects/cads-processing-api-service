@@ -25,8 +25,9 @@ from . import adaptors, costing, db_utils, models, utils
 
 def estimate_costs(
     process_id: str = fastapi.Path(...),
-    request: models.Execute = fastapi.Body(...),
+    execution_content: models.Execute = fastapi.Body(...),
 ) -> models.Costing:
+    request = execution_content.model_dump()
     table = cads_catalogue.database.Resource
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
         db_utils.ConnectionMode.read
@@ -37,7 +38,7 @@ def estimate_costs(
         )
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
     costing_info = costing.compute_costing(
-        request.model_dump()["inputs"], adaptor_properties
+        request.get("inputs", {}), adaptor_properties
     )
     return costing_info
 
