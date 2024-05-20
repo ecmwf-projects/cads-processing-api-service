@@ -2,6 +2,7 @@ from typing import Any
 
 import cads_adaptors
 import cads_adaptors.constraints
+import cads_adaptors.exceptions
 import cads_catalogue
 import fastapi
 
@@ -26,7 +27,10 @@ def apply_constraints(
         constraints: dict[str, Any] = adaptor.apply_constraints(
             request.get("inputs", {})
         )
-    except cads_adaptors.constraints.ParameterError as exc:
-        raise exceptions.InvalidParameter(detail=str(exc))
+    except (
+        cads_adaptors.exceptions.ParameterError,
+        cads_adaptors.exceptions.InvalidRequest,
+    ) as exc:
+        raise exceptions.InvalidParameter(detail=str(exc)) from exc
 
     return constraints
