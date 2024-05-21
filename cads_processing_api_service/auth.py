@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import threading
 import urllib.parse
 from typing import Any
 
@@ -79,7 +78,6 @@ def get_auth_header(
         maxsize=config.ensure_settings().cache_users_maxsize,
         ttl=config.ensure_settings().cache_users_ttl,
     ),
-    lock=threading.Lock(),
 )
 def authenticate_user(
     auth_header: tuple[str, str], portal_header: str | None = None
@@ -157,7 +155,6 @@ def verify_permission(user_uid: str, job: cads_broker.SystemRequest) -> None:
         maxsize=config.ensure_settings().cache_users_maxsize,
         ttl=config.ensure_settings().cache_users_ttl,
     ),
-    lock=threading.Lock(),
 )
 def get_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
     """Get licences accepted by a user stored in the Extended Profiles database.
