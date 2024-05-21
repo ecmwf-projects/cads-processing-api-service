@@ -17,6 +17,7 @@
 import base64
 import datetime
 import enum
+import threading
 from typing import Any, Callable, Mapping
 
 import cachetools
@@ -54,6 +55,7 @@ class JobSortCriterion(str, enum.Enum):
         maxsize=config.ensure_settings().cache_resources_maxsize,
         ttl=config.ensure_settings().cache_resources_ttl,
     ),
+    lock=threading.Lock(),
     key=lambda resource_id,
     table,
     session,
