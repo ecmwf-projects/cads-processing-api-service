@@ -223,6 +223,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             request_inputs = adaptor.normalise_request(request.get("inputs", {}))
         except cads_adaptors.exceptions.InvalidRequest as exc:
             raise exceptions.InvalidRequest(detail=str(exc)) from exc
+        if dataset.api_enforce_constraints:
+            try:
+                _ = adaptor.apply_constraints(request_inputs)
+            except (
+                cads_adaptors.exceptions.ParameterError,
+                cads_adaptors.exceptions.InvalidRequest,
+            ) as exc:
+                raise exceptions.InvalidRequest(detail=str(exc)) from exc
         auth.verify_cost(request_inputs, adaptor_properties)
         licences = adaptor.get_licences(request_inputs)
         auth.validate_licences(accepted_licences, licences)
