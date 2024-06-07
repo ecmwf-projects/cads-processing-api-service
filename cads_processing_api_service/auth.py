@@ -18,6 +18,7 @@ import urllib.parse
 from typing import Any
 
 import cachetools
+import cads_adaptors.adaptors
 import cads_broker
 import fastapi
 import requests
@@ -267,12 +268,14 @@ def verify_if_disabled(disabled_reason: str | None, user_role: str | None) -> No
         return
 
 
-def verify_cost(request: dict[str, Any], adaptor_properties: dict[str, Any]) -> None:
+def verify_cost(
+    request: cads_adaptors.adaptors.Request, adaptor_properties: dict[str, Any]
+) -> None:
     """Verify if the cost of a process execution request is within the allowed limits.
 
     Parameters
     ----------
-    request : dict[str, Any]
+    request : cads_adaptors.adaptors.Request
         Process execution request.
     adaptor_properties : dict[str, Any]
         Adaptor properties.
