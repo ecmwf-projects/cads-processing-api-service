@@ -508,6 +508,7 @@ def get_results_from_job(
         )
         traceback = "\n".join([message[1] for message in error_messages])
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
+            title="The job has failed.",
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
             traceback=traceback,
         )
