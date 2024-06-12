@@ -287,10 +287,7 @@ def verify_cost(request: dict[str, Any], adaptor_properties: dict[str, Any]) -> 
     if max_costs_exceeded:
         raise exceptions.PermissionDenied(
             title="cost limits exceeded",
-            detail=(
-                "the cost of the submitted request exceeds the allowed limits; "
-                f"the following limits have been exceeded: {max_costs_exceeded}"
-            ),
+            detail="Your request is too large, please reduce your selection.",
         )
     else:
         return
