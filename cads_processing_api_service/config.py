@@ -25,7 +25,7 @@ dataset = "{process_id}"
 request = {api_request_kwargs}
 
 client = cdsapi.Client()
-client.retrieve(dataset, request)
+client.retrieve(dataset, request).download()
 """
 
 general_settings = None
