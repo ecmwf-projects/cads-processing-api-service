@@ -82,7 +82,7 @@ def format_exception_content(
         instance=instance,
         trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
     ).model_dump(exclude_none=True)
-    if exc is ogc_api_processes_fastapi.exceptions.JobResultsFailed:
+    if isinstance(exc, ogc_api_processes_fastapi.exceptions.JobResultsFailed):
         exception_content["traceback"] = exc.traceback
 
     return exception_content
