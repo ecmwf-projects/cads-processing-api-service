@@ -82,6 +82,8 @@ def format_exception_content(
         instance=instance,
         trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
     ).model_dump(exclude_none=True)
+    if isinstance(exc, ogc_api_processes_fastapi.exceptions.JobResultsFailed):
+        exception_content["traceback"] = exc.traceback
 
     return exception_content
 
@@ -108,10 +110,11 @@ def exception_handler(
         exception="".join(traceback.TracebackException.from_exception(exc).format()),
         url=str(request.url),
     )
-    return fastapi.responses.JSONResponse(
+    out = fastapi.responses.JSONResponse(
         status_code=exc.status_code,
         content=format_exception_content(exc=exc, request=request),
     )
+    return out
 
 
 def request_readtimeout_handler(
@@ -137,8 +140,7 @@ def request_readtimeout_handler(
             type="read timeout error",
             title="read timeout error",
             trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
-            detail=str(exc),
-        ),
+        ).model_dump(exclude_none=True),
     )
     return out
 
@@ -165,7 +167,7 @@ def general_exception_handler(
         "internal server error",
         exception="".join(traceback.TracebackException.from_exception(exc).format()),
     )
-    return fastapi.responses.JSONResponse(
+    out = fastapi.responses.JSONResponse(
         status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=models.Exception(
             type="internal server error",
@@ -173,6 +175,7 @@ def general_exception_handler(
             trace_id=structlog.contextvars.get_contextvars().get("trace_id", "unset"),
         ).model_dump(exclude_none=True),
     )
+    return out
 
 
 def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
@@ -193,6 +196,9 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     app.add_exception_handler(InvalidParameter, exception_handler)  # type: ignore
     app.add_exception_handler(InvalidRequest, exception_handler)  # type: ignore
     app.add_exception_handler(JobResultsExpired, exception_handler)  # type: ignore
-    app.add_exception_handler(requests.exceptions.ReadTimeout, exception_handler)  # type: ignore
+    app.add_exception_handler(
+        requests.exceptions.ReadTimeout,
+        request_readtimeout_handler,  # type: ignore
+    )
     app.add_exception_handler(Exception, general_exception_handler)
     return app
