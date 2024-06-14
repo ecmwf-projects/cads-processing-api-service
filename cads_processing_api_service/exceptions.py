@@ -197,7 +197,8 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     app.add_exception_handler(InvalidRequest, exception_handler)  # type: ignore
     app.add_exception_handler(JobResultsExpired, exception_handler)  # type: ignore
     app.add_exception_handler(
-        requests.exceptions.ReadTimeout, request_readtimeout_handler
-    )  # type: ignore
+        requests.exceptions.ReadTimeout,
+        request_readtimeout_handler,  # type: ignore
+    )
     app.add_exception_handler(Exception, general_exception_handler)
     return app
