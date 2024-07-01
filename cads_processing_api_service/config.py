@@ -28,6 +28,8 @@ client = cdsapi.Client()
 client.retrieve(dataset, request).download()
 """
 
+ANONYMOUS_LICENCES_MESSAGE = "The job has been submitted as an anonymous user."
+
 general_settings = None
 
 
@@ -48,6 +50,7 @@ class Settings(pydantic_settings.BaseSettings):
 
     api_request_template: str = API_REQUEST_TEMPLATE
     missing_dataset_title: str = "Dataset not available"
+    anonymous_licences_message: str = "Anonymous licences are not allowed"
 
     @property
     def profiles_api_url(self) -> str:

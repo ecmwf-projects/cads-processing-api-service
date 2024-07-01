@@ -233,7 +233,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 raise exceptions.InvalidRequest(detail=str(exc)) from exc
         auth.verify_cost(request_inputs, adaptor_properties)
         licences = adaptor.get_licences(request_inputs)
-        auth.validate_licences(accepted_licences, licences)
+        if user_uid != "anonymous":
+            auth.validate_licences(accepted_licences, licences)
+            job_message = None
+        else:
+            job_message = config.ANONYMOUS_LICENCES_MESSAGE
         job_id = str(uuid.uuid4())
         structlog.contextvars.bind_contextvars(job_id=job_id)
         job_kwargs = adaptors.make_system_job_kwargs(
@@ -264,6 +268,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         status_info = utils.make_status_info(
             job, dataset_metadata={"messages": dataset_messages}
         )
+        status_info.message = job_message
         return status_info
 
     def get_jobs(
