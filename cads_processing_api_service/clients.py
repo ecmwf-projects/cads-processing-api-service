@@ -204,7 +204,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         user_uid, user_role = auth.authenticate_user(auth_header, portal_header)
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
-        accepted_licences = auth.get_accepted_licences(auth_header)
         request = execution_content.model_dump()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
             db_utils.ConnectionMode.read
@@ -234,6 +233,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         auth.verify_cost(request_inputs, adaptor_properties)
         licences = adaptor.get_licences(request_inputs)
         if user_uid != "anonymous":
+            accepted_licences = auth.get_accepted_licences(auth_header)
             auth.validate_licences(accepted_licences, licences)
             job_message = None
         else:
