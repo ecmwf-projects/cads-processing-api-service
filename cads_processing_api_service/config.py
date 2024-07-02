@@ -28,7 +28,11 @@ client = cdsapi.Client()
 client.retrieve(dataset, request).download()
 """
 
-ANONYMOUS_LICENCES_MESSAGE = "The job has been submitted as an anonymous user."
+ANONYMOUS_LICENCES_MESSAGE = (
+    "The job has been submitted as an anonymous user. "
+    "Please consider the following licences implicitly accepted: "
+    "{licences}"
+)
 
 general_settings = None
 

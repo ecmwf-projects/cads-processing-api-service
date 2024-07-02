@@ -237,7 +237,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             auth.validate_licences(accepted_licences, licences)
             job_message = None
         else:
-            job_message = config.ANONYMOUS_LICENCES_MESSAGE
+            job_message = config.ANONYMOUS_LICENCES_MESSAGE.format(
+                licences="; ".join(
+                    [f"{licence[0]} (rev: {licence[1]})" for licence in licences]
+                )
+            )
         job_id = str(uuid.uuid4())
         structlog.contextvars.bind_contextvars(job_id=job_id)
         job_kwargs = adaptors.make_system_job_kwargs(
