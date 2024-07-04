@@ -267,7 +267,9 @@ def verify_if_disabled(disabled_reason: str | None, user_role: str | None) -> No
         return
 
 
-def verify_cost(request: dict[str, Any], adaptor_properties: dict[str, Any]) -> None:
+def verify_cost(
+    request: dict[str, Any], adaptor_properties: dict[str, Any], request_origin: str
+) -> None:
     """Verify if the cost of a process execution request is within the allowed limits.
 
     Parameters
@@ -276,6 +278,8 @@ def verify_cost(request: dict[str, Any], adaptor_properties: dict[str, Any]) -> 
         Process execution request.
     adaptor_properties : dict[str, Any]
         Adaptor properties.
+    request_origin : str
+        Origin of the request. Can be either "api" or "ui".
 
     Raises
     ------

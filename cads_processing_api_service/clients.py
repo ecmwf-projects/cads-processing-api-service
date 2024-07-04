@@ -203,6 +203,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Submitted job's status information.
         """
         user_uid, user_role = auth.authenticate_user(auth_header, portal_header)
+        request_origin = auth.REQUEST_ORIGIN[auth_header[0]]
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
         accepted_licences = auth.get_accepted_licences(auth_header)
         request = execution_content.model_dump()
@@ -231,7 +232,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 cads_adaptors.exceptions.InvalidRequest,
             ) as exc:
                 raise exceptions.InvalidRequest(detail=str(exc)) from exc
-        auth.verify_cost(request_inputs, adaptor_properties)
+        auth.verify_cost(request_inputs, adaptor_properties, request_origin)
         licences = adaptor.get_licences(request_inputs)
         auth.validate_licences(accepted_licences, licences)
         job_id = str(uuid.uuid4())
@@ -246,7 +247,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job = cads_broker.database.create_request(
                 session=compute_session,
                 request_uid=job_id,
-                origin=auth.REQUEST_ORIGIN[auth_header[0]],
+                origin=request_origin,
                 user_uid=user_uid,
                 process_id=process_id,
                 portal=dataset.portal,
