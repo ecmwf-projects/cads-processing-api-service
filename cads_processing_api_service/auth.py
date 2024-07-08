@@ -286,7 +286,7 @@ def verify_cost(
     exceptions.PermissionDenied
         Raised if the cost of the process execution request exceeds the allowed limits.
     """
-    costing_info = costing.compute_costing(request, adaptor_properties)
+    costing_info = costing.compute_costing(request, adaptor_properties, request_origin)
     max_costs_exceeded = costing_info.max_costs_exceeded
     if max_costs_exceeded:
         raise exceptions.PermissionDenied(
