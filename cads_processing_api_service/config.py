@@ -54,7 +54,7 @@ class Settings(pydantic_settings.BaseSettings):
 
     api_request_template: str = API_REQUEST_TEMPLATE
     missing_dataset_title: str = "Dataset not available"
-    anonymous_licences_message: str = "Anonymous licences are not allowed"
+    anonymous_licences_message: str = ANONYMOUS_LICENCES_MESSAGE
 
     @property
     def profiles_api_url(self) -> str:
