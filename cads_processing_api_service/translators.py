@@ -162,8 +162,8 @@ def make_request_labels(
             )
             latitude = longitude = "Unknown"
         request_labels = [
-            f"Latitude: {latitude}°",
-            f"Longitude: {longitude}°",
+            f"Latitude: {latitude}",
+            f"Longitude: {longitude}",
         ]
     else:
         input_value_label = extract_labels(cds_input_schema)
