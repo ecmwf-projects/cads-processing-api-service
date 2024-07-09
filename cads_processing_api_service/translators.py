@@ -17,8 +17,11 @@
 from typing import Any
 
 import fastapi
+import structlog
 
 from . import config
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 def extract_groups_labels(
@@ -149,18 +152,15 @@ def make_request_labels(
         ]
     elif cds_input_schema["type"] == "GeographicLocationWidget":
         location = input_value_ids[0]
-        if not isinstance(location, dict):
-            raise ValueError(
-                f"GeographicLocationWidget input value must be a dictionary, got {location}"
-            )
         try:
-            latitude = location["latitude"]
-            longitude = location["longitude"]
-        except KeyError as e:
-            raise ValueError(
-                "GeographicLocationWidget input value must contain "
-                f"'latitude' and 'longitude' keys, got {location}"
-            ) from e
+            latitude = f"{location['latitude']}°"
+            longitude = f"{location['longitude']}°"
+        except Exception as e:
+            logger.error(
+                "Error extracting latitude and longitude from geographic location",
+                error=e,
+            )
+            latitude = longitude = "Unknown"
         request_labels = [
             f"Latitude: {latitude}°",
             f"Longitude: {longitude}°",
