@@ -133,7 +133,7 @@ def translate_cds_form(
 
 
 def make_request_labels(
-    input_value_ids: list[str],
+    input_value_ids: list[str | dict[str, Any]],
     cds_input_schema: dict[str, Any],
 ) -> list[str]:
     if cds_input_schema["type"] in (
@@ -148,9 +148,10 @@ def make_request_labels(
             )
         ]
     elif cds_input_schema["type"] == "GeographicLocationWidget":
+        location: dict[str, Any] = input_value_ids[0]
         request_labels = [
-            f"Latitude: {input_value_ids[0].get('latitude')}°",
-            f"Longitude: {input_value_ids[0].get('longitude')}°",
+            f"Latitude: {location.get('latitude')}°",
+            f"Longitude: {location.get('longitude')}°",
         ]
     else:
         input_value_label = extract_labels(cds_input_schema)
