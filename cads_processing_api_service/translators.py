@@ -147,6 +147,11 @@ def make_request_labels(
                 input_value_ids,
             )
         ]
+    elif cds_input_schema["type"] == "GeographicLocationWidget":
+        request_labels = [
+            f"Latitude: {input_value_ids[0].get('latitude')}°",
+            f"Longitude: {input_value_ids[0].get('longitude')}°",
+        ]
     else:
         input_value_label = extract_labels(cds_input_schema)
         request_labels = []
