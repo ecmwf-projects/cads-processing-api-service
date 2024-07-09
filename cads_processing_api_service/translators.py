@@ -149,6 +149,10 @@ def make_request_labels(
         ]
     elif cds_input_schema["type"] == "GeographicLocationWidget":
         location = input_value_ids[0]
+        if not isinstance(location, dict):
+            raise ValueError(
+                f"GeographicLocationWidget input value must be a dictionary, got {location}"
+            )
         request_labels = [
             f"Latitude: {location.get('latitude')}°",
             f"Longitude: {location.get('longitude')}°",
