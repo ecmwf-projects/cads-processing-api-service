@@ -136,7 +136,7 @@ def translate_cds_form(
 
 
 def make_request_labels(
-    input_value_ids: list[str] | list[dict[str, Any]],
+    input_value_ids: Any,
     cds_input_schema: dict[str, Any],
 ) -> list[str]:
     if cds_input_schema["type"] in (
