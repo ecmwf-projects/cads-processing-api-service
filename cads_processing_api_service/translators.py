@@ -148,7 +148,7 @@ def make_request_labels(
             )
         ]
     elif cds_input_schema["type"] == "GeographicLocationWidget":
-        location: dict[str, Any] = input_value_ids[0]
+        location = input_value_ids[0]
         request_labels = [
             f"Latitude: {location.get('latitude')}°",
             f"Longitude: {location.get('longitude')}°",
