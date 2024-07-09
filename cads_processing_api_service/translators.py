@@ -153,9 +153,17 @@ def make_request_labels(
             raise ValueError(
                 f"GeographicLocationWidget input value must be a dictionary, got {location}"
             )
+        try:
+            latitude = location["latitude"]
+            longitude = location["longitude"]
+        except KeyError as e:
+            raise ValueError(
+                "GeographicLocationWidget input value must contain "
+                f"'latitude' and 'longitude' keys, got {location}"
+            ) from e
         request_labels = [
-            f"Latitude: {location.get('latitude')}°",
-            f"Longitude: {location.get('longitude')}°",
+            f"Latitude: {latitude}°",
+            f"Longitude: {longitude}°",
         ]
     else:
         input_value_label = extract_labels(cds_input_schema)
