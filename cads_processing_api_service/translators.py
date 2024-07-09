@@ -143,18 +143,19 @@ def make_request_labels(
         "GeographicExtentWidget",
         "GeographicExtentMapWidget",
     ):
+        value_ids: list[str] = input_value_ids
         request_labels = [
             f"{label}: {value}°"
             for label, value in zip(
                 ["North", "West", "South", "East"],
-                input_value_ids,
+                value_ids,
             )
         ]
     elif cds_input_schema["type"] == "GeographicLocationWidget":
-        location: dict[str, Any] = input_value_ids[0]
+        value_ids: dict[str, Any] = input_value_ids[0]
         try:
-            latitude = f"{location['latitude']}°"
-            longitude = f"{location['longitude']}°"
+            latitude = f"{value_ids['latitude']}°"
+            longitude = f"{value_ids['longitude']}°"
         except Exception as e:
             logger.error(
                 "Error extracting latitude and longitude from geographic location",
@@ -166,6 +167,7 @@ def make_request_labels(
             f"Longitude: {longitude}",
         ]
     else:
+        value_ids: list[str] = input_value_ids
         input_value_label = extract_labels(cds_input_schema)
         request_labels = []
         for input_value_id in input_value_ids:
