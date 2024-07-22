@@ -196,8 +196,11 @@ def make_request_labels_group(
 
 
 def translate_request_ids_into_labels(
-    request: dict[str, Any], cds_form: list[Any] | dict[str, Any]
+    request: dict[str, Any], cds_form: list[Any] | dict[str, Any] | None
 ) -> dict[str, Any]:
+    """Translate request input values into labels."""
+    if cds_form is None:
+        return {}
     if not isinstance(cds_form, list):
         cds_form = [cds_form]
     request_labels = {}
@@ -219,7 +222,6 @@ def translate_request_ids_into_labels(
                 request_labels[input_key_label] = make_request_labels(
                     input_value_ids, cds_input_schema
                 )
-
     return request_labels
 
 
