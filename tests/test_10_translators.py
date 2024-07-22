@@ -1,3 +1,5 @@
+# type: ignore
+
 # Copyright 2022, European Union.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,6 +42,10 @@ TEST_INPUT_CDS_SCHEMAS: dict[str, Any] = {
     "geographic_extent_map": {
         "details": {"default": [1, 2, 3, 4]},
         "type": "GeographicExtentMapWidget",
+    },
+    "geographic_location": {
+        "details": {},
+        "type": "GeographicLocationWidget",
     },
     "string_list_array_groups": {
         "details": {
@@ -200,6 +206,14 @@ def test_make_request_labels() -> None:
     test_input_value_ids = ["1", "1", "1", "1"]
     test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["geographic_extent_map"]
     exp_output = ["North: 1°", "West: 1°", "South: 1°", "East: 1°"]
+    res_output = cads_processing_api_service.translators.make_request_labels(
+        test_input_value_ids, test_input_cds_schema
+    )
+    assert res_output == exp_output
+
+    test_input_value_ids = [{"latitude": 10, "longitude": 10}]
+    test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["geographic_location"]
+    exp_output = ["Latitude: 10°", "Longitude: 10°"]
     res_output = cads_processing_api_service.translators.make_request_labels(
         test_input_value_ids, test_input_cds_schema
     )

@@ -17,8 +17,11 @@
 from typing import Any
 
 import fastapi
+import structlog
 
 from . import config
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 def extract_groups_labels(
@@ -133,7 +136,7 @@ def translate_cds_form(
 
 
 def make_request_labels(
-    input_value_ids: list[str],
+    input_value_ids: Any,
     cds_input_schema: dict[str, Any],
 ) -> list[str]:
     if cds_input_schema["type"] in (
@@ -146,6 +149,21 @@ def make_request_labels(
                 ["North", "West", "South", "East"],
                 input_value_ids,
             )
+        ]
+    elif cds_input_schema["type"] == "GeographicLocationWidget":
+        location = input_value_ids[0]
+        try:
+            latitude = f"{location['latitude']}°"
+            longitude = f"{location['longitude']}°"
+        except Exception as e:
+            logger.error(
+                "Error extracting latitude and longitude from geographic location",
+                error=e,
+            )
+            latitude = longitude = "Unknown"
+        request_labels = [
+            f"Latitude: {latitude}",
+            f"Longitude: {longitude}",
         ]
     else:
         input_value_label = extract_labels(cds_input_schema)

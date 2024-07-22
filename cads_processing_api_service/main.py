@@ -15,7 +15,6 @@
 # limitations under the License
 
 import logging
-import os
 import uuid
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Awaitable, Callable, Mapping, MutableMapping
@@ -27,7 +26,15 @@ import ogc_api_processes_fastapi
 import starlette_exporter
 import structlog
 
-from . import clients, constraints, costing, exceptions, middlewares, translators
+from . import (
+    clients,
+    config,
+    constraints,
+    costing,
+    exceptions,
+    middlewares,
+    translators,
+)
 
 
 def add_user_request_flag(
@@ -86,7 +93,7 @@ async def initialize_logger(
     return response
 
 
-if os.environ.get("DEBUG", "0") == "1":
+if config.ensure_settings().allow_cors:
     app.add_middleware(
         fastapi.middleware.cors.CORSMiddleware,
         allow_origins=["*"],
