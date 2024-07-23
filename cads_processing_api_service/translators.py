@@ -211,9 +211,13 @@ def translate_request_ids_into_labels(
         input_key_id: str(input_value_id)
         for input_key_id, input_value_id in request.items()
     }
+    exclusive_group_widgets_children = []
+    for cds_input_schema in cds_form:
+        if cds_input_schema.get("type", None) == "ExclusiveGroupWidget":
+            exclusive_group_widgets_children.extend(cds_input_schema["children"])
     for cds_input_schema in cds_form:
         cds_input_schema_name = cds_input_schema.get("name", None)
-        if cds_input_schema_name in ("global", "area"):
+        if cds_input_schema_name in exclusive_group_widgets_children:
             continue
         if cds_input_schema.get("type", None) == "ExclusiveGroupWidget":
             input_key_label = cds_input_schema["label"]
@@ -229,19 +233,20 @@ def translate_request_ids_into_labels(
             # TODO: handle default values
             input_key_id = cds_input_schema.get("name", None)
             input_key_label = cds_input_schema.get("label", None)
-            logger.info("input_key_id", input_key_id=input_key_id)
             if input_key_id in request_labels:
                 del request_labels[input_key_id]
                 input_value_ids = request[input_key_id]
-                if not isinstance(input_value_ids, list):
-                    input_value_ids = [input_value_ids]
-                request_labels[input_key_label] = make_request_labels(
-                    input_value_ids, cds_input_schema
-                )
-                logger.info("if")
-            elif default := cds_input_schema.get("details", {}).get("default", None):
-                logger.info("elif", default=default)
-                request_labels[input_key_label] = [default]
+            elif default_value_ids := cds_input_schema.get("details", {}).get(
+                "default", None
+            ):
+                input_value_ids = default_value_ids
+            else:
+                continue
+            if not isinstance(input_value_ids, list):
+                input_value_ids = [input_value_ids]
+            request_labels[input_key_label] = make_request_labels(
+                input_value_ids, cds_input_schema
+            )
 
     return request_labels
 
