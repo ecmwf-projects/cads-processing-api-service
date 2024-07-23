@@ -11,9 +11,7 @@ dependencies:
 - attrs
 - asyncpg
 - cachetools
-- DateTimeRange
 - fastapi>=0.109.0
-- jsonschema
 - pip
 - pydantic>2
 - pydantic-settings>2
