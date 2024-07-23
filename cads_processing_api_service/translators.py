@@ -205,10 +205,44 @@ def translate_request_ids_into_labels(
         cds_form = {}
     if not isinstance(cds_form, list):
         cds_form = [cds_form]
+    # This will include in the labels the input keys that are not associated with
+    # any cds_input_schema in the cds_form
     request_labels = {
         input_key_id: str(input_value_id)
         for input_key_id, input_value_id in request.items()
     }
+    for cds_input_schema in cds_form:
+        cds_input_schema_name = cds_input_schema.get("name", None)
+        if cds_input_schema_name in ("global", "area"):
+            continue
+        if cds_input_schema.get("type", None) == "ExclusiveGroupWidget":
+            input_key_label = cds_input_schema["label"]
+            children = cds_input_schema["children"]
+            if keys_to_remove := list(set(request_labels.keys()) & set(children)):
+                for key_to_remove in keys_to_remove:
+                    del request_labels[key_to_remove]
+            default = cds_input_schema.get("details", {}).get("default", None)
+            request_labels[input_key_label] = make_request_labels_group(
+                request, children, default, cds_form
+            )
+        else:
+            # TODO: handle default values
+            input_key_id = cds_input_schema.get("name", None)
+            input_key_label = cds_input_schema.get("label", None)
+            logger.info("input_key_id", input_key_id=input_key_id)
+            if input_key_id in request_labels:
+                del request_labels[input_key_id]
+                input_value_ids = request[input_key_id]
+                if not isinstance(input_value_ids, list):
+                    input_value_ids = [input_value_ids]
+                request_labels[input_key_label] = make_request_labels(
+                    input_value_ids, cds_input_schema
+                )
+                logger.info("if")
+            elif default := cds_input_schema.get("details", {}).get("default", None):
+                logger.info("elif", default=default)
+                request_labels[input_key_label] = [default]
+
     return request_labels
 
 
