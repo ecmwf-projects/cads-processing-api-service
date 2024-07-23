@@ -205,24 +205,10 @@ def translate_request_ids_into_labels(
         cds_form = {}
     if not isinstance(cds_form, list):
         cds_form = [cds_form]
-    request_labels = {}
-    for input_key_id, input_value_id in request.items():
-        input_key_label = input_key_id
-        input_value_label = str(input_value_id)
-        for cds_input_schema in cds_form:
-            if cds_input_schema.get("name", None) == input_key_id:
-                input_key_label = cds_input_schema["label"]
-                if cds_input_schema["type"] == "ExclusiveGroupWidget":
-                    children = cds_input_schema["children"]
-                    default = cds_input_schema["details"]["default"]
-                    input_value_label = make_request_labels_group(
-                        request, children, default, cds_form
-                    )
-                else:
-                    input_value_label = make_request_labels(
-                        input_value_id, cds_input_schema
-                    )
-        request_labels[input_key_label] = input_value_label
+    request_labels = {
+        input_key_id: str(input_value_id)
+        for input_key_id, input_value_id in request.items()
+    }
     return request_labels
 
 
