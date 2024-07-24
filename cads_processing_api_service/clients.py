@@ -231,7 +231,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 cads_adaptors.exceptions.InvalidRequest,
             ) as exc:
                 raise exceptions.InvalidRequest(detail=str(exc)) from exc
-        auth.verify_cost(request_inputs, adaptor_properties)
+        costs = auth.verify_cost(request_inputs, adaptor_properties)
         licences = adaptor.get_licences(request_inputs)
         auth.validate_licences(accepted_licences, licences)
         job_id = str(uuid.uuid4())
@@ -251,6 +251,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 process_id=process_id,
                 portal=dataset.portal,
                 qos_tags=dataset.qos_tags,
+                metadata={"costs": costs},
                 **job_kwargs,
             )
         dataset_messages = [
