@@ -20,10 +20,14 @@ import cads_processing_api_service.translators
 
 TEST_INPUT_CDS_SCHEMAS: dict[str, Any] = {
     "string_list": {
+        "name": "string_list",
+        "label": "String List",
         "details": {"labels": {"val1": "Val1", "val2": "Val2", "val3": "Val3"}},
         "type": "StringListWidget",
     },
     "string_list_array": {
+        "name": "string_list_array",
+        "label": "String List Array",
         "details": {
             "groups": [
                 {"labels": {"val1": "Val1", "val2": "Val2"}},
@@ -33,6 +37,8 @@ TEST_INPUT_CDS_SCHEMAS: dict[str, Any] = {
         "type": "StringListArrayWidget",
     },
     "string_choice": {
+        "name": "string_choice",
+        "label": "String Choice",
         "details": {
             "labels": {"val1": "Val1", "val2": "Val2", "val3": "Val3"},
             "default": "val1",
@@ -40,14 +46,20 @@ TEST_INPUT_CDS_SCHEMAS: dict[str, Any] = {
         "type": "StringChoiceWidget",
     },
     "geographic_extent_map": {
+        "name": "geographic_extent_map",
+        "label": "Geographic Extent Map",
         "details": {"default": [1, 2, 3, 4]},
         "type": "GeographicExtentMapWidget",
     },
     "geographic_location": {
+        "name": "geographic_location",
+        "label": "Geographic Location",
         "details": {},
         "type": "GeographicLocationWidget",
     },
     "string_list_array_groups": {
+        "name": "string_list_array_groups",
+        "label": "String List Array Groups",
         "details": {
             "groups": [
                 {
@@ -67,7 +79,28 @@ TEST_INPUT_CDS_SCHEMAS: dict[str, Any] = {
         "type": "StringListArrayWidget",
     },
     "free_edition_widget": {
+        "name": "free_edition_widget",
+        "label": "Free Edition Widget",
         "type": "FreeEditionWidget",
+        "details": {},
+    },
+    "exclusive_group_widget": {
+        "name": "exclusive_group_widget",
+        "label": "Exclusive Group Widget",
+        "type": "ExclusiveGroupWidget",
+        "children": ["child_1", "child_2"],
+        "details": {"default": "child_1"},
+    },
+    "child_1": {
+        "name": "child_1",
+        "label": "Child 1",
+        "type": "Child1Widget",
+        "details": {},
+    },
+    "child_2": {
+        "name": "child_2",
+        "label": "Child 2",
+        "type": "Child2Widget",
         "details": {},
     },
 }
@@ -143,7 +176,6 @@ def test_translate_string_list() -> None:
     res_output = cads_processing_api_service.translators.translate_string_list(
         test_input
     )
-
     assert res_output == exp_ouput
 
 
@@ -156,7 +188,6 @@ def test_translate_string_list_array() -> None:
     res_output = cads_processing_api_service.translators.translate_string_list_array(
         test_input
     )
-
     assert res_output == exp_ouput
 
     test_input = TEST_INPUT_CDS_SCHEMAS["string_list_array_groups"]
@@ -170,7 +201,6 @@ def test_translate_string_list_array() -> None:
     res_output = cads_processing_api_service.translators.translate_string_list_array(
         test_input
     )
-
     assert res_output == exp_ouput
 
 
@@ -180,7 +210,6 @@ def test_translate_string_choice() -> None:
     res_output = cads_processing_api_service.translators.translate_string_choice(
         test_input
     )
-
     assert res_output == exp_ouput
 
 
@@ -198,7 +227,6 @@ def test_translate_geographic_extent_map() -> None:
             test_input
         )
     )
-
     assert res_output == exp_ouput
 
 
@@ -234,6 +262,51 @@ def test_make_request_labels() -> None:
         test_input_value_ids, test_input_cds_schema
     )
     assert res_output == exp_output
+
+
+def test_translate_request_ids_into_labels() -> None:
+    request = {"key1": "val1", "key2": "val2"}
+    cds_schema = None
+    exp_output = {"key1": "val1", "key2": "val2"}
+    res_output = (
+        cads_processing_api_service.translators.translate_request_ids_into_labels(
+            request, cds_schema
+        )
+    )
+    assert res_output == exp_output
+
+    request = {
+        "string_list": ["val1", "val2"],
+        "string_choice": "val1",
+        "unknown_key": "unknown_value",
+    }
+    cds_schema = [
+        TEST_INPUT_CDS_SCHEMAS["string_list"],
+        TEST_INPUT_CDS_SCHEMAS["string_choice"],
+    ]
+    exp_output = {
+        "String List": ["Val1", "Val2"],
+        "String Choice": ["Val1"],
+        "unknown_key": "unknown_value",
+    }
+    res_output = (
+        cads_processing_api_service.translators.translate_request_ids_into_labels(
+            request, cds_schema
+        )
+    )
+    assert res_output == exp_output
+
+    request = {}
+    cds_schema = [
+        TEST_INPUT_CDS_SCHEMAS["string_choice"],
+        TEST_INPUT_CDS_SCHEMAS["exclusive_group_widget"],
+        TEST_INPUT_CDS_SCHEMAS["child_1"],
+        TEST_INPUT_CDS_SCHEMAS["child_2"],
+    ]
+    exp_output = {
+        "String Choice": ["Val1"],
+        "Exclusive Group Widget": ["Child 1"],
+    }
 
 
 def test_format_request_value() -> None:
