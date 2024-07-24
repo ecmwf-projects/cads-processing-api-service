@@ -230,7 +230,6 @@ def translate_request_ids_into_labels(
                 request, children, default, cds_form
             )
         else:
-            # TODO: handle default values
             input_key_id = cds_input_schema.get("name", None)
             input_key_label = cds_input_schema.get("label", None)
             if input_key_id in request_labels:
@@ -247,7 +246,6 @@ def translate_request_ids_into_labels(
             request_labels[input_key_label] = make_request_labels(
                 input_value_ids, cds_input_schema
             )
-
     return request_labels
 
 
