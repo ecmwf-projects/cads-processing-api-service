@@ -269,7 +269,7 @@ def verify_if_disabled(disabled_reason: str | None, user_role: str | None) -> No
 
 def verify_cost(
     request: dict[str, Any], adaptor_properties: dict[str, Any]
-) -> dict[str, int]:
+) -> dict[str, float] | None:
     """Verify if the cost of a process execution request is within the allowed limits.
 
     Parameters
@@ -286,7 +286,7 @@ def verify_cost(
 
     Returns
     -------
-    dict[str, int]
+    dict[str, float] | None
         Request costs.
     """
     costing_info = costing.compute_costing(request, adaptor_properties)
