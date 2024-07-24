@@ -207,7 +207,7 @@ def translate_request_ids_into_labels(
         cds_form = [cds_form]
     # This will include in the labels the input keys that are not associated with
     # any cds_input_schema in the cds_form
-    request_labels = {
+    request_labels: dict[str, Any] = {
         input_key_id: str(input_value_id)
         for input_key_id, input_value_id in request.items()
     }
