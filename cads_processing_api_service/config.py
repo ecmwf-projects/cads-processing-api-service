@@ -37,6 +37,8 @@ class Settings(pydantic_settings.BaseSettings):
     profiles_service: str = "profiles-api"
     profiles_api_service_port: int = 8000
 
+    allow_cors: bool = True
+
     default_cache_control: str = "max-age=2"
     default_vary: str = "PRIVATE-TOKEN, Authorization"
     public_cache_control: str = "public, max-age=60"

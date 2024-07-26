@@ -17,8 +17,11 @@
 from typing import Any
 
 import fastapi
+import structlog
 
 from . import config
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 def extract_groups_labels(
@@ -133,9 +136,11 @@ def translate_cds_form(
 
 
 def make_request_labels(
-    input_value_ids: list[str],
+    input_value_ids: Any,
     cds_input_schema: dict[str, Any],
 ) -> list[str]:
+    if not isinstance(input_value_ids, list):
+        input_value_ids = [input_value_ids]
     if cds_input_schema["type"] in (
         "GeographicExtentWidget",
         "GeographicExtentMapWidget",
@@ -146,6 +151,21 @@ def make_request_labels(
                 ["North", "West", "South", "East"],
                 input_value_ids,
             )
+        ]
+    elif cds_input_schema["type"] == "GeographicLocationWidget":
+        location = input_value_ids[0]
+        try:
+            latitude = f"{location['latitude']}°"
+            longitude = f"{location['longitude']}°"
+        except Exception as e:
+            logger.error(
+                "Error extracting latitude and longitude from geographic location",
+                error=e,
+            )
+            latitude = longitude = "Unknown"
+        request_labels = [
+            f"Latitude: {latitude}",
+            f"Longitude: {longitude}",
         ]
     else:
         input_value_label = extract_labels(cds_input_schema)
@@ -178,30 +198,54 @@ def make_request_labels_group(
 
 
 def translate_request_ids_into_labels(
-    request: dict[str, Any], cds_form: list[Any] | dict[str, Any]
+    request: dict[str, Any], cds_form: list[Any] | dict[str, Any] | None
 ) -> dict[str, Any]:
+    """Translate request input values into labels."""
+    if cds_form is None:
+        cds_form = {}
     if not isinstance(cds_form, list):
         cds_form = [cds_form]
-    request_labels = {}
+    # This will include in the labels the input keys that are not associated with
+    # any cds_input_schema in the cds_form
+    request_labels: dict[str, Any] = {
+        input_key_id: str(input_value_id)
+        for input_key_id, input_value_id in request.items()
+    }
+    exclusive_group_widgets_children = []
     for cds_input_schema in cds_form:
-        if cds_input_schema["type"] == "ExclusiveGroupWidget":
+        if cds_input_schema.get("type", None) == "ExclusiveGroupWidget":
+            exclusive_group_widgets_children.extend(cds_input_schema["children"])
+    for cds_input_schema in cds_form:
+        cds_input_schema_name = cds_input_schema.get("name", None)
+        if cds_input_schema_name in exclusive_group_widgets_children:
+            continue
+        if cds_input_schema.get("type", None) == "ExclusiveGroupWidget":
             input_key_label = cds_input_schema["label"]
             children = cds_input_schema["children"]
-            default = cds_input_schema["details"]["default"]
+            if keys_to_remove := list(set(request_labels.keys()) & set(children)):
+                for key_to_remove in keys_to_remove:
+                    del request_labels[key_to_remove]
+            default = cds_input_schema.get("details", {}).get("default", None)
             request_labels[input_key_label] = make_request_labels_group(
                 request, children, default, cds_form
             )
         else:
-            input_key_id = cds_input_schema["name"]
-            if input_key_id in request:
-                input_key_label = cds_input_schema["label"]
+            input_key_id = cds_input_schema.get("name", None)
+            input_key_label = cds_input_schema.get("label", None)
+            if input_key_id in request_labels:
+                del request_labels[input_key_id]
                 input_value_ids = request[input_key_id]
-                if not isinstance(input_value_ids, list):
-                    input_value_ids = [input_value_ids]
-                request_labels[input_key_label] = make_request_labels(
-                    input_value_ids, cds_input_schema
-                )
-
+            elif default_value_ids := cds_input_schema.get("details", {}).get(
+                "default", None
+            ):
+                input_value_ids = default_value_ids
+            else:
+                continue
+            if not isinstance(input_value_ids, list):
+                input_value_ids = [input_value_ids]
+            request_labels[input_key_label] = make_request_labels(
+                input_value_ids, cds_input_schema
+            )
     return request_labels
 
 

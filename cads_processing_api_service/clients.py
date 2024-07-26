@@ -232,7 +232,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 cads_adaptors.exceptions.InvalidRequest,
             ) as exc:
                 raise exceptions.InvalidRequest(detail=str(exc)) from exc
-        auth.verify_cost(request_inputs, adaptor_properties, request_origin)
+        costs = auth.verify_cost(request_inputs, adaptor_properties, request_origin)
         licences = adaptor.get_licences(request_inputs)
         auth.validate_licences(accepted_licences, licences)
         job_id = str(uuid.uuid4())
@@ -252,6 +252,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 process_id=process_id,
                 portal=dataset.portal,
                 qos_tags=dataset.qos_tags,
+                metadata={"costs": costs},
                 **job_kwargs,
             )
         dataset_messages = [
@@ -601,8 +602,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
             auth.verify_permission(user_uid, job)
-            job = cads_broker.database.set_request_status(
-                request_uid=job_id, status="dismissed", session=compute_session
+            job = cads_broker.database.set_dismissed_request(
+                request_uid=job_id, session=compute_session
             )
             job = utils.dictify_job(job)
         status_info = utils.make_status_info(job)
