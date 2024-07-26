@@ -70,11 +70,11 @@ def test_verify_cost() -> None:
             costs={"cost_1": 1.0, "cost_2": 2.0},
             max_costs_exceeded={},
         )
-        auth.verify_cost({}, {})
+        auth.verify_cost({}, {}, "api")
 
         mock_compute_costing.return_value = models.Costing(
             costs={"cost_1": 1.0, "cost_2": 2.0},
             max_costs_exceeded={"cost_1": 0},
         )
         with pytest.raises(exceptions.PermissionDenied):
-            auth.verify_cost({}, {})
+            auth.verify_cost({}, {}, "api")
