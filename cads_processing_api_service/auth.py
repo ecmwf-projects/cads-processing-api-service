@@ -150,12 +150,6 @@ def verify_permission(user_uid: str, job: cads_broker.SystemRequest) -> None:
         )
 
 
-@cachetools.cached(
-    cache=cachetools.TTLCache(
-        maxsize=config.ensure_settings().cache_users_maxsize,
-        ttl=config.ensure_settings().cache_users_ttl,
-    ),
-)
 def get_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
     """Get licences accepted by a user stored in the Extended Profiles database.
 
