@@ -244,6 +244,14 @@ def test_get_job_from_broker_db() -> None:
             job = utils.get_job_from_broker_db("1234", session=mock_session)
 
 
+def test_update_results_href() -> None:
+    href = "http://base_path/results/1234"
+    data_volume = "http://data_volume/"
+    updated_href = utils.update_results_href(href, data_volume)
+    exp_updated_href = "http://data_volume/results/1234"
+    assert updated_href == exp_updated_href
+
+
 def test_get_results_from_job() -> None:
     mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
     job = cads_broker.SystemRequest(
