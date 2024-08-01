@@ -150,12 +150,6 @@ def verify_permission(user_uid: str, job: cads_broker.SystemRequest) -> None:
         )
 
 
-@cachetools.cached(
-    cache=cachetools.TTLCache(
-        maxsize=config.ensure_settings().cache_users_maxsize,
-        ttl=config.ensure_settings().cache_users_ttl,
-    ),
-)
 def get_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
     """Get licences accepted by a user stored in the Extended Profiles database.
 
@@ -267,7 +261,9 @@ def verify_if_disabled(disabled_reason: str | None, user_role: str | None) -> No
         return
 
 
-def verify_cost(request: dict[str, Any], adaptor_properties: dict[str, Any]) -> None:
+def verify_cost(
+    request: dict[str, Any], adaptor_properties: dict[str, Any]
+) -> dict[str, float] | None:
     """Verify if the cost of a process execution request is within the allowed limits.
 
     Parameters
@@ -281,6 +277,11 @@ def verify_cost(request: dict[str, Any], adaptor_properties: dict[str, Any]) -> 
     ------
     exceptions.PermissionDenied
         Raised if the cost of the process execution request exceeds the allowed limits.
+
+    Returns
+    -------
+    dict[str, float] | None
+        Request costs.
     """
     costing_info = costing.compute_costing(request, adaptor_properties)
     max_costs_exceeded = costing_info.max_costs_exceeded
@@ -290,4 +291,4 @@ def verify_cost(request: dict[str, Any], adaptor_properties: dict[str, Any]) -> 
             detail="Your request is too large, please reduce your selection.",
         )
     else:
-        return
+        return costing_info.costs
