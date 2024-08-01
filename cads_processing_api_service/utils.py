@@ -506,13 +506,13 @@ def get_results_from_job(
     if job_status == "successful":
         try:
             asset_value = job.cache_entry.result["args"][0]  # type: ignore
-            if "href" in asset_value:
-                asset_value["href"] = update_results_href(asset_value["href"])
-            results = {"asset": {"value": asset_value}}
         except Exception:
             raise exceptions.JobResultsExpired(
                 detail=f"results of job {job_id} expired"
             )
+        if "href" in asset_value:
+            asset_value["href"] = update_results_href(asset_value["href"])
+        results = {"asset": {"value": asset_value}}
     elif job_status == "failed":
         error_messages = get_job_events(
             job=job, session=session, event_type="user_visible_error"
