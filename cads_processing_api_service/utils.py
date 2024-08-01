@@ -471,10 +471,10 @@ def get_job_from_broker_db(
     return job
 
 
-def update_results_href(href: str, data_volume: str | None = None) -> str:
+def update_results_href(local_path: str, data_volume: str | None = None) -> str:
     if data_volume is None:
         data_volume = config.ensure_settings().data_volume
-    file_path = urllib.parse.urlparse(href).path
+    file_path = local_path.split("://", 1)[-1]
     results_href = urllib.parse.urljoin(data_volume, file_path)
     return results_href
 
@@ -510,8 +510,7 @@ def get_results_from_job(
             raise exceptions.JobResultsExpired(
                 detail=f"results of job {job_id} expired"
             )
-        if "href" in asset_value:
-            asset_value["href"] = update_results_href(asset_value["href"])
+        asset_value["href"] = update_results_href(asset_value["file:local_path"])
         results = {"asset": {"value": asset_value}}
     elif job_status == "failed":
         error_messages = get_job_events(
