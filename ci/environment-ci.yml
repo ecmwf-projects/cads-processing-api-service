@@ -15,7 +15,7 @@ dependencies:
 - sphinx-autoapi
 # DO NOT EDIT ABOVE THIS LINE, ADD DEPENDENCIES BELOW
 - pip
-- mypy != 1.11.1
+- mypy != 1.11
 - types-cachetools
 - types-requests
 - pip:
