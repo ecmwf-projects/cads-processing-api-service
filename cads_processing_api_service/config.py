@@ -17,6 +17,9 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import random
+
 import pydantic_settings
 
 API_REQUEST_TEMPLATE = """import cdsapi
@@ -58,9 +61,19 @@ class Settings(pydantic_settings.BaseSettings):
     missing_dataset_title: str = "Dataset not available"
     anonymous_licences_message: str = ANONYMOUS_LICENCES_MESSAGE
 
+    download_nodes_config: str = "/etc/retrieve-api/download-nodes.config"
+
     @property
     def profiles_api_url(self) -> str:
         return f"http://{self.profiles_service}:{self.profiles_api_service_port}"
+
+    @property
+    def data_volume(self) -> str:
+        data_volumes_config_path = self.download_nodes_config
+        with open(data_volumes_config_path) as fp:
+            data_volumes = [os.path.expandvars(line.rstrip("\n")) for line in fp]
+        data_volume = random.choice(data_volumes)
+        return data_volume
 
 
 def ensure_settings(
