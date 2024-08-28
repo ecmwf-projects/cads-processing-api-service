@@ -279,9 +279,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_jobs(
         self,
         processID: list[str] | None = fastapi.Query(None),
-        status: (
-            list[ogc_api_processes_fastapi.models.StatusCode] | None
-        ) = fastapi.Query(
+        status: list[models.StatusCode] | None = fastapi.Query(
             [
                 ogc_api_processes_fastapi.models.StatusCode.accepted,
                 ogc_api_processes_fastapi.models.StatusCode.running,
