@@ -115,8 +115,8 @@ def test_apply_bookmark() -> None:
         statement, job_table, cursor, back, sort_key, sort_dir
     )
     compiled_statement = statement.compile()
-    exp_params = {"created_at_1": "2022-10-24 13:32:03.178397"}
-    exp_substatement = "WHERE system_requests.created_at > :created_at_1"
+    exp_params = {"created_at_2": "2022-10-24 13:32:03.178397"}
+    exp_substatement = "WHERE system_requests.created_at > :created_at_2"
     assert compiled_statement.params == exp_params
     assert exp_substatement in compiled_statement.string
 
