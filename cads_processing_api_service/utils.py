@@ -232,6 +232,7 @@ def apply_job_filters(
             statement = statement.where(
                 getattr(resource, filter_key).in_(filter_values)
             )
+    statement = statement.where(resource.status != "dismissed")
     return statement
 
 
