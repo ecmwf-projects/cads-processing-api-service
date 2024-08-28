@@ -281,7 +281,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         processID: list[str] | None = fastapi.Query(None),
         status: (
             list[ogc_api_processes_fastapi.models.StatusCode] | None
-        ) = fastapi.Query(None),
+        ) = fastapi.Query(
+            [
+                ogc_api_processes_fastapi.models.StatusCode.accepted,
+                ogc_api_processes_fastapi.models.StatusCode.running,
+                ogc_api_processes_fastapi.models.StatusCode.successful,
+                ogc_api_processes_fastapi.models.StatusCode.failed,
+            ]
+        ),
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
         sortby: utils.JobSortCriterion | None = fastapi.Query(
             utils.JobSortCriterion.created_at_desc
