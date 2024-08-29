@@ -96,7 +96,6 @@ def test_apply_job_filters() -> None:
     exp_params = {
         "process_id_1": ["process"],
         "status_1": ["successful", "failed"],
-        "status_2": "dismissed",
     }
     exp_substatement = (
         "WHERE system_requests.process_id IN (__[POSTCOMPILE_process_id_1]) "

@@ -15,10 +15,18 @@
 # limitations under the License
 
 import datetime
+import enum
 from typing import Any
 
 import ogc_api_processes_fastapi.models
 import pydantic
+
+
+class StatusCode(str, enum.Enum):
+    accepted: str = "accepted"
+    running: str = "running"
+    successful: str = "successful"
+    failed: str = "failed"
 
 
 class StatusInfoMetadata(pydantic.BaseModel):
