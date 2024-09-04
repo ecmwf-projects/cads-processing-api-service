@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import enum
 from typing import Any
 
 import cads_adaptors
@@ -25,9 +26,14 @@ from . import adaptors, costing, db_utils, models, utils
 COST_THRESHOLDS = {"api": "max_costs", "ui": "max_costs_portal"}
 
 
+class RequestOrigin(str, enum.Enum):
+    api: str = "api"
+    ui: str = "ui"
+
+
 def estimate_costs(
     process_id: str = fastapi.Path(...),
-    request_origin: str = fastapi.Query("api"),
+    request_origin: RequestOrigin = fastapi.Query("api"),
     execution_content: models.Execute = fastapi.Body(...),
 ) -> models.Costing:
     request = execution_content.model_dump()
