@@ -205,7 +205,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         user_uid, user_role = auth.authenticate_user(auth_header, portal_header)
         request_origin = auth.REQUEST_ORIGIN[auth_header[0]]
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
-        accepted_licences = auth.get_accepted_licences(auth_header)
         request = execution_content.model_dump()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
             db_utils.ConnectionMode.read
@@ -234,7 +233,16 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 raise exceptions.InvalidRequest(detail=str(exc)) from exc
         costs = auth.verify_cost(request_inputs, adaptor_properties, request_origin)
         licences = adaptor.get_licences(request_inputs)
-        auth.validate_licences(accepted_licences, licences)
+        if user_uid != "anonymous":
+            accepted_licences = auth.get_accepted_licences(auth_header)
+            auth.validate_licences(accepted_licences, licences)
+            job_message = None
+        else:
+            job_message = config.ensure_settings().anonymous_licences_message.format(
+                licences="; ".join(
+                    [f"{licence[0]} (rev: {licence[1]})" for licence in licences]
+                )
+            )
         job_id = str(uuid.uuid4())
         structlog.contextvars.bind_contextvars(job_id=job_id)
         job_kwargs = adaptors.make_system_job_kwargs(
@@ -266,14 +274,20 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         status_info = utils.make_status_info(
             job, dataset_metadata={"messages": dataset_messages}
         )
+        status_info.message = job_message
         return status_info
 
     def get_jobs(
         self,
         processID: list[str] | None = fastapi.Query(None),
-        status: (
-            list[ogc_api_processes_fastapi.models.StatusCode] | None
-        ) = fastapi.Query(None),
+        status: list[models.StatusCode] | None = fastapi.Query(
+            [
+                ogc_api_processes_fastapi.models.StatusCode.accepted,
+                ogc_api_processes_fastapi.models.StatusCode.running,
+                ogc_api_processes_fastapi.models.StatusCode.successful,
+                ogc_api_processes_fastapi.models.StatusCode.failed,
+            ]
+        ),
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
         sortby: utils.JobSortCriterion | None = fastapi.Query(
             utils.JobSortCriterion.created_at_desc

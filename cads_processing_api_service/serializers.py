@@ -70,7 +70,7 @@ def serialize_process_description(
     cds_form = db_model.resource_data.form_data  # type: ignore
     process_inputs = {}
     if cds_form:
-        process_inputs = translators.translate_cds_form(cds_form)  # type: ignore
+        process_inputs = translators.translate_cds_form(cds_form)
     retval = ogc_api_processes_fastapi.models.ProcessDescription(
         **process_summary.model_dump(),
         inputs=process_inputs,
