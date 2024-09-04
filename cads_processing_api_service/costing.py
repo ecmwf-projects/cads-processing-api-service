@@ -27,7 +27,7 @@ COST_THRESHOLDS = {"api": "max_costs", "ui": "max_costs_portal"}
 
 def estimate_costs(
     process_id: str = fastapi.Path(...),
-    request_origin: str | None = fastapi.Query("api"),
+    request_origin: str = fastapi.Query("api"),
     execution_content: models.Execute = fastapi.Body(...),
 ) -> models.Costing:
     request = execution_content.model_dump()
@@ -54,7 +54,9 @@ def compute_costing(
     adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(
         adaptor_properties=adaptor_properties
     )
-    cost_threshold = COST_THRESHOLDS.get(request_origin)
+    if request_origin not in COST_THRESHOLDS:
+        raise ValueError(f"Invalid request origin: {request_origin}")
+    cost_threshold: str = COST_THRESHOLDS.get(request_origin)
     costs: dict[str, float] = adaptor.estimate_costs(
         request=request, cost_threshold=cost_threshold
     )
