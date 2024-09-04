@@ -62,7 +62,7 @@ def compute_costing(
     )
     if request_origin not in COST_THRESHOLDS:
         raise ValueError(f"Invalid request origin: {request_origin}")
-    cost_threshold: str = COST_THRESHOLDS.get(request_origin)
+    cost_threshold = COST_THRESHOLDS[request_origin]
     costs: dict[str, float] = adaptor.estimate_costs(
         request=request, cost_threshold=cost_threshold
     )
