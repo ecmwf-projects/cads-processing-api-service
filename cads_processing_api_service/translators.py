@@ -16,6 +16,7 @@
 
 from typing import Any
 
+import black
 import fastapi
 import structlog
 
@@ -318,4 +319,5 @@ def get_api_request(
     """
     api_request_template = config.ensure_settings().api_request_template
     api_request = format_api_request(api_request_template, process_id, request)
+    api_request = black.format_str(api_request, mode=black.FileMode())
     return {"api_request": api_request}
