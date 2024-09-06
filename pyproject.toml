@@ -15,6 +15,7 @@ classifiers = [
 ]
 dependencies = [
   "attrs",
+  "black",
   "cacholote",
   "cads-adaptors@git+https://github.com/ecmwf-projects/cads-adaptors.git",
   "cads-broker@git+https://github.com/ecmwf-projects/cads-broker.git",

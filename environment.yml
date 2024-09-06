@@ -10,6 +10,7 @@ channels:
 dependencies:
 - attrs
 - asyncpg
+- black
 - cachetools
 - fastapi>=0.109.0
 - pip
