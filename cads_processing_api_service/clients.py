@@ -70,6 +70,16 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     process_data_table = cads_catalogue.database.ResourceData
     job_table = cads_broker.database.SystemRequest
 
+    endpoints_description = {
+        "GetProcesses": "Get the list of available processes' summaries.",
+        "GetProcess": "Get the description of the process identified by `process_id`.",
+        "PostProcessExecution": "Request execution of a process.",
+        "GetJobs": "Get the list of submitted jobs, alongside information on their status.",
+        "GetJob": "Get status information for the job identifed by `job_id`.",
+        "GetJobResults": "Get results for the job identifed by `job_id`.",
+        "DeleteJob": "Dismiss the job identifed by `job_id`.",
+    }
+
     def get_processes(
         self,
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
