@@ -177,6 +177,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def post_process_execution(
         self,
+        api_request: fastapi.Request,
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
@@ -273,6 +274,16 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         status_info = utils.make_status_info(
             job, dataset_metadata={"messages": dataset_messages}
         )
+        url = str(api_request.url)
+        if url.rstrip("/").endswith("execute"):
+            log_message = (
+                datetime.datetime.now().isoformat(),
+                config.ensure_settings().deprecation_warning_message,
+            )
+            if status_info.metadata.log is None:
+                status_info.metadata.log = [log_message]
+            else:
+                status_info.metadata.log.append(log_message)
         status_info.message = job_message
         return status_info
 
