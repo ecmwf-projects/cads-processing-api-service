@@ -271,19 +271,17 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             )
             for message in dataset.messages
         ]
+        url = str(api_request.url)
+        if url.rstrip("/").endswith("execute"):
+            message = models.DatasetMessage(
+                date=datetime.datetime.now(),
+                severity="WARNING",
+                content=config.ensure_settings().deprecation_warning_message,
+            )
+            dataset_messages.append(message)
         status_info = utils.make_status_info(
             job, dataset_metadata={"messages": dataset_messages}
         )
-        url = str(api_request.url)
-        if url.rstrip("/").endswith("execute"):
-            log_message = (
-                datetime.datetime.now().isoformat(),
-                config.ensure_settings().deprecation_warning_message,
-            )
-            if status_info.metadata.log is None:
-                status_info.metadata.log = [log_message]
-            else:
-                status_info.metadata.log.append(log_message)
         status_info.message = job_message
         return status_info
 

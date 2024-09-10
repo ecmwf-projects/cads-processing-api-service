@@ -35,8 +35,8 @@ ANONYMOUS_LICENCES_MESSAGE = (
 )
 
 DEPRECATION_WARNING_MESSAGE = (
-    "WARNING: The version of cdsapi you are using makes use of a "
-    "deprecated CADS Processing API endpoint."
+    "You are using a deprecated API endpoint. "
+    "If you are using cdsapi, please upgrade to the latest version."
 )
 
 general_settings = None
