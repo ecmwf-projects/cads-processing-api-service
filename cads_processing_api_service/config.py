@@ -34,6 +34,11 @@ ANONYMOUS_LICENCES_MESSAGE = (
     "{licences}"
 )
 
+DEPRECATION_WARNING_MESSAGE = (
+    "You are using a deprecated API endpoint. "
+    "If you are using cdsapi, please upgrade to the latest version."
+)
+
 general_settings = None
 
 
@@ -57,6 +62,7 @@ class Settings(pydantic_settings.BaseSettings):
     api_request_template: str = API_REQUEST_TEMPLATE
     missing_dataset_title: str = "Dataset not available"
     anonymous_licences_message: str = ANONYMOUS_LICENCES_MESSAGE
+    deprecation_warning_message: str = DEPRECATION_WARNING_MESSAGE
 
     @property
     def profiles_api_url(self) -> str:
