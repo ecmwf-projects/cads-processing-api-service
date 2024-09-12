@@ -454,9 +454,9 @@ def get_job_from_broker_db(
     """
     try:
         job = cads_broker.database.get_request(request_uid=job_id, session=session)
-        if job.status == "dismissed":
+        if job.status in ("dismissed", "deleted"):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
-                detail=f"job {job_id} dismissed"
+                detail=f"job {job_id} {job.status}"
             )
     except cads_broker.database.NoResultFound:
         raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
