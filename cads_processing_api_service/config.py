@@ -31,6 +31,15 @@ client = cdsapi.Client()
 client.retrieve(dataset, request).download()
 """
 
+API_REQUEST_MAX_LIST_LENGTH: dict[str, int] = {
+    "year": 3,
+    "month": 3,
+    "day": 3,
+    "time": 3,
+    "area": 4,
+    "pressure_level": 3,
+}
+
 ANONYMOUS_LICENCES_MESSAGE = (
     "The job has been submitted as an anonymous user. "
     "Please consider the following licences implicitly accepted: "
@@ -63,6 +72,7 @@ class Settings(pydantic_settings.BaseSettings):
     cache_resources_ttl: int = 10
 
     api_request_template: str = API_REQUEST_TEMPLATE
+    api_request_max_list_length: dict[str, int] = API_REQUEST_MAX_LIST_LENGTH
     missing_dataset_title: str = "Dataset not available"
     anonymous_licences_message: str = ANONYMOUS_LICENCES_MESSAGE
     deprecation_warning_message: str = DEPRECATION_WARNING_MESSAGE
