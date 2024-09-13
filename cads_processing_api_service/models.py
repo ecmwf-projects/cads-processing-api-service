@@ -68,8 +68,8 @@ class Exception(ogc_api_processes_fastapi.models.Exception):
 
 
 class CostingInfo(pydantic.BaseModel):
-    costs: dict[str, float] | None = None
-    limits: dict[str, float] | None = None
+    costs: dict[str, float] = {}
+    limits: dict[str, float] = {}
 
 
 class RequestCost(pydantic.BaseModel):
