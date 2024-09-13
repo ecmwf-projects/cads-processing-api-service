@@ -66,15 +66,16 @@ def test_verify_cost() -> None:
     with unittest.mock.patch(
         "cads_processing_api_service.costing.compute_costing"
     ) as mock_compute_costing:
-        mock_compute_costing.return_value = models.Costing(
-            costs={"cost_1": 1.0, "cost_2": 2.0},
-            max_costs_exceeded={},
+        mock_compute_costing.return_value = models.CostingInfo(
+            costs={"cost_id_1": 10.0, "cost_id_2": 10.0},
+            limits={"cost_id_1": 20.0, "cost_id_2": 20.0},
         )
-        auth.verify_cost({}, {})
+        costs = auth.verify_cost({}, {})
+        assert costs == {"cost_id_1": 10.0, "cost_id_2": 10.0}
 
-        mock_compute_costing.return_value = models.Costing(
-            costs={"cost_1": 1.0, "cost_2": 2.0},
-            max_costs_exceeded={"cost_1": 0},
+        mock_compute_costing.return_value = models.CostingInfo(
+            costs={"cost_id_1": 10.0, "cost_id_2": 10.0},
+            limits={"cost_id_1": 5.0, "cost_id_2": 20.0},
         )
         with pytest.raises(exceptions.PermissionDenied):
             auth.verify_cost({}, {})

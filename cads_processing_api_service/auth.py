@@ -289,7 +289,7 @@ def verify_cost(
     highest_cost: models.RequestCost = costing.compute_highest_cost_limit_ratio(
         costing_info
     )
-    if highest_cost.cost > highest_cost.cost_limit:
+    if highest_cost.cost > highest_cost.limit:
         raise exceptions.PermissionDenied(
             title="cost limits exceeded",
             detail="Your request is too large, please reduce your selection.",

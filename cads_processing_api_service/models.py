@@ -73,9 +73,9 @@ class CostingInfo(pydantic.BaseModel):
 
 
 class RequestCost(pydantic.BaseModel):
-    cost_id: str | None = None
+    id: str | None = None
     cost: float = 0.0
-    cost_limit: float = 1.0
+    limit: float = 1.0
 
 
 class Execute(ogc_api_processes_fastapi.models.Execute):

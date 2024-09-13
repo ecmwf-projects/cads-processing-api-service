@@ -78,6 +78,7 @@ def compute_highest_cost_limit_ratio(
     costs = costing_info.costs
     limits = costing_info.limits
     highest_cost_limit_ratio = 0
+    highest_cost = models.RequestCost()
     for limit_id, limit in limits.items():
         cost = costs.get(limit_id, 0.0)
         cost_limit_ratio = cost / limit if limit > 0 else 1.1
