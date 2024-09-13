@@ -243,6 +243,20 @@ def test_get_job_from_broker_db() -> None:
             job = utils.get_job_from_broker_db("1234", session=mock_session)
 
 
+def test_update_results_href() -> None:
+    data_volume = "http://data_volume/"
+
+    local_path = "protocol://results/1234"
+    updated_href = utils.update_results_href(local_path, data_volume)
+    exp_updated_href = "http://data_volume/results/1234"
+    assert updated_href == exp_updated_href
+
+    local_path = "results/1234"
+    updated_href = utils.update_results_href(local_path, data_volume)
+    exp_updated_href = "http://data_volume/results/1234"
+    assert updated_href == exp_updated_href
+
+
 def test_get_results_from_job() -> None:
     mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
     job = cads_broker.SystemRequest(
@@ -250,12 +264,26 @@ def test_get_results_from_job() -> None:
             "status": "successful",
             "request_uid": "1234",
             "cache_entry": cacholote.database.CacheEntry(
-                result={"args": [{"key": "value"}]}
+                result={
+                    "args": [{"key": "value", "file:local_path": "test_local_path"}]
+                }
             ),
         }
     )
-    results = utils.get_results_from_job(job, session=mock_session)
-    exp_results = {"asset": {"value": {"key": "value"}}}
+    with unittest.mock.patch(
+        "cads_processing_api_service.utils.update_results_href"
+    ) as mock_update_results_href:
+        mock_update_results_href.return_value = "test_href"
+        results = utils.get_results_from_job(job, session=mock_session)
+    exp_results = {
+        "asset": {
+            "value": {
+                "key": "value",
+                "file:local_path": "test_local_path",
+                "href": "test_href",
+            }
+        }
+    }
     assert results == exp_results
 
     job = cads_broker.SystemRequest(
