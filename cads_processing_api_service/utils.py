@@ -18,6 +18,7 @@ import base64
 import datetime
 import enum
 import threading
+import urllib.parse
 from typing import Any, Callable, Mapping
 
 import cachetools
@@ -469,6 +470,14 @@ def get_job_from_broker_db(
     return job
 
 
+def update_results_href(local_path: str, data_volume: str | None = None) -> str:
+    if data_volume is None:
+        data_volume = config.ensure_settings().data_volume
+    file_path = local_path.split("://", 1)[-1]
+    results_href = urllib.parse.urljoin(data_volume, file_path)
+    return results_href
+
+
 def get_results_from_job(
     job: cads_broker.SystemRequest, session: sqlalchemy.orm.Session
 ) -> dict[str, Any]:
@@ -496,11 +505,12 @@ def get_results_from_job(
     if job_status == "successful":
         try:
             asset_value = job.cache_entry.result["args"][0]  # type: ignore
-            results = {"asset": {"value": asset_value}}
         except Exception:
             raise exceptions.JobResultsExpired(
                 detail=f"results of job {job_id} expired"
             )
+        asset_value["href"] = update_results_href(asset_value["file:local_path"])
+        results = {"asset": {"value": asset_value}}
     elif job_status == "failed":
         error_messages = get_job_events(
             job=job, session=session, event_type="user_visible_error"
