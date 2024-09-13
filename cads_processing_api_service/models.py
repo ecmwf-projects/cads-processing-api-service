@@ -70,7 +70,12 @@ class Exception(ogc_api_processes_fastapi.models.Exception):
 class CostingInfo(pydantic.BaseModel):
     costs: dict[str, float] | None = None
     limits: dict[str, float] | None = None
-    limits_exceeded: dict[str, float] | None = None
+
+
+class RequestCost(pydantic.BaseModel):
+    cost_id: str | None = None
+    cost: float = 0.0
+    cost_limit: float = 1.0
 
 
 class Execute(ogc_api_processes_fastapi.models.Execute):

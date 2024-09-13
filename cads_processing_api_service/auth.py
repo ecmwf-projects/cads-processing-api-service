@@ -286,8 +286,10 @@ def verify_cost(
     costing_info: models.CostingInfo = costing.compute_costing(
         request, adaptor_properties
     )
-    limits_exceeded = costing_info.limits_exceeded
-    if limits_exceeded:
+    highest_cost: models.RequestCost = costing.compute_highest_cost_limit_ratio(
+        costing_info
+    )
+    if highest_cost.cost > highest_cost.cost_limit:
         raise exceptions.PermissionDenied(
             title="cost limits exceeded",
             detail="Your request is too large, please reduce your selection.",
