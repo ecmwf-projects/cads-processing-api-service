@@ -201,6 +201,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Parameters
         ----------
+        api_request: fastapi.Request
+            API Request object.
         process_id : str
             Process identifier.
         execution_content : models.Execute
@@ -243,15 +245,21 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             ) as exc:
                 raise exceptions.InvalidRequest(detail=str(exc)) from exc
         costs = auth.verify_cost(request_inputs, adaptor_properties, request_origin)
-        licences = adaptor.get_licences(request_inputs)
+        required_licences = adaptor.get_licences(request_inputs)
         if user_uid != "anonymous":
             accepted_licences = auth.get_accepted_licences(auth_header)
-            auth.validate_licences(accepted_licences, licences)
+            api_request_url = str(api_request.url)
+            _ = auth.verify_licences(
+                accepted_licences, required_licences, api_request_url, process_id
+            )
             job_message = None
         else:
             job_message = config.ensure_settings().anonymous_licences_message.format(
                 licences="; ".join(
-                    [f"{licence[0]} (rev: {licence[1]})" for licence in licences]
+                    [
+                        f"{licence[0]} (rev: {licence[1]})"
+                        for licence in required_licences
+                    ]
                 )
             )
         job_id = str(uuid.uuid4())

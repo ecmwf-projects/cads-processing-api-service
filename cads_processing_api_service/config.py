@@ -42,6 +42,14 @@ DEPRECATION_WARNING_MESSAGE = (
     "If you are using cdsapi, please upgrade to the latest version."
 )
 
+
+MISSING_LICENCES_MESSAGE = (
+    "Not all the required licences have been accepted; "
+    "please visit {dataset_licences_url} "
+    "to accept the required licence(s)."
+)
+
+
 general_settings = None
 
 
@@ -66,6 +74,10 @@ class Settings(pydantic_settings.BaseSettings):
     missing_dataset_title: str = "Dataset not available"
     anonymous_licences_message: str = ANONYMOUS_LICENCES_MESSAGE
     deprecation_warning_message: str = DEPRECATION_WARNING_MESSAGE
+    missing_licences_message: str = MISSING_LICENCES_MESSAGE
+    dataset_licences_url: str = (
+        "{base_url}/datasets/{process_id}?tab=download#manage-licences"
+    )
 
     download_nodes_config: str = "/etc/retrieve-api/download-nodes.config"
 
