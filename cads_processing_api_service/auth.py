@@ -286,7 +286,7 @@ def verify_cost(
         Request costs.
     """
     costing_info: models.CostingInfo = costing.compute_costing(
-        request, adaptor_properties
+        request, adaptor_properties, request_origin
     )
     highest_cost: models.RequestCost = costing.compute_highest_cost_limit_ratio(
         costing_info
