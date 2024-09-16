@@ -78,4 +78,4 @@ def test_verify_cost() -> None:
             limits={"cost_id_1": 5.0, "cost_id_2": 20.0},
         )
         with pytest.raises(exceptions.PermissionDenied):
-            auth.verify_cost({}, {})
+            auth.verify_cost({}, {}, "api")

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import enum
 from typing import Any
 
 import cads_adaptors
@@ -22,9 +23,17 @@ import fastapi
 
 from . import adaptors, costing, db_utils, models, utils
 
+COST_THRESHOLDS = {"api": "max_costs", "ui": "max_costs_portal"}
+
+
+class RequestOrigin(str, enum.Enum):
+    api: str = "api"
+    ui: str = "ui"
+
 
 def estimate_cost(
     process_id: str = fastapi.Path(...),
+    request_origin: RequestOrigin = fastapi.Query("api"),
     execution_content: models.Execute = fastapi.Body(...),
 ) -> models.RequestCost:
     """
@@ -53,7 +62,7 @@ def estimate_cost(
         )
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
     costing_info = costing.compute_costing(
-        request.get("inputs", {}), adaptor_properties
+        request.get("inputs", {}), adaptor_properties, request_origin
     )
     cost = costing.compute_highest_cost_limit_ratio(costing_info)
     return cost
@@ -91,6 +100,7 @@ def compute_highest_cost_limit_ratio(
 def compute_costing(
     request: dict[str, Any],
     adaptor_properties: dict[str, Any],
+    request_origin: str,
 ) -> models.CostingInfo:
     """
     Compute the costs of the request.
@@ -110,7 +120,12 @@ def compute_costing(
     adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(
         adaptor_properties=adaptor_properties
     )
-    costs: dict[str, float] = adaptor.estimate_costs(request=request)
+    if request_origin not in COST_THRESHOLDS:
+        raise ValueError(f"Invalid request origin: {request_origin}")
+    cost_threshold = COST_THRESHOLDS[request_origin]
+    costs: dict[str, float] = adaptor.estimate_costs(
+        request=request, cost_threshold=cost_threshold
+    )
     costing_config: dict[str, Any] = adaptor_properties["config"].get("costing", {})
     limits: dict[str, Any] = costing_config.get("max_costs", {})
     costing_info = models.CostingInfo(costs=costs, limits=limits)
