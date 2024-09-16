@@ -22,7 +22,7 @@ import cads_broker
 import fastapi
 import requests
 
-from . import config, costing, exceptions
+from . import config, costing, exceptions, models
 
 VERIFICATION_ENDPOINT = {
     "PRIVATE-TOKEN": "/account/verification/pat",
@@ -285,9 +285,13 @@ def verify_cost(
     dict[str, float] | None
         Request costs.
     """
-    costing_info = costing.compute_costing(request, adaptor_properties, request_origin)
-    max_costs_exceeded = costing_info.max_costs_exceeded
-    if max_costs_exceeded:
+    costing_info: models.CostingInfo = costing.compute_costing(
+        request, adaptor_properties, request_origin
+    )
+    highest_cost: models.RequestCost = costing.compute_highest_cost_limit_ratio(
+        costing_info
+    )
+    if highest_cost.cost > highest_cost.limit:
         raise exceptions.PermissionDenied(
             title="cost limits exceeded",
             detail="Your request is too large, please reduce your selection.",

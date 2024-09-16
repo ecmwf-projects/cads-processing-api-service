@@ -70,7 +70,7 @@ app.router.add_api_route(
 )
 app.router.add_api_route(
     "/processes/{process_id}/costing",
-    costing.estimate_costs,
+    costing.estimate_cost,
     description="Estimate costs of the submitted process execution.",
     methods=["POST"],
 )
