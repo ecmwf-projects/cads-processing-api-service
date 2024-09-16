@@ -262,7 +262,7 @@ def verify_if_disabled(disabled_reason: str | None, user_role: str | None) -> No
 
 
 def verify_cost(
-    request: dict[str, Any], adaptor_properties: dict[str, Any]
+    request: dict[str, Any], adaptor_properties: dict[str, Any], request_origin: str
 ) -> dict[str, float] | None:
     """Verify if the cost of a process execution request is within the allowed limits.
 
@@ -272,6 +272,8 @@ def verify_cost(
         Process execution request.
     adaptor_properties : dict[str, Any]
         Adaptor properties.
+    request_origin : str
+        Origin of the request. Can be either "api" or "ui".
 
     Raises
     ------
@@ -283,7 +285,7 @@ def verify_cost(
     dict[str, float] | None
         Request costs.
     """
-    costing_info = costing.compute_costing(request, adaptor_properties)
+    costing_info = costing.compute_costing(request, adaptor_properties, request_origin)
     max_costs_exceeded = costing_info.max_costs_exceeded
     if max_costs_exceeded:
         raise exceptions.PermissionDenied(
