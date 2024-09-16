@@ -65,16 +65,19 @@ app.router.lifespan_context = lifespan
 app.router.add_api_route(
     "/processes/{process_id}/constraints",
     constraints.apply_constraints,
+    description="Apply constraints to the submitted process execution.",
     methods=["POST"],
 )
 app.router.add_api_route(
     "/processes/{process_id}/costing",
     costing.estimate_costs,
+    description="Estimate costs of the submitted process execution.",
     methods=["POST"],
 )
 app.router.add_api_route(
     "/processes/{process_id}/api-request",
     translators.get_api_request,
+    description="Get API request equivalent to the submitted prrocess execution json.",
     methods=["POST"],
 )
 

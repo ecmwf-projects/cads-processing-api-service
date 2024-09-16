@@ -70,6 +70,16 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     process_data_table = cads_catalogue.database.ResourceData
     job_table = cads_broker.database.SystemRequest
 
+    endpoints_description = {
+        "GetProcesses": "Get the list of available processes' summaries.",
+        "GetProcess": "Get the description of the process identified by `process_id`.",
+        "PostProcessExecution": "Request execution of a process.",
+        "GetJobs": "Get the list of submitted jobs, alongside information on their status.",
+        "GetJob": "Get status information for the job identifed by `job_id`.",
+        "GetJobResults": "Get results for the job identifed by `job_id`.",
+        "DeleteJob": "Dismiss the job identifed by `job_id`.",
+    }
+
     def get_processes(
         self,
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
@@ -177,6 +187,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def post_process_execution(
         self,
+        api_request: fastapi.Request,
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
@@ -271,6 +282,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             )
             for message in dataset.messages
         ]
+        url = str(api_request.url)
+        if url.rstrip("/").endswith("execute"):
+            message = models.DatasetMessage(
+                date=datetime.datetime.now(),
+                severity="WARNING",
+                content=config.ensure_settings().deprecation_warning_message,
+            )
+            dataset_messages.append(message)
         status_info = utils.make_status_info(
             job, dataset_metadata={"messages": dataset_messages}
         )
