@@ -70,7 +70,7 @@ def test_verify_cost() -> None:
             costs={"cost_id_1": 10.0, "cost_id_2": 10.0},
             limits={"cost_id_1": 20.0, "cost_id_2": 20.0},
         )
-        costs = auth.verify_cost({}, {})
+        costs = auth.verify_cost({}, {}, "api")
         assert costs == {"cost_id_1": 10.0, "cost_id_2": 10.0}
 
         mock_compute_costing.return_value = models.CostingInfo(
