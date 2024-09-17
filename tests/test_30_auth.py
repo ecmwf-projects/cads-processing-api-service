@@ -22,16 +22,22 @@ import pytest
 from cads_processing_api_service import auth, exceptions, models
 
 
-def test_check_licences() -> None:
-    required_licences = {("licence_1", 1), ("licence_2", 2)}
+def test_verify_licences() -> None:
     accepted_licences = {("licence_1", 1), ("licence_2", 2), ("licence_3", 3)}
-    missing_licences = auth.check_licences(required_licences, accepted_licences)
+    required_licences = {("licence_1", 1), ("licence_2", 2)}
+    api_request_url = "http://base_url/api/v1/processes/process_id/execution"
+    process_id = "process_id"
+    missing_licences = auth.verify_licences(
+        accepted_licences, required_licences, api_request_url, process_id
+    )
     assert len(missing_licences) == 0
 
-    required_licences = {("licence_1", 1), ("licence_2", 2)}
     accepted_licences = {("licence_1", 1), ("licence_2", 1)}
+    required_licences = {("licence_1", 1), ("licence_2", 2)}
     with pytest.raises(exceptions.PermissionDenied):
-        missing_licences = auth.check_licences(required_licences, accepted_licences)
+        missing_licences = auth.verify_licences(
+            accepted_licences, required_licences, api_request_url, process_id
+        )
 
 
 def test_verify_permission() -> None:
@@ -66,15 +72,16 @@ def test_verify_cost() -> None:
     with unittest.mock.patch(
         "cads_processing_api_service.costing.compute_costing"
     ) as mock_compute_costing:
-        mock_compute_costing.return_value = models.Costing(
-            costs={"cost_1": 1.0, "cost_2": 2.0},
-            max_costs_exceeded={},
+        mock_compute_costing.return_value = models.CostingInfo(
+            costs={"cost_id_1": 10.0, "cost_id_2": 10.0},
+            limits={"cost_id_1": 20.0, "cost_id_2": 20.0},
         )
-        auth.verify_cost({}, {})
+        costs = auth.verify_cost({}, {}, "api")
+        assert costs == {"cost_id_1": 10.0, "cost_id_2": 10.0}
 
-        mock_compute_costing.return_value = models.Costing(
-            costs={"cost_1": 1.0, "cost_2": 2.0},
-            max_costs_exceeded={"cost_1": 0},
+        mock_compute_costing.return_value = models.CostingInfo(
+            costs={"cost_id_1": 10.0, "cost_id_2": 10.0},
+            limits={"cost_id_1": 5.0, "cost_id_2": 20.0},
         )
         with pytest.raises(exceptions.PermissionDenied):
-            auth.verify_cost({}, {})
+            auth.verify_cost({}, {}, "api")

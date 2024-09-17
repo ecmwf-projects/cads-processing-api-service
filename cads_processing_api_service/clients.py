@@ -70,6 +70,16 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     process_data_table = cads_catalogue.database.ResourceData
     job_table = cads_broker.database.SystemRequest
 
+    endpoints_description = {
+        "GetProcesses": "Get the list of available processes' summaries.",
+        "GetProcess": "Get the description of the process identified by `process_id`.",
+        "PostProcessExecution": "Request execution of a process.",
+        "GetJobs": "Get the list of submitted jobs, alongside information on their status.",
+        "GetJob": "Get status information for the job identifed by `job_id`.",
+        "GetJobResults": "Get results for the job identifed by `job_id`.",
+        "DeleteJob": "Dismiss the job identifed by `job_id`.",
+    }
+
     def get_processes(
         self,
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
@@ -191,6 +201,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Parameters
         ----------
+        api_request: fastapi.Request
+            API Request object.
         process_id : str
             Process identifier.
         execution_content : models.Execute
@@ -204,6 +216,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Submitted job's status information.
         """
         user_uid, user_role = auth.authenticate_user(auth_header, portal_header)
+        request_origin = auth.REQUEST_ORIGIN[auth_header[0]]
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
         request = execution_content.model_dump()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
@@ -231,16 +244,22 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 cads_adaptors.exceptions.InvalidRequest,
             ) as exc:
                 raise exceptions.InvalidRequest(detail=str(exc)) from exc
-        costs = auth.verify_cost(request_inputs, adaptor_properties)
-        licences = adaptor.get_licences(request_inputs)
+        costs = auth.verify_cost(request_inputs, adaptor_properties, request_origin)
+        required_licences = adaptor.get_licences(request_inputs)
         if user_uid != "anonymous":
             accepted_licences = auth.get_accepted_licences(auth_header)
-            auth.validate_licences(accepted_licences, licences)
+            api_request_url = str(api_request.url)
+            _ = auth.verify_licences(
+                accepted_licences, required_licences, api_request_url, process_id
+            )
             job_message = None
         else:
             job_message = config.ensure_settings().anonymous_licences_message.format(
                 licences="; ".join(
-                    [f"{licence[0]} (rev: {licence[1]})" for licence in licences]
+                    [
+                        f"{licence[0]} (rev: {licence[1]})"
+                        for licence in required_licences
+                    ]
                 )
             )
         job_id = str(uuid.uuid4())
@@ -255,7 +274,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job = cads_broker.database.create_request(
                 session=compute_session,
                 request_uid=job_id,
-                origin=auth.REQUEST_ORIGIN[auth_header[0]],
+                origin=request_origin,
                 user_uid=user_uid,
                 process_id=process_id,
                 portal=dataset.portal,

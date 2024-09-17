@@ -22,7 +22,7 @@ import cads_broker
 import fastapi
 import requests
 
-from . import config, costing, exceptions
+from . import config, costing, exceptions, models
 
 VERIFICATION_ENDPOINT = {
     "PRIVATE-TOKEN": "/account/verification/pat",
@@ -183,17 +183,25 @@ def get_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
     return accepted_licences
 
 
-def check_licences(
-    required_licences: set[tuple[str, int]], accepted_licences: set[tuple[str, int]]
+def verify_licences(
+    accepted_licences: set[tuple[str, int]] | list[tuple[str, int]],
+    required_licences: set[tuple[str, int]] | list[tuple[str, int]],
+    api_request_url: str,
+    process_id: str,
 ) -> set[tuple[str, int]]:
-    """Check if accepted licences satisfy required ones.
+    """
+    Verify if all the licences required for the process submission have been accepted.
 
     Parameters
     ----------
-    required_licences : set[tuple[str, int]]
-        Required licences.
-    accepted_licences : set[tuple[str, int]]
-        Accepted licences.
+    accepted_licences : set[tuple[str, int]] | list[tuple[str, int]],
+        Licences accepted by a user stored in the Extended Profiles database.
+    required_licences : set[tuple[str, int]] | list[tuple[str, int]],
+        Licences bound to the required process/dataset.
+    api_request_url : str
+        API request URL, required to generate the URL to the dataset licences page.
+    process_id : str
+        Process identifier, required to generate the URL to the dataset licences page.
 
     Returns
     -------
@@ -205,37 +213,28 @@ def check_licences(
     exceptions.PermissionDenied
         Raised if not all required licences have been accepted.
     """
+    if not isinstance(accepted_licences, set):
+        accepted_licences = set(accepted_licences)
+    if not isinstance(required_licences, set):
+        required_licences = set(required_licences)
     missing_licences = required_licences - accepted_licences
     if not len(missing_licences) == 0:
-        missing_licences_detail = [
-            {"id": licence[0], "revision": licence[1]} for licence in missing_licences
-        ]
+        missing_licences_message_template = (
+            config.ensure_settings().missing_licences_message
+        )
+        dataset_licences_url_template = config.ensure_settings().dataset_licences_url
+        parsed_api_request_url = urllib.parse.urlparse(api_request_url)
+        base_url = f"{parsed_api_request_url.scheme}://{parsed_api_request_url.netloc}"
+        dataset_licences_url = dataset_licences_url_template.format(
+            base_url=base_url, process_id=process_id
+        )
+        missing_licences_message = missing_licences_message_template.format(
+            dataset_licences_url=dataset_licences_url
+        )
         raise exceptions.PermissionDenied(
-            title="required licences not accepted",
-            detail=(
-                "required licences not accepted; "
-                "please accept the following licences to proceed: "
-                f"{missing_licences_detail}"
-            ),
+            title="required licences not accepted", detail=missing_licences_message
         )
     return missing_licences
-
-
-def validate_licences(
-    accepted_licences: set[tuple[str, str]],
-    licences: list[tuple[str, int]],
-) -> None:
-    """Validate process execution request's payload in terms of required licences.
-
-    Parameters
-    ----------
-    stored_accepted_licences : set[tuple[str, str]]
-        Licences accepted by a user stored in the Extended Profiles database.
-    licences : list[tuple[str, int]]
-        Licences bound to the required process/dataset.
-    """
-    required_licences = set(licences)
-    check_licences(required_licences, accepted_licences)  # type: ignore
 
 
 def verify_if_disabled(disabled_reason: str | None, user_role: str | None) -> None:
@@ -262,7 +261,7 @@ def verify_if_disabled(disabled_reason: str | None, user_role: str | None) -> No
 
 
 def verify_cost(
-    request: dict[str, Any], adaptor_properties: dict[str, Any]
+    request: dict[str, Any], adaptor_properties: dict[str, Any], request_origin: str
 ) -> dict[str, float] | None:
     """Verify if the cost of a process execution request is within the allowed limits.
 
@@ -272,6 +271,8 @@ def verify_cost(
         Process execution request.
     adaptor_properties : dict[str, Any]
         Adaptor properties.
+    request_origin : str
+        Origin of the request. Can be either "api" or "ui".
 
     Raises
     ------
@@ -283,9 +284,13 @@ def verify_cost(
     dict[str, float] | None
         Request costs.
     """
-    costing_info = costing.compute_costing(request, adaptor_properties)
-    max_costs_exceeded = costing_info.max_costs_exceeded
-    if max_costs_exceeded:
+    costing_info: models.CostingInfo = costing.compute_costing(
+        request, adaptor_properties, request_origin
+    )
+    highest_cost: models.RequestCost = costing.compute_highest_cost_limit_ratio(
+        costing_info
+    )
+    if highest_cost.cost > highest_cost.limit:
         raise exceptions.PermissionDenied(
             title="cost limits exceeded",
             detail="Your request is too large, please reduce your selection.",
