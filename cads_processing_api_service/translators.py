@@ -250,7 +250,7 @@ def translate_request_ids_into_labels(
 
 
 def format_list(
-    value_list: list[int | float | str], max_items_per_line: int = 3
+    value_list: list[int | float | str], max_items_per_line: int = 1
 ) -> str:
     if len(value_list) > max_items_per_line:
         formatted = "[\n"
@@ -267,14 +267,18 @@ def format_list(
 
 
 def format_request_value(
-    key: str,
     request_value: int | float | str | list[int | float | str],
+    key: str | None = None,
 ) -> str:
     if isinstance(request_value, list):
-        if key in ("year", "month", "day", "time"):
-            formatted_request_value = format_list(request_value, max_items_per_line=3)
+        if key is None:
+            formatted_request_value = format_list(request_value)
         else:
-            formatted_request_value = format_list(request_value, max_items_per_line=1)
+            api_request_max_list_length = (
+                config.ensure_settings().api_request_max_list_length
+            )
+            max_items_per_line = api_request_max_list_length.get(key, 1)
+            formatted_request_value = format_list(request_value, max_items_per_line)
     elif isinstance(request_value, str):
         formatted_request_value = f'"{request_value}"'
     else:
@@ -308,7 +312,7 @@ def format_api_request(
         "{"
         + ",".join(
             [
-                f'\n    "{key}": {format_request_value(key, value)}'
+                f'\n    "{key}": {format_request_value(value, key)}'
                 for key, value in request_inputs.items()
             ]
         )
