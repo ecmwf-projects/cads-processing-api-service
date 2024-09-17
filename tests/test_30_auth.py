@@ -22,16 +22,22 @@ import pytest
 from cads_processing_api_service import auth, exceptions, models
 
 
-def test_check_licences() -> None:
-    required_licences = {("licence_1", 1), ("licence_2", 2)}
+def test_verify_licences() -> None:
     accepted_licences = {("licence_1", 1), ("licence_2", 2), ("licence_3", 3)}
-    missing_licences = auth.check_licences(required_licences, accepted_licences)
+    required_licences = {("licence_1", 1), ("licence_2", 2)}
+    api_request_url = "http://base_url/api/v1/processes/process_id/execution"
+    process_id = "process_id"
+    missing_licences = auth.verify_licences(
+        accepted_licences, required_licences, api_request_url, process_id
+    )
     assert len(missing_licences) == 0
 
-    required_licences = {("licence_1", 1), ("licence_2", 2)}
     accepted_licences = {("licence_1", 1), ("licence_2", 1)}
+    required_licences = {("licence_1", 1), ("licence_2", 2)}
     with pytest.raises(exceptions.PermissionDenied):
-        missing_licences = auth.check_licences(required_licences, accepted_licences)
+        missing_licences = auth.verify_licences(
+            accepted_licences, required_licences, api_request_url, process_id
+        )
 
 
 def test_verify_permission() -> None:
