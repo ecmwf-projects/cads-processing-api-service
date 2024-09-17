@@ -65,6 +65,8 @@ def estimate_cost(
         request.get("inputs", {}), adaptor_properties, request_origin
     )
     cost = costing.compute_highest_cost_limit_ratio(costing_info)
+    if costing_info.cost_bar_steps:
+        cost.cost_bar_steps = costing_info.cost_bar_steps
     return cost
 
 
@@ -128,5 +130,8 @@ def compute_costing(
     )
     costing_config: dict[str, Any] = adaptor_properties["config"].get("costing", {})
     limits: dict[str, Any] = costing_config.get("max_costs", {})
-    costing_info = models.CostingInfo(costs=costs, limits=limits)
+    cost_bar_steps = costing_config.get("cost_bar_steps", None)
+    costing_info = models.CostingInfo(
+        costs=costs, limits=limits, cost_bar_steps=cost_bar_steps
+    )
     return costing_info
