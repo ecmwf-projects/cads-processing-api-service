@@ -249,11 +249,38 @@ def translate_request_ids_into_labels(
     return request_labels
 
 
-def format_request_value(
-    request_value: str | list[str],
+def format_list(
+    value_list: list[int | float | str], max_items_per_line: int = 1
 ) -> str:
-    if isinstance(request_value, str):
-        formatted_request_value = f"'{request_value}'"
+    if len(value_list) > max_items_per_line:
+        formatted = "[\n"
+        for i in range(0, len(value_list), max_items_per_line):
+            line = ", ".join(
+                f"'{item}'" if isinstance(item, str) else f"{item}"
+                for item in value_list[i : i + max_items_per_line]
+            )
+            formatted += f"        {line},\n"
+        formatted = formatted.rstrip(",\n") + "\n    ]"
+    else:
+        formatted = str(value_list)
+    return formatted
+
+
+def format_request_value(
+    request_value: int | float | str | list[int | float | str],
+    key: str | None = None,
+) -> str:
+    if isinstance(request_value, list):
+        if key is None:
+            formatted_request_value = format_list(request_value)
+        else:
+            api_request_max_list_length = (
+                config.ensure_settings().api_request_max_list_length
+            )
+            max_items_per_line = api_request_max_list_length.get(key, 1)
+            formatted_request_value = format_list(request_value, max_items_per_line)
+    elif isinstance(request_value, str):
+        formatted_request_value = f'"{request_value}"'
     else:
         formatted_request_value = str(request_value)
     return formatted_request_value
@@ -285,7 +312,7 @@ def format_api_request(
         "{"
         + ",".join(
             [
-                f"\n    '{key}': {format_request_value(value)}"
+                f'\n    "{key}": {format_request_value(value, key)}'
                 for key, value in request_inputs.items()
             ]
         )
@@ -293,7 +320,7 @@ def format_api_request(
     )
     api_request = api_request_template.format(
         process_id=process_id, api_request_kwargs=api_request_kwargs
-    )
+    ).replace("'", '"')
 
     return api_request
 

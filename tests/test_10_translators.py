@@ -14,9 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# mypy: ignore-errors
+
 from typing import Any
 
-import cads_processing_api_service.translators
+from cads_processing_api_service import config, translators
 
 TEST_INPUT_CDS_SCHEMAS: dict[str, Any] = {
     "string_list": {
@@ -115,16 +117,12 @@ def test_extract_groups_labels() -> None:
         "val2": "Val2",
         "val3": "Val3",
     }
-    res_output = cads_processing_api_service.translators.extract_groups_labels(
-        test_groups, test_values
-    )
+    res_output = translators.extract_groups_labels(test_groups, test_values)
     assert res_output == exp_output
 
     test_groups = TEST_INPUT_CDS_SCHEMAS["string_list_array"]["details"]["groups"]
     exp_output = {"val1": "Val1", "val2": "Val2", "val3": "Val3"}
-    res_output = cads_processing_api_service.translators.extract_groups_labels(
-        test_groups
-    )
+    res_output = translators.extract_groups_labels(test_groups)
     assert res_output == exp_output
 
     test_groups = TEST_INPUT_CDS_SCHEMAS["string_list_array_groups"]["details"][
@@ -138,32 +136,24 @@ def test_extract_groups_labels() -> None:
         "val5": "Val5",
         "val6": "Val6",
     }
-    res_output = cads_processing_api_service.translators.extract_groups_labels(
-        test_groups
-    )
+    res_output = translators.extract_groups_labels(test_groups)
     assert res_output == exp_output
 
 
 def test_extract_labels() -> None:
     test_inputs_cds_schema = TEST_INPUT_CDS_SCHEMAS["string_list_array"]
     exp_output = {"val1": "Val1", "val2": "Val2", "val3": "Val3"}
-    res_output = cads_processing_api_service.translators.extract_labels(
-        test_inputs_cds_schema
-    )
+    res_output = translators.extract_labels(test_inputs_cds_schema)
     assert res_output == exp_output
 
     test_inputs_cds_schema = TEST_INPUT_CDS_SCHEMAS["string_list"]
     exp_output = {"val1": "Val1", "val2": "Val2", "val3": "Val3"}
-    res_output = cads_processing_api_service.translators.extract_labels(
-        test_inputs_cds_schema
-    )
+    res_output = translators.extract_labels(test_inputs_cds_schema)
     assert res_output == exp_output
 
     test_inputs_cds_schema = TEST_INPUT_CDS_SCHEMAS["free_edition_widget"]
     exp_output = {}
-    res_output = cads_processing_api_service.translators.extract_labels(
-        test_inputs_cds_schema
-    )
+    res_output = translators.extract_labels(test_inputs_cds_schema)
     assert res_output == exp_output
 
 
@@ -173,9 +163,7 @@ def test_translate_string_list() -> None:
         "type": "array",
         "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
     }
-    res_output = cads_processing_api_service.translators.translate_string_list(
-        test_input
-    )
+    res_output = translators.translate_string_list(test_input)
     assert res_output == exp_ouput
 
 
@@ -185,9 +173,7 @@ def test_translate_string_list_array() -> None:
         "type": "array",
         "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
     }
-    res_output = cads_processing_api_service.translators.translate_string_list_array(
-        test_input
-    )
+    res_output = translators.translate_string_list_array(test_input)
     assert res_output == exp_ouput
 
     test_input = TEST_INPUT_CDS_SCHEMAS["string_list_array_groups"]
@@ -198,18 +184,14 @@ def test_translate_string_list_array() -> None:
             "enum": ["val1", "val2", "val3", "val4", "val5", "val6"],
         },
     }
-    res_output = cads_processing_api_service.translators.translate_string_list_array(
-        test_input
-    )
+    res_output = translators.translate_string_list_array(test_input)
     assert res_output == exp_ouput
 
 
 def test_translate_string_choice() -> None:
     test_input = TEST_INPUT_CDS_SCHEMAS["string_choice"]
     exp_ouput = {"type": "string", "enum": ["val1", "val2", "val3"], "default": "val1"}
-    res_output = cads_processing_api_service.translators.translate_string_choice(
-        test_input
-    )
+    res_output = translators.translate_string_choice(test_input)
     assert res_output == exp_ouput
 
 
@@ -222,11 +204,7 @@ def test_translate_geographic_extent_map() -> None:
         "items": {"type": "number"},
         "default": [1, 2, 3, 4],
     }
-    res_output = (
-        cads_processing_api_service.translators.translate_geographic_extent_map(
-            test_input
-        )
-    )
+    res_output = translators.translate_geographic_extent_map(test_input)
     assert res_output == exp_ouput
 
 
@@ -234,7 +212,7 @@ def test_make_request_labels() -> None:
     test_input_value_ids = ["1", "1", "1", "1"]
     test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["geographic_extent_map"]
     exp_output = ["North: 1°", "West: 1°", "South: 1°", "East: 1°"]
-    res_output = cads_processing_api_service.translators.make_request_labels(
+    res_output = translators.make_request_labels(
         test_input_value_ids, test_input_cds_schema
     )
     assert res_output == exp_output
@@ -242,7 +220,7 @@ def test_make_request_labels() -> None:
     test_input_value_ids = [{"latitude": 10, "longitude": 10}]
     test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["geographic_location"]
     exp_output = ["Latitude: 10°", "Longitude: 10°"]
-    res_output = cads_processing_api_service.translators.make_request_labels(
+    res_output = translators.make_request_labels(
         test_input_value_ids, test_input_cds_schema
     )
     assert res_output == exp_output
@@ -250,7 +228,7 @@ def test_make_request_labels() -> None:
     test_input_value_ids = ["val1", "val2"]
     test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["string_list"]
     exp_output = ["Val1", "Val2"]
-    res_output = cads_processing_api_service.translators.make_request_labels(
+    res_output = translators.make_request_labels(
         test_input_value_ids, test_input_cds_schema
     )
     assert res_output == exp_output
@@ -258,7 +236,7 @@ def test_make_request_labels() -> None:
     test_input_value_ids = ["val1", "val4"]
     test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["string_list"]
     exp_output = ["Val1", "val4"]
-    res_output = cads_processing_api_service.translators.make_request_labels(
+    res_output = translators.make_request_labels(
         test_input_value_ids, test_input_cds_schema
     )
     assert res_output == exp_output
@@ -268,11 +246,7 @@ def test_translate_request_ids_into_labels() -> None:
     request = {"key1": "val1", "key2": "val2"}
     cds_schema = None
     exp_output = {"key1": "val1", "key2": "val2"}
-    res_output = (
-        cads_processing_api_service.translators.translate_request_ids_into_labels(
-            request, cds_schema
-        )
-    )
+    res_output = translators.translate_request_ids_into_labels(request, cds_schema)
     assert res_output == exp_output
 
     request = {
@@ -289,11 +263,7 @@ def test_translate_request_ids_into_labels() -> None:
         "String Choice": ["Val1"],
         "unknown_key": "unknown_value",
     }
-    res_output = (
-        cads_processing_api_service.translators.translate_request_ids_into_labels(
-            request, cds_schema
-        )
-    )
+    res_output = translators.translate_request_ids_into_labels(request, cds_schema)
     assert res_output == exp_output
 
     request = {}
@@ -309,52 +279,58 @@ def test_translate_request_ids_into_labels() -> None:
     }
 
 
-def test_format_request_value() -> None:
-    test_value_1 = "test_value"
-    exp_output_1 = "'test_value'"
-    res_output_1 = cads_processing_api_service.translators.format_request_value(
-        test_value_1
-    )
-    assert res_output_1 == exp_output_1
+def test_format_list() -> None:
+    value_list = ["test_value_1", "test_value_2"]
+    max_items_per_line = 1
+    exp_output = "[\n        'test_value_1',\n        'test_value_2'\n    ]"
+    res_output = translators.format_list(value_list, max_items_per_line)
+    assert res_output == exp_output
 
-    test_value_2 = ["test_value_1", "test_value_2"]
-    exp_output_2 = "['test_value_1', 'test_value_2']"
-    res_output_2 = cads_processing_api_service.translators.format_request_value(
-        test_value_2
-    )
-    assert res_output_2 == exp_output_2
+    max_items_per_line = 2
+    exp_output = "['test_value_1', 'test_value_2']"
+    res_output = translators.format_list(value_list, max_items_per_line)
+    assert res_output == exp_output
+
+
+def test_format_request_value() -> None:
+    test_value = "test_value"
+    exp_output = '"test_value"'
+    res_output = translators.format_request_value(test_value)
+    assert res_output == exp_output
+
+    test_value = 1
+    exp_output = "1"
+    res_output = translators.format_request_value(test_value)
+    assert res_output == exp_output
+
+    test_value = ["test_value_1", "test_value_2"]
+    exp_output = "[\n        'test_value_1',\n        'test_value_2'\n    ]"
+    res_output = translators.format_request_value(test_value)
+    assert res_output == exp_output
 
 
 def test_format_api_request() -> None:
-    test_api_request_template = (
-        "import cads_api_client\n\n"
-        "request = {api_request_kwargs}\n\n"
-        "client = cads_api_client.ApiClient()\n"
-        "client.retrieve(\n\t"
-        "collection_id='{process_id}',\n\t"
-        "**request\n"
-        ")\n"
-    )
+    test_api_request_template = config.API_REQUEST_TEMPLATE
     test_process_id = "test_process_id"
     test_request = {
         "inputs": {
-            "variable": "test_variable_1",
-            "year": ["2000", "2001"],
+            "variable_1": "value_1",
+            "variable_2": ["value_1", "value_2"],
+            "variable_3": 1,
         }
     }
     exp_output = (
-        "import cads_api_client\n\n"
+        "import cdsapi\n\n"
+        'dataset = "test_process_id"\n'
         "request = {\n"
-        "    'variable': 'test_variable_1',\n"
-        "    'year': ['2000', '2001']\n"
+        '    "variable_1": "value_1",\n'
+        '    "variable_2": [\n        "value_1",\n        "value_2"\n    ],\n'
+        '    "variable_3": 1\n'
         "}\n\n"
-        "client = cads_api_client.ApiClient()\n"
-        "client.retrieve(\n\t"
-        "collection_id='test_process_id',\n\t"
-        "**request\n"
-        ")\n"
+        "client = cdsapi.Client()\n"
+        "client.retrieve(dataset, request).download()\n"
     )
-    res_output = cads_processing_api_service.translators.format_api_request(
+    res_output = translators.format_api_request(
         test_api_request_template, test_process_id, test_request
     )
     assert res_output == exp_output
