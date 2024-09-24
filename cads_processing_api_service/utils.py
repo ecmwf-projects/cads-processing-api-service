@@ -470,11 +470,11 @@ def get_job_from_broker_db(
     return job
 
 
-def update_results_href(local_path: str, data_volume: str | None = None) -> str:
-    if data_volume is None:
-        data_volume = config.ensure_settings().data_volume
+def update_results_href(local_path: str, download_node: str | None = None) -> str:
+    if download_node is None:
+        download_node = config.ensure_settings().download_node
     file_path = local_path.split("://", 1)[-1]
-    results_href = urllib.parse.urljoin(data_volume, file_path)
+    results_href = urllib.parse.urljoin(download_node, file_path)
     return results_href
 
 

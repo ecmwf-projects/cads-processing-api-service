@@ -96,12 +96,13 @@ class Settings(pydantic_settings.BaseSettings):
         return f"http://{self.profiles_service}:{self.profiles_api_service_port}"
 
     @property
-    def data_volume(self) -> str:
-        data_volumes_config_path = self.download_nodes_config
-        with open(data_volumes_config_path) as fp:
-            data_volumes = [os.path.expandvars(line.rstrip("\n")) for line in fp]
-        data_volume = random.choice(data_volumes)
-        return data_volume
+    def download_node(self) -> str:
+        download_nodes = []
+        with open(self.download_nodes_config) as fp:
+            for line in fp:
+                if download_node := os.path.expandvars(line.rstrip("\n")):
+                    download_nodes.append(download_node)
+        return random.choice(download_nodes)
 
 
 def ensure_settings(
