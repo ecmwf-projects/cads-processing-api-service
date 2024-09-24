@@ -260,10 +260,10 @@ def test_update_results_href() -> None:
 def test_update_results_href_from_config(
     monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
 ) -> None:
-    download_nodes_config = tmp_path / "download-nodes.config"
-    download_nodes_config.write_text("\n\nhttp://download_node/\n\n$DOWNLOAD_NODE\n\n")
+    config_path = tmp_path / "download-nodes.config"
+    config_path.write_text("\n\nhttp://download_node/\n\n$DOWNLOAD_NODE\n\n")
     monkeypatch.setenv("DOWNLOAD_NODE", "http://download_node/")
-    monkeypatch.setenv("DOWNLOAD_NODES_CONFIG", str(download_nodes_config))
+    monkeypatch.setenv("DOWNLOAD_NODES_CONFIG", str(config_path))
 
     local_path = "protocol://results/1234"
     updated_href = utils.update_results_href(local_path)
