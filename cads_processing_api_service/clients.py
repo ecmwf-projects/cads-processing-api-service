@@ -215,6 +215,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Submitted job's status information.
         """
+        logger.info("Processing request", process_id=process_id)
         user_uid, user_role = auth.authenticate_user(auth_header, portal_header)
         request_origin = auth.REQUEST_ORIGIN[auth_header[0]]
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
