@@ -21,6 +21,9 @@ import cads_broker.config
 import cads_catalogue.config
 import sqlalchemy
 import sqlalchemy.orm
+import structlog
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 class ConnectionMode(str, enum.Enum):
@@ -47,6 +50,7 @@ def get_compute_sessionmaker(
     sqlalchemy.orm.sessionmaker
         sqlalchemy.orm.sessionmaker object bound to the Broker database.
     """
+    logger.info("Getting compute sessionmaker", mode=mode)
     broker_settings = cads_broker.config.ensure_settings()
     if mode == ConnectionMode.write:
         connection_string = broker_settings.connection_string
@@ -54,6 +58,7 @@ def get_compute_sessionmaker(
         connection_string = broker_settings.connection_string_read
     else:
         raise ValueError(f"Invalid connection mode: {str(mode)}")
+    logger.info("Creating engine", connection_string=connection_string)
     broker_engine = sqlalchemy.create_engine(
         connection_string,
         pool_timeout=broker_settings.pool_timeout,

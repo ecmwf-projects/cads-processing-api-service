@@ -267,6 +267,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_kwargs = adaptors.make_system_job_kwargs(
             dataset, request_inputs, adaptor.resources
         )
+        logger.info("Creating job", job_id=job_id, process_id=process_id)
         compute_sessionmaker = db_utils.get_compute_sessionmaker(
             mode=db_utils.ConnectionMode.write
         )
