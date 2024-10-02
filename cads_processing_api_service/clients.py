@@ -51,8 +51,6 @@ from . import (
 )
 from .metrics import handle_download_metrics
 
-logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-
 
 @attrs.define
 class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
@@ -215,7 +213,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Submitted job's status information.
         """
-        logger.info("Processing request", process_id=process_id)
         user_uid, user_role = auth.authenticate_user(auth_header, portal_header)
         request_origin = auth.REQUEST_ORIGIN[auth_header[0]]
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
@@ -268,7 +265,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_kwargs = adaptors.make_system_job_kwargs(
             dataset, request_inputs, adaptor.resources
         )
-        logger.info("Creating job", job_id=job_id, process_id=process_id)
         compute_sessionmaker = db_utils.get_compute_sessionmaker(
             mode=db_utils.ConnectionMode.write
         )
