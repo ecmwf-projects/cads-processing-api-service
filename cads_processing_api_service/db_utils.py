@@ -61,6 +61,9 @@ def get_compute_sessionmaker(
         pool_size=broker_settings.pool_size,
         max_overflow=broker_settings.max_overflow,
     )
+    raise ValueError(
+        f"Connection mode: {str(mode)}, connection string: {connection_string}"
+    )
     return sqlalchemy.orm.sessionmaker(broker_engine)
 
 
