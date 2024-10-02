@@ -18,8 +18,11 @@ from typing import Any
 
 import cads_adaptors
 import cads_catalogue.database
+import structlog
 
 DEFAULT_ENTRY_POINT = "cads_adaptors:UrlCdsAdaptor"
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 def get_adaptor_properties(
@@ -94,7 +97,9 @@ def instantiate_adaptor(
         setup_code=adaptor_properties["setup_code"],
     )
     adaptor = adaptor_class(
-        form=adaptor_properties["form"], **adaptor_properties["config"]
+        form=adaptor_properties["form"],
+        **adaptor_properties["config"],
+        context=cads_adaptors.Context(logger=logger),
     )
 
     return adaptor
