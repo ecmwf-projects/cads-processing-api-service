@@ -190,10 +190,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         request: fastapi.Request,
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
-        auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
-        portal_header: str | None = fastapi.Header(
-            None, alias=config.PORTAL_HEADER_NAME
-        ),
+        auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
 
@@ -207,17 +204,16 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Process identifier.
         execution_content : models.Execute
             Details needed for the process execution.
-        auth_header : tuple[str, str], optional
-            Authorization header.
+        auth_info : models.AuthInfo
+            Authentication information.
 
         Returns
         -------
         models.StatusInfo
             Submitted job's status information.
         """
-        user_uid, user_role = auth.authenticate_user(auth_header, portal_header)
-        request_origin = auth.REQUEST_ORIGIN[auth_header[0]]
-        structlog.contextvars.bind_contextvars(user_uid=user_uid)
+        request_origin = auth.REQUEST_ORIGIN[auth_info.auth_header[0]]
+        structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         request_body = execution_content.model_dump()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
             db_utils.ConnectionMode.read
@@ -229,7 +225,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 session=catalogue_session,
                 load_messages=True,
             )
-        auth.verify_if_disabled(dataset.disabled_reason, user_role)
+        auth.verify_if_disabled(dataset.disabled_reason, auth_info.user_role)
         adaptor_properties = adaptors.get_adaptor_properties(dataset)
         adaptor = adaptors.instantiate_adaptor(adaptor_properties=adaptor_properties)
         try:
@@ -246,8 +242,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 raise exceptions.InvalidRequest(detail=str(exc)) from exc
         costs = auth.verify_cost(request_inputs, adaptor_properties, request_origin)
         required_licences = adaptor.get_licences(request_inputs)
-        if user_uid != "anonymous":
-            accepted_licences = auth.get_accepted_licences(auth_header)
+        if auth_info.user_uid != "anonymous":
+            accepted_licences = auth.get_accepted_licences(auth_info.auth_header)
             request_url = str(request.url)
             _ = auth.verify_licences(
                 accepted_licences, required_licences, request_url, process_id
@@ -275,7 +271,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 session=compute_session,
                 request_uid=job_id,
                 origin=request_origin,
-                user_uid=user_uid,
+                user_uid=auth_info.user_uid,
                 process_id=process_id,
                 portal=dataset.portal,
                 qos_tags=dataset.qos_tags,
@@ -321,10 +317,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ),
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
-        auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
-        portal_header: str | None = fastapi.Header(
-            None, alias=config.PORTAL_HEADER_NAME
-        ),
+        auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
     ) -> models.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
 
@@ -347,17 +340,21 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Hash string representing the reference to a particular job, used for pagination.
         back : bool | None, optional
             Specifies in which sense the list of processes should be traversed, used for pagination.
-        auth_header : tuple[str, str], optional
-            Authorization header
+        auth_info: models.AuthInfo
+            Authentication information.
 
         Returns
         -------
         models.JobList
             List of jobs status information.
         """
-        user_uid, _ = auth.authenticate_user(auth_header, portal_header)
+        user_uid, _ = auth.authenticate_user(
+            auth_info.auth_header, auth_info.portal_header
+        )
         portals = (
-            [p.strip() for p in portal_header.split(",")] if portal_header else None
+            [p.strip() for p in auth_info.portal_header.split(",")]
+            if auth_info.portal_header
+            else None
         )
         job_filters = {
             "process_id": processID,
@@ -437,16 +434,13 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_job(
         self,
         job_id: str = fastapi.Path(...),
-        auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
-        portal_header: str | None = fastapi.Header(
-            None, alias=config.PORTAL_HEADER_NAME
-        ),
         qos: bool = fastapi.Query(False),
         request: bool = fastapi.Query(False),
         log: bool = fastapi.Query(False),
         log_start_time: datetime.datetime | None = fastapi.Query(
             None, alias="logStartTime"
         ),
+        auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -456,10 +450,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         job_id : str
             Job identifer.
-        auth_header : tuple[str, str], optional
-            Authorization header
-        portal_header : str | None, optional
-            Portal header
         qos : bool, optional
             Whether to include job qos info in the response
         request : bool, optional
@@ -468,15 +458,18 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Whether to include the job's log in the response
         log_start_time: datetime.datetime, optional
             Datetime of the first log message to be returned
+        auth_info: models.AuthInfo
+            Authentication Information.
 
         Returns
         -------
         models.StatusInfo
             Job status information.
         """
-        user_uid, _ = auth.authenticate_user(auth_header, portal_header)
         portals = (
-            [p.strip() for p in portal_header.split(",")] if portal_header else None
+            [p.strip() for p in auth_info.portal_header.split(",")]
+            if auth_info.portal_header
+            else None
         )
         try:
             compute_sessionmaker = db_utils.get_compute_sessionmaker(
@@ -526,7 +519,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 detail=f"job {job_id} not found"
             )
-        auth.verify_permission(user_uid, job)
+        auth.verify_permission(auth_info.user_uid, job)
         kwargs = {}
         if request:
             request_ids = job.request_body["request"]
@@ -560,10 +553,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_job_results(
         self,
         job_id: str = fastapi.Path(...),
-        auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
-        portal_header: str | None = fastapi.Header(
-            None, alias=config.PORTAL_HEADER_NAME
-        ),
+        auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
     ) -> ogc_api_processes_fastapi.models.Results:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
 
@@ -573,17 +563,17 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         job_id : str
             Identifier of the job.
-        auth_header : tuple[str, str], optional
-            Authorization header
+        auth_info: models.AuthInfo
+            Authentication Information.
 
         Returns
         -------
         ogc_api_processes_fastapi.models.Results
             Job results.
         """
-        structlog.contextvars.bind_contextvars(job_id=job_id)
-        user_uid, _ = auth.authenticate_user(auth_header, portal_header)
-        structlog.contextvars.bind_contextvars(user_id=user_uid)
+        structlog.contextvars.bind_contextvars(
+            job_id=job_id, user_uid=auth_info.user_uid
+        )
         try:
             compute_sessionmaker = db_utils.get_compute_sessionmaker(
                 mode=db_utils.ConnectionMode.read
@@ -593,7 +583,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     job_id=job_id, session=compute_session
                 )
                 results = utils.get_results_from_job(job=job, session=compute_session)
-            auth.verify_permission(user_uid, job)
+            auth.verify_permission(auth_info.user_uid, job)
         except (
             ogc_api_processes_fastapi.exceptions.NoSuchJob,
             ogc_api_processes_fastapi.exceptions.ResultsNotReady,
@@ -606,17 +596,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     job_id=job_id, session=compute_session
                 )
                 results = utils.get_results_from_job(job=job, session=compute_session)
-            auth.verify_permission(user_uid, job)
+            auth.verify_permission(auth_info.user_uid, job)
         handle_download_metrics(job.process_id, results)
         return results
 
     def delete_job(
         self,
         job_id: str = fastapi.Path(...),
-        auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
-        portal_header: str | None = fastapi.Header(
-            None, alias=config.PORTAL_HEADER_NAME
-        ),
+        auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `DELETE /jobs/{job_id}` endpoint.
 
@@ -626,23 +613,23 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ----------
         job_id : str
             Identifier of the job.
-        auth_header : tuple[str, str], optional
-            Authorization header.
+        auth_info: models.AuthInfo
+            Authentication Information.
 
         Returns
         -------
         ogc_api_processes_fastapi.models.StatusInfo
             Job status information
         """
-        structlog.contextvars.bind_contextvars(job_id=job_id)
-        user_uid, _ = auth.authenticate_user(auth_header, portal_header)
-        structlog.contextvars.bind_contextvars(user_id=user_uid)
+        structlog.contextvars.bind_contextvars(
+            job_id=job_id, user_id=auth_info.user_uid
+        )
         compute_sessionmaker = db_utils.get_compute_sessionmaker(
             mode=db_utils.ConnectionMode.write
         )
         with compute_sessionmaker() as compute_session:
             job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
-            auth.verify_permission(user_uid, job)
+            auth.verify_permission(auth_info.user_uid, job)
             job = cads_broker.database.set_dismissed_request(
                 request_uid=job_id, session=compute_session
             )

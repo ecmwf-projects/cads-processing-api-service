@@ -22,6 +22,13 @@ import ogc_api_processes_fastapi.models
 import pydantic
 
 
+class AuthInfo(pydantic.BaseModel):
+    user_uid: str | None = None
+    user_role: str | None = None
+    auth_header: tuple[str, str] | None = None
+    portal_header: tuple[str, str] | None = None
+
+
 class StatusCode(str, enum.Enum):
     accepted: str = "accepted"
     running: str = "running"
