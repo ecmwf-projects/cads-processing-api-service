@@ -26,7 +26,7 @@ class AuthInfo(pydantic.BaseModel):
     user_uid: str | None = None
     user_role: str | None = None
     auth_header: tuple[str, str] | None = None
-    portal_header: tuple[str, str] | None = None
+    portal_header: str | None = None
 
 
 class StatusCode(str, enum.Enum):
