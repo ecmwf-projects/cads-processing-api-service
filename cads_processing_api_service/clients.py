@@ -187,7 +187,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
     def post_process_execution(
         self,
-        api_request: fastapi.Request,
+        request: fastapi.Request,
         process_id: str = fastapi.Path(...),
         execution_content: models.Execute = fastapi.Body(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
@@ -201,7 +201,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Parameters
         ----------
-        api_request: fastapi.Request
+        request: fastapi.Request
             API Request object.
         process_id : str
             Process identifier.
@@ -218,7 +218,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         user_uid, user_role = auth.authenticate_user(auth_header, portal_header)
         request_origin = auth.REQUEST_ORIGIN[auth_header[0]]
         structlog.contextvars.bind_contextvars(user_uid=user_uid)
-        request = execution_content.model_dump()
+        request_body = execution_content.model_dump()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
             db_utils.ConnectionMode.read
         )
@@ -233,7 +233,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         adaptor_properties = adaptors.get_adaptor_properties(dataset)
         adaptor = adaptors.instantiate_adaptor(adaptor_properties=adaptor_properties)
         try:
-            request_inputs = adaptor.normalise_request(request.get("inputs", {}))
+            request_inputs = adaptor.normalise_request(request_body.get("inputs", {}))
         except cads_adaptors.exceptions.InvalidRequest as exc:
             raise exceptions.InvalidRequest(detail=str(exc)) from exc
         if dataset.api_enforce_constraints:
@@ -248,9 +248,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         required_licences = adaptor.get_licences(request_inputs)
         if user_uid != "anonymous":
             accepted_licences = auth.get_accepted_licences(auth_header)
-            api_request_url = str(api_request.url)
+            request_url = str(request.url)
             _ = auth.verify_licences(
-                accepted_licences, required_licences, api_request_url, process_id
+                accepted_licences, required_licences, request_url, process_id
             )
             job_message = None
         else:
@@ -290,7 +290,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             )
             for message in dataset.messages
         ]
-        url = str(api_request.url)
+        url = str(request.url)
         if url.rstrip("/").endswith("execute"):
             message = models.DatasetMessage(
                 date=datetime.datetime.now(),
