@@ -19,8 +19,13 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 
 import os
 import random
+from typing import Annotated
 
+import pydantic
 import pydantic_settings
+import structlog
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 API_REQUEST_TEMPLATE = """import cdsapi
 
@@ -51,7 +56,6 @@ DEPRECATION_WARNING_MESSAGE = (
     "If you are using cdsapi, please upgrade to the latest version."
 )
 
-
 MISSING_LICENCES_MESSAGE = (
     "Not all the required licences have been accepted; "
     "please visit {dataset_licences_url} "
@@ -59,22 +63,47 @@ MISSING_LICENCES_MESSAGE = (
 )
 
 
+def load_downlaod_nodes(v: list[str], info: pydantic.ValidationInfo) -> list[str]:
+    v = []
+    file_path = info.data.get("download_nodes_file")
+    if file_path:
+        try:
+            with open(file_path, "r") as file:
+                for line in file:
+                    if download_node := os.path.expandvars(line.rstrip("\n")):
+                        v.append(download_node)
+        except Exception as e:
+            logger.warning(
+                "Failed to load download nodes from file",
+                file_path=file_path,
+                error=e,
+            )
+    if not v:
+        raise ValueError(f"No download nodes found in file {file_path}")
+    return v
+
+
 class Settings(pydantic_settings.BaseSettings):
     """General settings."""
 
     profiles_service: str = "profiles-api"
     profiles_api_service_port: int = 8000
-    portal_header_name: str = "X-CADS-PORTAL"
+
+    @property
+    def profiles_api_url(self) -> str:
+        return f"http://{self.profiles_service}:{self.profiles_api_service_port}"
 
     allow_cors: bool = True
 
     default_cache_control: str = "max-age=2"
     default_vary: str = "PRIVATE-TOKEN, Authorization"
     public_cache_control: str = "public, max-age=60"
+    portal_header_name: str = "X-CADS-PORTAL"
 
     cache_users_maxsize: int = 2000
     cache_users_ttl: int = 60
     cache_resources_maxsize: int = 1000
+    # cache_resources_ttl: int = 10
     cache_resources_ttl: int = 10
 
     api_request_template: str = API_REQUEST_TEMPLATE
@@ -87,20 +116,14 @@ class Settings(pydantic_settings.BaseSettings):
         "{base_url}/datasets/{process_id}?tab=download#manage-licences"
     )
 
-    download_nodes_config: str = "/etc/retrieve-api/download-nodes.config"
-
-    @property
-    def profiles_api_url(self) -> str:
-        return f"http://{self.profiles_service}:{self.profiles_api_service_port}"
+    download_nodes_file: str = "/etc/retrieve-api/download-nodes.config"
+    download_nodes: Annotated[
+        list[str], pydantic.BeforeValidator(load_downlaod_nodes)
+    ] = []
 
     @property
     def download_node(self) -> str:
-        download_nodes = []
-        with open(self.download_nodes_config) as fp:
-            for line in fp:
-                if download_node := os.path.expandvars(line.rstrip("\n")):
-                    download_nodes.append(download_node)
-        return random.choice(download_nodes)
+        return random.choice(self.download_nodes)
 
 
 settings = Settings()
