@@ -21,6 +21,7 @@ import os
 import random
 
 import pydantic_settings
+import yaml
 
 API_REQUEST_TEMPLATE = """import cdsapi
 
@@ -70,7 +71,7 @@ class Settings(pydantic_settings.BaseSettings):
 
     allow_cors: bool = True
 
-    default_cache_control: str = "max-age=2"
+    default__control: str = "max-age=2"
     default_vary: str = "PRIVATE-TOKEN, Authorization"
     public_cache_control: str = "public, max-age=60"
 
@@ -90,6 +91,7 @@ class Settings(pydantic_settings.BaseSettings):
     )
 
     download_nodes_config: str = "/etc/retrieve-api/download-nodes.config"
+    rate_limits_config: str = "/etc/retrieve-api/rate-limits.yaml"
 
     @property
     def profiles_api_url(self) -> str:
@@ -103,6 +105,14 @@ class Settings(pydantic_settings.BaseSettings):
                 if download_node := os.path.expandvars(line.rstrip("\n")):
                     download_nodes.append(download_node)
         return random.choice(download_nodes)
+
+    @property
+    def rate_limits(self) -> dict:
+        rate_limits = {"post_process_execution": {"api": ["2/minute"]}}
+        if os.path.exists(self.rate_limits_config):
+            with open(self.rate_limits_config) as fp:
+                rate_limits = yaml.safe_load(fp) or {}
+        return rate_limits
 
 
 def ensure_settings(

@@ -44,6 +44,7 @@ from . import (
     config,
     db_utils,
     exceptions,
+    limits,
     models,
     serializers,
     translators,
@@ -212,7 +213,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Submitted job's status information.
         """
-        request_origin = auth.REQUEST_ORIGIN[auth_info.auth_header[0]]
+        _ = limits.check_rate_limit("post_process_execution", auth_info)
         structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         request_body = execution_content.model_dump()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
@@ -240,7 +241,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 cads_adaptors.exceptions.InvalidRequest,
             ) as exc:
                 raise exceptions.InvalidRequest(detail=str(exc)) from exc
-        costs = auth.verify_cost(request_inputs, adaptor_properties, request_origin)
+        costs = auth.verify_cost(
+            request_inputs, adaptor_properties, auth_info.request_origin
+        )
         required_licences = adaptor.get_licences(request_inputs)
         if auth_info.user_uid != "anonymous":
             accepted_licences = auth.get_accepted_licences(auth_info.auth_header)
@@ -270,7 +273,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             job = cads_broker.database.create_request(
                 session=compute_session,
                 request_uid=job_id,
-                origin=request_origin,
+                origin=auth_info.request_origin,
                 user_uid=auth_info.user_uid,
                 process_id=process_id,
                 portal=dataset.portal,

@@ -153,9 +153,11 @@ def get_auth_info(
     """
     auth_header = get_auth_header(pat, jwt)
     user_uid, user_role = authenticate_user(auth_header, portal_header)
+    request_origin = REQUEST_ORIGIN[auth_header[0]]
     auth_info = models.AuthInfo(
         user_uid=user_uid,
         user_role=user_role,
+        request_origin=request_origin,
         auth_header=auth_header,
         portal_header=portal_header,
     )
