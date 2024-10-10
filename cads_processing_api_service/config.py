@@ -19,9 +19,7 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 
 import os
 import random
-from typing import Annotated
 
-import pydantic
 import pydantic_settings
 import structlog
 
@@ -63,24 +61,22 @@ MISSING_LICENCES_MESSAGE = (
 )
 
 
-def load_download_nodes(v: list[str], info: pydantic.ValidationInfo) -> list[str]:
-    v = []
-    file_path = info.data.get("download_nodes_file")
-    if file_path:
-        try:
-            with open(file_path, "r") as file:
-                for line in file:
-                    if download_node := os.path.expandvars(line.rstrip("\n")):
-                        v.append(download_node)
-        except Exception as e:
-            logger.warning(
-                "Failed to load download nodes from file",
-                file_path=file_path,
-                error=e,
-            )
-    if not v:
-        raise ValueError(f"No download nodes found in file {file_path}")
-    return v
+def load_download_nodes(download_nodes_file: str) -> list[str]:
+    download_nodes = []
+    try:
+        with open(download_nodes_file, "r") as file:
+            for line in file:
+                if download_node := os.path.expandvars(line.rstrip("\n")):
+                    download_nodes.append(download_node)
+    except Exception as e:
+        logger.warning(
+            "Failed to load download nodes from file",
+            file_path=download_nodes_file,
+            error=e,
+        )
+    if not download_nodes:
+        raise ValueError(f"No download nodes found in file {download_nodes_file}")
+    return download_nodes
 
 
 class Settings(pydantic_settings.BaseSettings):
@@ -117,13 +113,11 @@ class Settings(pydantic_settings.BaseSettings):
     )
 
     download_nodes_file: str = "/etc/retrieve-api/download-nodes.config"
-    download_nodes: Annotated[
-        list[str], pydantic.BeforeValidator(load_download_nodes)
-    ] = []
 
     @property
     def download_node(self) -> str:
-        return random.choice(self.download_nodes)
+        download_nodes = load_download_nodes(self.download_nodes_file)
+        return random.choice(download_nodes)
 
 
 settings = Settings()
