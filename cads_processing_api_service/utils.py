@@ -38,6 +38,8 @@ import structlog
 
 from . import config, exceptions, models
 
+SETTINGS = config.settings
+
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
@@ -53,8 +55,8 @@ class JobSortCriterion(str, enum.Enum):
 
 @cachetools.cached(
     cache=cachetools.TTLCache(
-        maxsize=config.ensure_settings().cache_resources_maxsize,
-        ttl=config.ensure_settings().cache_resources_ttl,
+        maxsize=SETTINGS.cache_resources_maxsize,
+        ttl=SETTINGS.cache_resources_ttl,
     ),
     lock=threading.Lock(),
     key=lambda resource_id,
@@ -113,8 +115,8 @@ def lookup_resource_by_id(
 
 @cachetools.cached(
     cache=cachetools.TTLCache(
-        maxsize=config.ensure_settings().cache_resources_maxsize,
-        ttl=config.ensure_settings().cache_resources_ttl,
+        maxsize=SETTINGS.cache_resources_maxsize,
+        ttl=SETTINGS.cache_resources_ttl,
     ),
     key=lambda resource_id, table, properties, session: cachetools.keys.hashkey(
         resource_id, table, properties
@@ -472,7 +474,7 @@ def get_job_from_broker_db(
 
 def update_results_href(local_path: str, download_node: str | None = None) -> str:
     if download_node is None:
-        download_node = config.ensure_settings().download_node
+        download_node = SETTINGS.download_node
     file_path = local_path.split("://", 1)[-1]
     results_href = urllib.parse.urljoin(download_node, file_path)
     return results_href

@@ -20,6 +20,7 @@ import starlette_exporter
 
 from . import config
 
+SETTINGS = config.settings
 CACHEABLE_HTTP_METHODS = ["GET", "HEAD"]
 
 
@@ -39,11 +40,10 @@ class CacheControlMiddleware(starlette.middleware.base.BaseHTTPMiddleware):
             "cache-control" not in response.headers
             and request.method in CACHEABLE_HTTP_METHODS
         ):
-            settings = config.ensure_settings()
-            if settings.default_cache_control:
-                response.headers["cache-control"] = settings.default_cache_control
-            if settings.default_vary:
-                response.headers["vary"] = settings.default_vary
+            if SETTINGS.default_cache_control:
+                response.headers["cache-control"] = SETTINGS.default_cache_control
+            if SETTINGS.default_vary:
+                response.headers["vary"] = SETTINGS.default_vary
         return response
 
 
