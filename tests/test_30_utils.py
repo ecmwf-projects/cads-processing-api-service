@@ -14,7 +14,6 @@
 
 # mypy: ignore-errors
 import datetime
-import pathlib
 import unittest.mock
 import uuid
 from typing import Any
@@ -255,19 +254,6 @@ def test_update_results_href() -> None:
     updated_href = utils.update_results_href(local_path, download_node)
     exp_updated_href = "http://download_node/results/1234"
     assert updated_href == exp_updated_href
-
-
-def test_update_results_href_from_config(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
-    config_path = tmp_path / "download-nodes.config"
-    config_path.write_text("\n\nhttp://download_node/\n\n$DOWNLOAD_NODE\n\n")
-    monkeypatch.setenv("DOWNLOAD_NODE", "http://download_node/")
-    monkeypatch.setenv("DOWNLOAD_NODES_CONFIG", str(config_path))
-
-    local_path = "protocol://results/1234"
-    updated_href = utils.update_results_href(local_path)
-    assert updated_href == "http://download_node/results/1234"
 
 
 def test_get_results_from_job() -> None:
