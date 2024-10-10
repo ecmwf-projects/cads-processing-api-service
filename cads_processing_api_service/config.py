@@ -59,14 +59,12 @@ MISSING_LICENCES_MESSAGE = (
 )
 
 
-general_settings = None
-
-
 class Settings(pydantic_settings.BaseSettings):
     """General settings."""
 
     profiles_service: str = "profiles-api"
     profiles_api_service_port: int = 8000
+    portal_header_name: str = "X-CADS-PORTAL"
 
     allow_cors: bool = True
 
@@ -105,26 +103,4 @@ class Settings(pydantic_settings.BaseSettings):
         return random.choice(download_nodes)
 
 
-def ensure_settings(
-    settings: Settings | None = None,
-) -> Settings:
-    """If `settings` is None, create a new Settings object.
-
-    Parameters
-    ----------
-    settings: an optional Settings object to be set as general settings.
-
-    Returns
-    -------
-    Settings:
-        General settings.
-    """
-    global general_settings
-    if settings and isinstance(settings, pydantic_settings.BaseSettings):
-        general_settings = settings
-    else:
-        general_settings = Settings()
-    return general_settings
-
-
-PORTAL_HEADER_NAME = "X-CADS-PORTAL"
+settings = Settings()
