@@ -63,7 +63,7 @@ MISSING_LICENCES_MESSAGE = (
 )
 
 
-def load_downlaod_nodes(v: list[str], info: pydantic.ValidationInfo) -> list[str]:
+def load_download_nodes(v: list[str], info: pydantic.ValidationInfo) -> list[str]:
     v = []
     file_path = info.data.get("download_nodes_file")
     if file_path:
@@ -118,7 +118,7 @@ class Settings(pydantic_settings.BaseSettings):
 
     download_nodes_file: str = "/etc/retrieve-api/download-nodes.config"
     download_nodes: Annotated[
-        list[str], pydantic.BeforeValidator(load_downlaod_nodes)
+        list[str], pydantic.BeforeValidator(load_download_nodes)
     ] = []
 
     @property
