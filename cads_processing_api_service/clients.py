@@ -192,7 +192,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         execution_content: models.Execute = fastapi.Body(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         portal_header: str | None = fastapi.Header(
-            None, alias=config.PORTAL_HEADER_NAME
+            None, alias=SETTINGS.portal_header_name
         ),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
@@ -323,7 +323,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         back: bool | None = fastapi.Query(None, include_in_schema=False),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         portal_header: str | None = fastapi.Header(
-            None, alias=config.PORTAL_HEADER_NAME
+            None, alias=SETTINGS.portal_header_name
         ),
     ) -> models.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
@@ -439,7 +439,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_id: str = fastapi.Path(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         portal_header: str | None = fastapi.Header(
-            None, alias=config.PORTAL_HEADER_NAME
+            None, alias=SETTINGS.portal_header_name
         ),
         qos: bool = fastapi.Query(False),
         request: bool = fastapi.Query(False),
@@ -562,7 +562,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_id: str = fastapi.Path(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         portal_header: str | None = fastapi.Header(
-            None, alias=config.PORTAL_HEADER_NAME
+            None, alias=SETTINGS.portal_header_name
         ),
     ) -> ogc_api_processes_fastapi.models.Results:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
@@ -615,7 +615,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_id: str = fastapi.Path(...),
         auth_header: tuple[str, str] = fastapi.Depends(auth.get_auth_header),
         portal_header: str | None = fastapi.Header(
-            None, alias=config.PORTAL_HEADER_NAME
+            None, alias=SETTINGS.portal_header_name
         ),
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `DELETE /jobs/{job_id}` endpoint.
