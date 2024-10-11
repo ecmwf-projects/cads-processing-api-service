@@ -102,20 +102,23 @@ class Settings(pydantic_settings.BaseSettings):
 settings = Settings()
 
 
-def validate_download_nodes_file(download_nodes_file: pathlib.Path) -> pathlib.Path:
-    if not download_nodes_file.exists():
-        raise FileNotFoundError(f"Download nodes file not found: {download_nodes_file}")
+def validate_download_nodes_file(download_nodes_file: str) -> pathlib.Path:
+    download_nodes_file_path = pathlib.Path(download_nodes_file)
+    if not download_nodes_file_path.exists():
+        raise FileNotFoundError(
+            f"Download nodes file not found: {download_nodes_file_path}"
+        )
     try:
-        with open(download_nodes_file, "r") as file:
+        with open(download_nodes_file_path, "r") as file:
             lines = file.readlines()
             line_count = len(lines)
             if line_count == 0:
                 raise ValueError("Download nodes file is empty")
     except Exception as e:
         raise ValueError(
-            f"Failed to read download nodes file: {download_nodes_file}"
+            f"Failed to read download nodes file: {download_nodes_file_path}"
         ) from e
-    return download_nodes_file
+    return download_nodes_file_path
 
 
 @functools.lru_cache
@@ -132,7 +135,7 @@ class DownloadNodesSettings(pydantic.BaseModel):
     """Settings for download nodes."""
 
     download_nodes_file: Annotated[
-        pathlib.Path, pydantic.AfterValidator(validate_download_nodes_file)
+        str, pydantic.AfterValidator(validate_download_nodes_file)
     ] = "/etc/retrieve-api/download-nodes.config"
 
     @property
