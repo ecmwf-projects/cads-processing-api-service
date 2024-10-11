@@ -21,6 +21,8 @@ import structlog
 
 from . import config
 
+SETTINGS = config.settings
+
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
@@ -274,9 +276,7 @@ def format_request_value(
         if key is None:
             formatted_request_value = format_list(request_value)
         else:
-            api_request_max_list_length = (
-                config.ensure_settings().api_request_max_list_length
-            )
+            api_request_max_list_length = SETTINGS.api_request_max_list_length
             max_items_per_line = api_request_max_list_length.get(key, 1)
             formatted_request_value = format_list(request_value, max_items_per_line)
     elif isinstance(request_value, str):
@@ -343,6 +343,6 @@ def get_api_request(
     dict[str, str]
         CDS API request.
     """
-    api_request_template = config.ensure_settings().api_request_template
+    api_request_template = SETTINGS.api_request_template
     api_request = format_api_request(api_request_template, process_id, request)
     return {"api_request": api_request}

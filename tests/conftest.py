@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# mypy: ignore-errors
 import os
 
 import pytest
@@ -29,3 +30,13 @@ def dev_env_prof_api_url() -> str:
     api_root_url = os.environ.get("CADS_API_ROOT_URL", "http://localhost:8080/api")
     prof_api_url = f"{api_root_url}/profiles/v1/"
     return prof_api_url
+
+
+@pytest.fixture(scope="session")
+def prepare_env_for_download_nodes(tmp_path_factory) -> None:
+    temp_dir = tmp_path_factory.mktemp("data")
+    temp_file_path = temp_dir / "test-download-nodes.config"
+    # Create and write to the file
+    with open(temp_file_path, "w") as f:
+        f.write("http://test_node")
+    os.environ["DOWNLOAD_NODES_FILE"] = str(temp_file_path)

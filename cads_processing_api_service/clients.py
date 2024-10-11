@@ -52,6 +52,8 @@ from . import (
 )
 from .metrics import handle_download_metrics
 
+SETTINGS = config.settings
+
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
@@ -180,9 +182,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             ),
         }
 
-        response.headers["cache-control"] = (
-            config.ensure_settings().public_cache_control
-        )
+        response.headers["cache-control"] = SETTINGS.public_cache_control
 
         return process_description
 
@@ -253,7 +253,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             )
             job_message = None
         else:
-            job_message = config.ensure_settings().anonymous_licences_message.format(
+            job_message = SETTINGS.anonymous_licences_message.format(
                 licences="; ".join(
                     [
                         f"{licence[0]} (rev: {licence[1]})"
@@ -294,7 +294,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             message = models.DatasetMessage(
                 date=datetime.datetime.now(),
                 severity="WARNING",
-                content=config.ensure_settings().deprecation_warning_message,
+                content=SETTINGS.deprecation_warning_message,
             )
             dataset_messages.append(message)
         status_info = utils.make_status_info(
@@ -406,7 +406,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                             session=catalogue_session,
                         )
                     except ogc_api_processes_fastapi.exceptions.NoSuchProcess:
-                        dataset_title = config.ensure_settings().missing_dataset_title
+                        dataset_title = SETTINGS.missing_dataset_title
                 results = utils.parse_results_from_broker_db(
                     job, session=compute_session
                 )

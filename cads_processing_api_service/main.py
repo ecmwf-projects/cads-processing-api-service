@@ -36,6 +36,8 @@ from . import (
     translators,
 )
 
+SETTINGS = config.settings
+
 
 def add_user_request_flag(
     logger: logging.Logger, method_name: str, event_dict: MutableMapping[str, Any]
@@ -96,7 +98,7 @@ async def initialize_logger(
     return response
 
 
-if config.ensure_settings().allow_cors:
+if SETTINGS.allow_cors:
     app.add_middleware(
         fastapi.middleware.cors.CORSMiddleware,
         allow_origins=["*"],

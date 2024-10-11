@@ -24,6 +24,8 @@ import requests
 
 from . import config, costing, exceptions, models
 
+SETTINGS = config.settings
+
 VERIFICATION_ENDPOINT = {
     "PRIVATE-TOKEN": "/account/verification/pat",
     "Authorization": "/account/verification/oidc",
@@ -67,8 +69,8 @@ def get_auth_header(pat: str | None = None, jwt: str | None = None) -> tuple[str
 
 @cachetools.cached(
     cache=cachetools.TTLCache(
-        maxsize=config.ensure_settings().cache_users_maxsize,
-        ttl=config.ensure_settings().cache_users_ttl,
+        maxsize=SETTINGS.cache_users_maxsize,
+        ttl=SETTINGS.cache_users_ttl,
     ),
 )
 def authenticate_user(
@@ -96,13 +98,12 @@ def authenticate_user(
         registered/authorized user.
     """
     verification_endpoint = VERIFICATION_ENDPOINT[auth_header[0]]
-    settings = config.ensure_settings()
-    request_url = urllib.parse.urljoin(settings.profiles_api_url, verification_endpoint)
+    request_url = urllib.parse.urljoin(SETTINGS.profiles_api_url, verification_endpoint)
     response = requests.post(
         request_url,
         headers={
             auth_header[0]: auth_header[1],
-            config.PORTAL_HEADER_NAME: portal_header,
+            SETTINGS.portal_header_name: portal_header,
         },
     )
     if response.status_code in (
@@ -200,8 +201,7 @@ def get_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
     set[tuple[str, int]]
         Accepted licences.
     """
-    settings = config.ensure_settings()
-    request_url = urllib.parse.urljoin(settings.profiles_api_url, "account/licences")
+    request_url = urllib.parse.urljoin(SETTINGS.profiles_api_url, "account/licences")
     response = requests.get(request_url, headers={auth_header[0]: auth_header[1]})
     if response.status_code in (
         fastapi.status.HTTP_401_UNAUTHORIZED,
@@ -254,10 +254,8 @@ def verify_licences(
         required_licences = set(required_licences)
     missing_licences = required_licences - accepted_licences
     if not len(missing_licences) == 0:
-        missing_licences_message_template = (
-            config.ensure_settings().missing_licences_message
-        )
-        dataset_licences_url_template = config.ensure_settings().dataset_licences_url
+        missing_licences_message_template = SETTINGS.missing_licences_message
+        dataset_licences_url_template = SETTINGS.dataset_licences_url
         parsed_api_request_url = urllib.parse.urlparse(api_request_url)
         base_url = f"{parsed_api_request_url.scheme}://{parsed_api_request_url.netloc}"
         dataset_licences_url = dataset_licences_url_template.format(
