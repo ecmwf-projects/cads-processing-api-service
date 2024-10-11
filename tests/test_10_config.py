@@ -16,6 +16,8 @@
 
 import pathlib
 
+import pytest
+
 from cads_processing_api_service import config
 
 
@@ -24,10 +26,19 @@ def test_load_download_nodes(tmp_path: pathlib.Path) -> None:
     download_nodes_file.write_text(
         "http://download_node_1/\n\nhttp://download_node_2/\nhttp://download_node_3/"
     )
-    downolad_nodes = config.load_download_nodes(download_nodes_file)
+    download_nodes = config.load_download_nodes(download_nodes_file)
     exp_download_nodes = [
         "http://download_node_1/",
         "http://download_node_2/",
         "http://download_node_3/",
     ]
-    assert downolad_nodes == exp_download_nodes
+    assert download_nodes == exp_download_nodes
+
+    not_existing_download_nodes_file = tmp_path / "not-existing-download-nodes.config"
+    with pytest.raises(FileNotFoundError):
+        download_nodes = config.load_download_nodes(not_existing_download_nodes_file)
+
+    empty_download_nodes_file = tmp_path / "empty-download-nodes.config"
+    empty_download_nodes_file.write_text("")
+    with pytest.raises(ValueError):
+        download_nodes = config.load_download_nodes(empty_download_nodes_file)
