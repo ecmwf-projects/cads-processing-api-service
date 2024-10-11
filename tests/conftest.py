@@ -13,17 +13,8 @@
 # limitations under the License.
 
 import os
-import pathlib
-import tempfile
 
 import pytest
-
-
-def pytest_sessionstart(session):
-    temp_dir = pathlib.Path(tempfile.mkdtemp())
-    download_nodes_file = temp_dir / "test-download-nodes.config"
-    download_nodes_file.write_text("http://download_node_1/")
-    os.environ["DOWNLOAD_NODES_FILE"] = str(download_nodes_file)
 
 
 @pytest.fixture
