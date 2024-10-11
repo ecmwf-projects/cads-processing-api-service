@@ -510,7 +510,7 @@ def get_results_from_job(
                 detail=f"results of job {job_id} expired"
             )
         asset_value["href"] = update_results_href(
-            asset_value["file:local_path"], SETTINGS.download_node
+            asset_value["file:local_path"], config.DownloadNodesSettings().download_node
         )
         results = {"asset": {"value": asset_value}}
     elif job_status == "failed":
