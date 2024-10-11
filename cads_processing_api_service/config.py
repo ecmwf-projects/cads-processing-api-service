@@ -131,7 +131,7 @@ def load_download_nodes(download_nodes_file: pathlib.Path) -> list[str]:
     return download_nodes
 
 
-class DownloadNodesSettings(pydantic.BaseModel):
+class DownloadNodesSettings(pydantic_settings.BaseSettings):
     """Settings for download nodes."""
 
     download_nodes_file: Annotated[
