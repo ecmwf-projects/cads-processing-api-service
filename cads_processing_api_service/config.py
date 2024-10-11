@@ -19,8 +19,11 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 
 import functools
 import os
+import pathlib
 import random
+from typing import Annotated
 
+import pydantic
 import pydantic_settings
 import structlog
 
@@ -63,8 +66,10 @@ MISSING_LICENCES_MESSAGE = (
 
 
 @functools.lru_cache
-def load_download_nodes(download_nodes_file: str) -> list[str]:
+def load_download_nodes(download_nodes_file: pathlib.Path) -> list[str]:
     download_nodes = []
+    if not download_nodes_file.exists():
+        raise FileNotFoundError(f"Download nodes file not found: {download_nodes_file}")
     try:
         with open(download_nodes_file, "r") as file:
             for line in file:
@@ -114,7 +119,9 @@ class Settings(pydantic_settings.BaseSettings):
         "{base_url}/datasets/{process_id}?tab=download#manage-licences"
     )
 
-    download_nodes_file: str = "/etc/retrieve-api/download-nodes.config"
+    download_nodes_file: Annotated[
+        pathlib.Path, pydantic.AfterValidator(load_download_nodes)
+    ] = "/etc/retrieve-api/download-nodes.config"
 
     @property
     def download_node(self) -> str:
