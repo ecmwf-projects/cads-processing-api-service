@@ -14,7 +14,6 @@
 
 # mypy: ignore-errors
 import datetime
-import pathlib
 import unittest.mock
 import uuid
 from typing import Any
@@ -257,20 +256,7 @@ def test_update_results_href() -> None:
     assert updated_href == exp_updated_href
 
 
-def test_update_results_href_from_config(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
-    config_path = tmp_path / "download-nodes.config"
-    config_path.write_text("\n\nhttp://download_node/\n\n$DOWNLOAD_NODE\n\n")
-    monkeypatch.setenv("DOWNLOAD_NODE", "http://download_node/")
-    monkeypatch.setenv("DOWNLOAD_NODES_CONFIG", str(config_path))
-
-    local_path = "protocol://results/1234"
-    updated_href = utils.update_results_href(local_path)
-    assert updated_href == "http://download_node/results/1234"
-
-
-def test_get_results_from_job() -> None:
+def test_get_results_from_job(prepare_env_for_download_nodes) -> None:
     mock_session = unittest.mock.Mock(spec=sqlalchemy.orm.Session)
     job = cads_broker.SystemRequest(
         **{
@@ -278,22 +264,23 @@ def test_get_results_from_job() -> None:
             "request_uid": "1234",
             "cache_entry": cacholote.database.CacheEntry(
                 result={
-                    "args": [{"key": "value", "file:local_path": "test_local_path"}]
+                    "args": [
+                        {
+                            "key": "value",
+                            "file:local_path": "protocol://test_local_path",
+                        }
+                    ]
                 }
             ),
         }
     )
-    with unittest.mock.patch(
-        "cads_processing_api_service.utils.update_results_href"
-    ) as mock_update_results_href:
-        mock_update_results_href.return_value = "test_href"
-        results = utils.get_results_from_job(job, session=mock_session)
+    results = utils.get_results_from_job(job, session=mock_session)
     exp_results = {
         "asset": {
             "value": {
                 "key": "value",
-                "file:local_path": "test_local_path",
-                "href": "test_href",
+                "file:local_path": "protocol://test_local_path",
+                "href": "http://test_node/test_local_path",
             }
         }
     }

@@ -17,10 +17,17 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
 import os
+import pathlib
 import random
+from typing import Annotated
 
+import pydantic
 import pydantic_settings
+import structlog
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 API_REQUEST_TEMPLATE = """import cdsapi
 
@@ -51,7 +58,6 @@ DEPRECATION_WARNING_MESSAGE = (
     "If you are using cdsapi, please upgrade to the latest version."
 )
 
-
 MISSING_LICENCES_MESSAGE = (
     "Not all the required licences have been accepted; "
     "please visit {dataset_licences_url} "
@@ -59,24 +65,27 @@ MISSING_LICENCES_MESSAGE = (
 )
 
 
-general_settings = None
-
-
 class Settings(pydantic_settings.BaseSettings):
-    """General settings."""
+    """General API settings."""
 
     profiles_service: str = "profiles-api"
     profiles_api_service_port: int = 8000
+
+    @property
+    def profiles_api_url(self) -> str:
+        return f"http://{self.profiles_service}:{self.profiles_api_service_port}"
 
     allow_cors: bool = True
 
     default_cache_control: str = "max-age=2"
     default_vary: str = "PRIVATE-TOKEN, Authorization"
     public_cache_control: str = "public, max-age=60"
+    portal_header_name: str = "X-CADS-PORTAL"
 
     cache_users_maxsize: int = 2000
     cache_users_ttl: int = 60
     cache_resources_maxsize: int = 1000
+    # cache_resources_ttl: int = 10
     cache_resources_ttl: int = 10
 
     api_request_template: str = API_REQUEST_TEMPLATE
@@ -89,42 +98,47 @@ class Settings(pydantic_settings.BaseSettings):
         "{base_url}/datasets/{process_id}?tab=download#manage-licences"
     )
 
-    download_nodes_config: str = "/etc/retrieve-api/download-nodes.config"
 
-    @property
-    def profiles_api_url(self) -> str:
-        return f"http://{self.profiles_service}:{self.profiles_api_service_port}"
+settings = Settings()
+
+
+def validate_download_nodes_file(download_nodes_file: str) -> pathlib.Path:
+    download_nodes_file_path = pathlib.Path(download_nodes_file)
+    if not download_nodes_file_path.exists():
+        raise FileNotFoundError(
+            f"Download nodes file not found: {download_nodes_file_path}"
+        )
+    try:
+        with open(download_nodes_file_path, "r") as file:
+            lines = file.readlines()
+            line_count = len(lines)
+            if line_count == 0:
+                raise ValueError("Download nodes file is empty")
+    except Exception as e:
+        raise ValueError(
+            f"Failed to read download nodes file: {download_nodes_file_path}"
+        ) from e
+    return download_nodes_file_path
+
+
+@functools.lru_cache
+def load_download_nodes(download_nodes_file: pathlib.Path) -> list[str]:
+    download_nodes = []
+    with open(download_nodes_file, "r") as file:
+        for line in file:
+            if download_node := os.path.expandvars(line.rstrip("\n")):
+                download_nodes.append(download_node)
+    return download_nodes
+
+
+class DownloadNodesSettings(pydantic_settings.BaseSettings):
+    """Settings for download nodes."""
+
+    download_nodes_file: Annotated[
+        str, pydantic.AfterValidator(validate_download_nodes_file)
+    ] = "/etc/retrieve-api/download-nodes.config"
 
     @property
     def download_node(self) -> str:
-        download_nodes = []
-        with open(self.download_nodes_config) as fp:
-            for line in fp:
-                if download_node := os.path.expandvars(line.rstrip("\n")):
-                    download_nodes.append(download_node)
+        download_nodes = load_download_nodes(self.download_nodes_file)
         return random.choice(download_nodes)
-
-
-def ensure_settings(
-    settings: Settings | None = None,
-) -> Settings:
-    """If `settings` is None, create a new Settings object.
-
-    Parameters
-    ----------
-    settings: an optional Settings object to be set as general settings.
-
-    Returns
-    -------
-    Settings:
-        General settings.
-    """
-    global general_settings
-    if settings and isinstance(settings, pydantic_settings.BaseSettings):
-        general_settings = settings
-    else:
-        general_settings = Settings()
-    return general_settings
-
-
-PORTAL_HEADER_NAME = "X-CADS-PORTAL"
