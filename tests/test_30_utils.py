@@ -270,8 +270,11 @@ def test_get_results_from_job() -> None:
         }
     )
     with unittest.mock.patch(
-        "cads_processing_api_service.utils.update_results_href"
+        "cads_processing_api_service.config.load_download_nodes"
+    ) as mock_download_nodes, unittest.mock.patch(
+        "cads_processing_api_service.utils.update_results_href",
     ) as mock_update_results_href:
+        mock_download_nodes.return_value = ["http://download_node/"]
         mock_update_results_href.return_value = "test_href"
         results = utils.get_results_from_job(job, session=mock_session)
     exp_results = {
