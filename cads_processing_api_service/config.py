@@ -65,29 +65,8 @@ MISSING_LICENCES_MESSAGE = (
 )
 
 
-@functools.lru_cache
-def load_download_nodes(download_nodes_file: pathlib.Path) -> list[str]:
-    download_nodes = []
-    if not download_nodes_file.exists():
-        raise FileNotFoundError(f"Download nodes file not found: {download_nodes_file}")
-    try:
-        with open(download_nodes_file, "r") as file:
-            for line in file:
-                if download_node := os.path.expandvars(line.rstrip("\n")):
-                    download_nodes.append(download_node)
-    except Exception as e:
-        logger.warning(
-            "Failed to load download nodes from file",
-            file_path=download_nodes_file,
-            error=e,
-        )
-    if not download_nodes:
-        raise ValueError(f"No download nodes found in file {download_nodes_file}")
-    return download_nodes
-
-
 class Settings(pydantic_settings.BaseSettings):
-    """General settings."""
+    """General API settings."""
 
     profiles_service: str = "profiles-api"
     profiles_api_service_port: int = 8000
@@ -119,14 +98,44 @@ class Settings(pydantic_settings.BaseSettings):
         "{base_url}/datasets/{process_id}?tab=download#manage-licences"
     )
 
+
+settings = Settings()
+
+
+def validate_download_nodes_file(download_nodes_file: pathlib.Path) -> pathlib.Path:
+    if not download_nodes_file.exists():
+        raise FileNotFoundError(f"Download nodes file not found: {download_nodes_file}")
+    try:
+        with open(download_nodes_file, "r") as file:
+            lines = file.readlines()
+            line_count = len(lines)
+            if line_count == 0:
+                raise ValueError("Download nodes file is empty")
+    except Exception as e:
+        raise ValueError(
+            f"Failed to read download nodes file: {download_nodes_file}"
+        ) from e
+    return download_nodes_file
+
+
+@functools.lru_cache
+def load_download_nodes(download_nodes_file: pathlib.Path) -> list[str]:
+    download_nodes = []
+    with open(download_nodes_file, "r") as file:
+        for line in file:
+            if download_node := os.path.expandvars(line.rstrip("\n")):
+                download_nodes.append(download_node)
+    return download_nodes
+
+
+class DownloadNodesSettings(pydantic.BaseModel):
+    """Settings for download nodes."""
+
     download_nodes_file: Annotated[
-        pathlib.Path, pydantic.AfterValidator(load_download_nodes)
+        pathlib.Path, pydantic.AfterValidator(validate_download_nodes_file)
     ] = "/etc/retrieve-api/download-nodes.config"
 
     @property
     def download_node(self) -> str:
         download_nodes = load_download_nodes(self.download_nodes_file)
         return random.choice(download_nodes)
-
-
-settings = Settings()
