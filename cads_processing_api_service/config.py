@@ -96,13 +96,13 @@ class Settings(pydantic_settings.BaseSettings):
         "{base_url}/datasets/{process_id}?tab=download#manage-licences"
     )
 
-    rate_limits_config: str = "/etc/retrieve-api/rate-limits.yaml"
+    rate_limits_file: str = "/etc/retrieve-api/rate-limits.yaml"
 
     @property
-    def rate_limits(self) -> dict:
-        rate_limits = {"post_process_execution": {"api": ["2/minute"]}}
-        if os.path.exists(self.rate_limits_config):
-            with open(self.rate_limits_config) as fp:
+    def rate_limits(self) -> dict[str, dict[str, str]]:
+        rate_limits = {}
+        if os.path.exists(self.rate_limits_file):
+            with open(self.rate_limits_file) as fp:
                 rate_limits = yaml.safe_load(fp) or {}
         return rate_limits
 
