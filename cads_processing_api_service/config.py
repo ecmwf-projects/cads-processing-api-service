@@ -23,9 +23,13 @@ import pathlib
 import random
 from typing import Annotated
 
+import limits
 import pydantic
 import pydantic_settings
+import structlog
 import yaml
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 API_REQUEST_TEMPLATE = """import cdsapi
 
@@ -61,6 +65,88 @@ MISSING_LICENCES_MESSAGE = (
     "please visit {dataset_licences_url} "
     "to accept the required licence(s)."
 )
+
+
+def validate_rate_limits(rate_limits: list[str]) -> list[str]:
+    """Validate rate limits configuration."""
+    for rate_limit in rate_limits:
+        limits.parse(rate_limit)
+    return rate_limits
+
+
+class RateLimitsMethodConfig(pydantic.BaseModel):
+    """Rate limits configuration for a specific origin."""
+
+    api: Annotated[list[str], pydantic.AfterValidator(validate_rate_limits)] = (
+        pydantic.Field([])
+    )
+    ui: Annotated[list[str], pydantic.AfterValidator(validate_rate_limits)] = (
+        pydantic.Field([])
+    )
+
+
+class RateLimitsRouteConfig(pydantic.BaseModel):
+    post: RateLimitsMethodConfig = pydantic.Field(RateLimitsMethodConfig())
+    get: RateLimitsMethodConfig = pydantic.Field(RateLimitsMethodConfig())
+    delete: RateLimitsMethodConfig = pydantic.Field(RateLimitsMethodConfig())
+
+
+class RateLimitsConfig(pydantic.BaseModel):
+    default: RateLimitsRouteConfig = pydantic.Field(
+        RateLimitsRouteConfig(), validate_default=True
+    )
+    process_execution: RateLimitsRouteConfig = pydantic.Field(
+        RateLimitsRouteConfig(),
+        alias="processes/{process_id}/execution",
+        validate_default=True,
+    )
+    jobs: RateLimitsRouteConfig = pydantic.Field(
+        RateLimitsRouteConfig(), alias="jobs", validate_default=True
+    )
+    job: RateLimitsRouteConfig = pydantic.Field(
+        RateLimitsRouteConfig(), alias="jobs/{job_id}", validate_default=True
+    )
+    job_results: RateLimitsRouteConfig = pydantic.Field(
+        RateLimitsRouteConfig(), alias="jobs/{job_id}/results", validate_default=True
+    )
+
+    @pydantic.model_validator(mode="after")
+    def populate_fields_with_default(self) -> None:
+        default = self.default
+        if default is RateLimitsRouteConfig():
+            return
+        routes = self.model_fields
+        for route in routes:
+            if route == "default":
+                continue
+            route_config: RateLimitsRouteConfig = getattr(self, route)
+            for method in route_config.model_fields:
+                method_config: RateLimitsMethodConfig = getattr(route_config, method)
+                for origin in method_config.model_fields:
+                    set_value = getattr(getattr(getattr(self, route), method), origin)
+                    if not set_value:
+                        default_value = getattr(getattr(default, method), origin)
+                        setattr(getattr(route_config, method), origin, default_value)
+        return
+
+
+def validate_rate_limits_file(rate_limits_file: str) -> pathlib.Path:
+    rate_limits_file_path = pathlib.Path(rate_limits_file)
+    if not rate_limits_file_path.exists():
+        logger.warning("Rate limits file not found", rate_limits_file=rate_limits_file)
+        return rate_limits_file_path
+    with open(rate_limits_file_path, "r") as file:
+        try:
+            rate_limits = yaml.safe_load(file) or {}
+            RateLimitsConfig(**rate_limits)
+        except pydantic.ValidationError as e:
+            logger.error(
+                "Failed to validate rate limits configuration",
+                rate_limits_file=rate_limits_file,
+                error=str(e),
+            )
+            raise
+    return rate_limits_file_path
 
 
 class Settings(pydantic_settings.BaseSettings):
