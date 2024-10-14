@@ -20,3 +20,5 @@ dependencies:
 - starlette-exporter
 - structlog
 - uvicorn>=0.26.0
+- pip:
+  - limits
