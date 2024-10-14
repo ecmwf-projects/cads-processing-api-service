@@ -66,6 +66,9 @@ MISSING_LICENCES_MESSAGE = (
     "to accept the required licence(s)."
 )
 
+RATE_LIMITS_STORAGE = limits.storage.MemoryStorage()
+RATE_LIMITS_LIMITER = limits.strategies.FixedWindowRateLimiter(RATE_LIMITS_STORAGE)
+
 
 def validate_rate_limits(rate_limits: list[str]) -> list[str]:
     """Validate rate limits configuration."""

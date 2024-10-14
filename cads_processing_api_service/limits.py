@@ -23,8 +23,8 @@ SETTINGS = config.settings
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-storage = limits.storage.MemoryStorage()
-limiter = limits.strategies.FixedWindowRateLimiter(storage)
+storage = config.RATE_LIMITS_STORAGE
+limiter = config.RATE_LIMITS_LIMITER
 
 
 def check_rate_limit(method: str, auth_info: models.AuthInfo) -> None:
