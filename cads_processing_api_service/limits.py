@@ -27,21 +27,20 @@ storage = config.RATE_LIMITS_STORAGE
 limiter = config.RATE_LIMITS_LIMITER
 
 
-def check_rate_limit(method: str, auth_info: models.AuthInfo) -> None:
-    rate_limits_config: dict[str, list[str]] = SETTINGS.rate_limits.get(method, {})
-    rate_limit_ids: list[str] = rate_limits_config.get(auth_info.request_origin, [])
-    rate_limits = [limits.parse(rate_limit_id) for rate_limit_id in rate_limit_ids]
+def check_rate_limits_for_user(
+    user_uid: str, rate_limits: limits.RateLimitItem
+) -> None:
     rate_limits_exceeded = [
         rate_limit
         for rate_limit in rate_limits
-        if not limiter.hit(rate_limit, auth_info.user_uid)
+        if not limiter.hit(rate_limit, user_uid)
     ]
     if rate_limits_exceeded:
         rate_limiters_reset_time = [
-            limiter.get_window_stats(rate_limit, auth_info.user_uid).reset_time
+            limiter.get_window_stats(rate_limit, user_uid).reset_time
             for rate_limit in rate_limits_exceeded
         ]
-        expiry = storage.get_expiry(auth_info.user_uid)
+        expiry = storage.get_expiry(user_uid)
         time_to_wait = max(
             [reset_time - expiry for reset_time in rate_limiters_reset_time]
         )
@@ -49,3 +48,17 @@ def check_rate_limit(method: str, auth_info: models.AuthInfo) -> None:
             detail=f"Rate limit exceeded. Please wait {time_to_wait} seconds.",
             retry_after=time_to_wait,
         )
+    return None
+
+
+def check_rate_limits(
+    method_rate_limits: config.RateLimitsMethodConfig,
+    auth_info: models.AuthInfo,
+) -> None:
+    """Check if the rate limits are exceeded."""
+    user_uid = auth_info.user_uid
+    request_origin = auth_info.request_origin
+    rate_limit_ids = getattr(method_rate_limits, request_origin)
+    rate_limits = [limits.parse(rate_limit_id) for rate_limit_id in rate_limit_ids]
+    check_rate_limits_for_user(user_uid, request_origin, rate_limits)
+    return None

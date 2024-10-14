@@ -213,7 +213,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Submitted job's status information.
         """
-        _ = limits.check_rate_limit("post_process_execution", auth_info)
+        _ = limits.check_rate_limits(
+            SETTINGS.rate_limits.process_execution.post,
+            auth_info,
+        )
         structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         request_body = execution_content.model_dump()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
