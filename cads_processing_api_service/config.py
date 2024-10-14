@@ -162,7 +162,7 @@ class Settings(pydantic_settings.BaseSettings):
 
     allow_cors: bool = True
 
-    default__control: str = "max-age=2"
+    default_cache_control: str = "max-age=2"
     default_vary: str = "PRIVATE-TOKEN, Authorization"
     public_cache_control: str = "public, max-age=60"
     portal_header_name: str = "X-CADS-PORTAL"
