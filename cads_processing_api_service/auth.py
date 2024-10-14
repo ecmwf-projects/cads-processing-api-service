@@ -75,7 +75,7 @@ def get_auth_header(pat: str | None = None, jwt: str | None = None) -> tuple[str
 )
 def authenticate_user(
     auth_header: tuple[str, str], portal_header: str | None = None
-) -> tuple[str | None, str | None]:
+) -> tuple[str, str | None]:
     """Verify user authentication.
 
     Verify if the provided authentication header corresponds to a registered user.
@@ -88,7 +88,7 @@ def authenticate_user(
 
     Returns
     -------
-    tuple[str, str] | None
+    tuple[str, str | None]
         User identifier and role.
 
     Raises
@@ -116,8 +116,8 @@ def authenticate_user(
             detail="operation not allowed",
         )
     response.raise_for_status()
-    user: dict[str, Any] = response.json()
-    user_uid: str | None = user.get("sub", None)
+    user: dict[str, str] = response.json()
+    user_uid: str = user["sub"]
     user_role: str | None = user.get("role", None)
     return user_uid, user_role
 

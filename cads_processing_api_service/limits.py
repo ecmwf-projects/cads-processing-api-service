@@ -28,7 +28,7 @@ limiter = config.RATE_LIMITS_LIMITER
 
 
 def check_rate_limits_for_user(
-    user_uid: str, rate_limits: limits.RateLimitItem
+    user_uid: str, rate_limits: list[limits.RateLimitItem]
 ) -> None:
     rate_limits_exceeded = [
         rate_limit
