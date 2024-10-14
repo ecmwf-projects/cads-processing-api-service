@@ -354,8 +354,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             List of jobs status information.
         """
-        user_uid, _ = auth.authenticate_user(
-            auth_info.auth_header, auth_info.portal_header
+        _ = limits.check_rate_limits(
+            SETTINGS.rate_limits.jobs.get,
+            auth_info,
         )
         portals = (
             [p.strip() for p in auth_info.portal_header.split(",")]
@@ -365,7 +366,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_filters = {
             "process_id": processID,
             "status": status,
-            "user_uid": [user_uid],
+            "user_uid": [auth_info.user_uid],
             "portal": portals,
         }
         sort_key, sort_dir = utils.parse_sortby(sortby.name)
@@ -472,6 +473,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Job status information.
         """
+        _ = limits.check_rate_limits(
+            SETTINGS.rate_limits.job.get,
+            auth_info,
+        )
         portals = (
             [p.strip() for p in auth_info.portal_header.split(",")]
             if auth_info.portal_header
@@ -577,6 +582,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.Results
             Job results.
         """
+        _ = limits.check_rate_limits(
+            SETTINGS.rate_limits.job_results.get,
+            auth_info,
+        )
         structlog.contextvars.bind_contextvars(
             job_id=job_id, user_uid=auth_info.user_uid
         )
@@ -627,6 +636,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.StatusInfo
             Job status information
         """
+        _ = limits.check_rate_limits(
+            SETTINGS.rate_limits.job.delete,
+            auth_info,
+        )
         structlog.contextvars.bind_contextvars(
             job_id=job_id, user_id=auth_info.user_uid
         )
