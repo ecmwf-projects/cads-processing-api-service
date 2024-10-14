@@ -16,7 +16,9 @@
 
 import pathlib
 
+import pydantic
 import pytest
+import yaml
 
 from cads_processing_api_service import config
 
@@ -44,3 +46,70 @@ def test_load_download_nodes(tmp_path: pathlib.Path) -> None:
         "http://download_node_3/",
     ]
     assert download_nodes == exp_download_nodes
+
+
+def test_validate_rate_limits_file(tmp_path: pathlib.Path) -> None:
+    invalid_rate_limits_file = tmp_path / "invalid-rate-limits.yaml"
+    invalid_rate_limits = {
+        "default": {"post": {"api": ["invalid_rate_limit"], "ui": ["2/second"]}},
+    }
+    with open(invalid_rate_limits_file, "w") as file:
+        yaml.dump(invalid_rate_limits, file)
+    with pytest.raises(pydantic.ValidationError):
+        _ = config.validate_rate_limits_file(invalid_rate_limits_file)
+
+    invalid_rate_limits_file = tmp_path / "invalid-rate-limits.yaml"
+    invalid_rate_limits = {
+        "default": {"post": {"api": "invalid_rate_limit"}},
+    }
+    with open(invalid_rate_limits_file, "w") as file:
+        yaml.dump(invalid_rate_limits, file)
+    with pytest.raises(pydantic.ValidationError):
+        _ = config.validate_rate_limits_file(invalid_rate_limits_file)
+
+
+def test_validate_rate_limits() -> None:
+    rate_limits = ["1/second", "10/minute"]
+    config.validate_rate_limits(rate_limits)
+
+    rate_limits = ["not_valid_limit"]
+    with pytest.raises(ValueError):
+        config.validate_rate_limits(rate_limits)
+
+
+def test_rate_limits_config_populate_with_default() -> None:
+    rate_limits_config = config.RateLimitsConfig(
+        **{
+            "default": {
+                "post": {"api": ["1/second"], "ui": ["2/second"]},
+                "get": {"api": ["2/second"]},
+            },
+            "processes/{process_id}/execution": {"post": {"api": ["1/minute"]}},
+        }
+    )
+    exp_populated_rate_limits_config = {
+        "default": {
+            "post": {"api": ["1/second"], "ui": ["2/second"]},
+            "get": {"api": ["2/second"]},
+        },
+        "process_execution": {
+            "post": {"api": ["1/minute"], "ui": ["2/second"]},
+            "get": {"api": ["2/second"]},
+        },
+        "jobs": {
+            "post": {"api": ["1/second"], "ui": ["2/second"]},
+            "get": {"api": ["2/second"]},
+        },
+        "job": {
+            "post": {"api": ["1/second"], "ui": ["2/second"]},
+            "get": {"api": ["2/second"]},
+        },
+        "job_results": {
+            "post": {"api": ["1/second"], "ui": ["2/second"]},
+            "get": {"api": ["2/second"]},
+        },
+    }
+    assert (
+        rate_limits_config.model_dump(exclude_defaults=True)
+        == exp_populated_rate_limits_config
+    )
