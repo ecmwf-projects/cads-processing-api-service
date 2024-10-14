@@ -60,5 +60,5 @@ def check_rate_limits(
     request_origin = auth_info.request_origin
     rate_limit_ids = getattr(method_rate_limits, request_origin)
     rate_limits = [limits.parse(rate_limit_id) for rate_limit_id in rate_limit_ids]
-    check_rate_limits_for_user(user_uid, request_origin, rate_limits)
+    check_rate_limits_for_user(user_uid, rate_limits)
     return None
