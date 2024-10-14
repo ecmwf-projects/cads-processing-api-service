@@ -130,22 +130,20 @@ class RateLimitsConfig(pydantic.BaseModel):
         return
 
 
+def load_rate_limits(rate_limits_file: pathlib.Path) -> RateLimitsConfig:
+    rate_limits = {}
+    if os.path.exists(rate_limits_file):
+        with open(rate_limits_file, "r") as file:
+            rate_limits = yaml.safe_load(file)
+    return RateLimitsConfig(**rate_limits)
+
+
 def validate_rate_limits_file(rate_limits_file: str) -> pathlib.Path:
     rate_limits_file_path = pathlib.Path(rate_limits_file)
     if not rate_limits_file_path.exists():
         logger.warning("Rate limits file not found", rate_limits_file=rate_limits_file)
         return rate_limits_file_path
-    with open(rate_limits_file_path, "r") as file:
-        try:
-            rate_limits = yaml.safe_load(file) or {}
-            RateLimitsConfig(**rate_limits)
-        except pydantic.ValidationError as e:
-            logger.error(
-                "Failed to validate rate limits configuration",
-                rate_limits_file=rate_limits_file,
-                error=str(e),
-            )
-            raise
+    _ = load_rate_limits(rate_limits_file_path)
     return rate_limits_file_path
 
 
@@ -182,14 +180,13 @@ class Settings(pydantic_settings.BaseSettings):
         "{base_url}/datasets/{process_id}?tab=download#manage-licences"
     )
 
-    rate_limits_file: str = "/etc/retrieve-api/rate-limits.yaml"
+    rate_limits_file: Annotated[
+        str, pydantic.AfterValidator(validate_rate_limits_file)
+    ] = "/etc/retrieve-api/rate-limits.yaml"
 
     @property
-    def rate_limits(self) -> dict[str, dict[str, str]]:
-        rate_limits = {}
-        if os.path.exists(self.rate_limits_file):
-            with open(self.rate_limits_file) as fp:
-                rate_limits = yaml.safe_load(fp) or {}
+    def rate_limits(self) -> RateLimitsConfig:
+        rate_limits = load_rate_limits(self.rate_limits_file)
         return rate_limits
 
 
