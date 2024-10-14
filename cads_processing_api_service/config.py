@@ -81,39 +81,41 @@ class RateLimitsMethodConfig(pydantic.BaseModel):
     """Rate limits configuration for a specific origin."""
 
     api: Annotated[list[str], pydantic.AfterValidator(validate_rate_limits)] = (
-        pydantic.Field([])
+        pydantic.Field(default=[])
     )
     ui: Annotated[list[str], pydantic.AfterValidator(validate_rate_limits)] = (
-        pydantic.Field([])
+        pydantic.Field(default=[])
     )
 
 
 class RateLimitsRouteConfig(pydantic.BaseModel):
-    post: RateLimitsMethodConfig = pydantic.Field(RateLimitsMethodConfig())
-    get: RateLimitsMethodConfig = pydantic.Field(RateLimitsMethodConfig())
-    delete: RateLimitsMethodConfig = pydantic.Field(RateLimitsMethodConfig())
+    post: RateLimitsMethodConfig = pydantic.Field(default=RateLimitsMethodConfig())
+    get: RateLimitsMethodConfig = pydantic.Field(default=RateLimitsMethodConfig())
+    delete: RateLimitsMethodConfig = pydantic.Field(default=RateLimitsMethodConfig())
 
 
 class RateLimitsConfig(pydantic.BaseModel):
     default: RateLimitsRouteConfig = pydantic.Field(
-        RateLimitsRouteConfig(), validate_default=True
+        default=RateLimitsRouteConfig(), validate_default=True
     )
     process_execution: RateLimitsRouteConfig = pydantic.Field(
-        RateLimitsRouteConfig(),
+        default=RateLimitsRouteConfig(),
         alias="processes/{process_id}/execution",
         validate_default=True,
     )
     jobs: RateLimitsRouteConfig = pydantic.Field(
-        RateLimitsRouteConfig(), alias="jobs", validate_default=True
+        default=RateLimitsRouteConfig(), alias="jobs", validate_default=True
     )
     job: RateLimitsRouteConfig = pydantic.Field(
-        RateLimitsRouteConfig(), alias="jobs/{job_id}", validate_default=True
+        default=RateLimitsRouteConfig(), alias="jobs/{job_id}", validate_default=True
     )
     job_results: RateLimitsRouteConfig = pydantic.Field(
-        RateLimitsRouteConfig(), alias="jobs/{job_id}/results", validate_default=True
+        default=RateLimitsRouteConfig(),
+        alias="jobs/{job_id}/results",
+        validate_default=True,
     )
 
-    @pydantic.model_validator(mode="after")
+    @pydantic.model_validator(mode="after")  # type: ignore
     def populate_fields_with_default(self) -> None:
         default = self.default
         if default is RateLimitsRouteConfig():
@@ -189,7 +191,7 @@ class Settings(pydantic_settings.BaseSettings):
 
     @property
     def rate_limits(self) -> RateLimitsConfig:
-        rate_limits = load_rate_limits(self.rate_limits_file)
+        rate_limits = load_rate_limits(self.rate_limits_file)  # type: ignore
         return rate_limits
 
 
