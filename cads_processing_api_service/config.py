@@ -202,30 +202,28 @@ settings = Settings()
 
 def validate_download_nodes_file(download_nodes_file: str) -> pathlib.Path:
     download_nodes_file_path = pathlib.Path(download_nodes_file)
-    if not download_nodes_file_path.exists():
-        raise FileNotFoundError(
-            f"Download nodes file not found: {download_nodes_file_path}"
-        )
-    try:
-        with open(download_nodes_file_path, "r") as file:
-            lines = file.readlines()
-            line_count = len(lines)
-            if line_count == 0:
-                raise ValueError("Download nodes file is empty")
-    except Exception as e:
-        raise ValueError(
-            f"Failed to read download nodes file: {download_nodes_file_path}"
-        ) from e
+    _ = load_download_nodes(download_nodes_file_path)
     return download_nodes_file_path
 
 
 @functools.lru_cache
 def load_download_nodes(download_nodes_file: pathlib.Path) -> list[str]:
     download_nodes = []
-    with open(download_nodes_file, "r") as file:
-        for line in file:
-            if download_node := os.path.expandvars(line.rstrip("\n")):
-                download_nodes.append(download_node)
+    if not download_nodes_file.exists():
+        raise FileNotFoundError(f"Download nodes file not found: {download_nodes_file}")
+    try:
+        with open(download_nodes_file, "r") as file:
+            for line in file:
+                if download_node := os.path.expandvars(line.rstrip("\n")):
+                    download_nodes.append(download_node)
+    except Exception as e:
+        raise ValueError(
+            f"Failed to read download nodes file: {download_nodes_file}"
+        ) from e
+    if not download_nodes:
+        raise ValueError(
+            f"No download nodes found in download nodes file: {download_nodes_file}"
+        )
     return download_nodes
 
 
