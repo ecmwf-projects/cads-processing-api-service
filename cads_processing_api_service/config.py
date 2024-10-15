@@ -188,11 +188,13 @@ class Settings(pydantic_settings.BaseSettings):
     rate_limits_file: Annotated[
         str, pydantic.AfterValidator(validate_rate_limits_file)
     ] = "/etc/retrieve-api/rate-limits.yaml"
+    rate_limits: RateLimitsConfig = pydantic.Field(default=RateLimitsConfig())
 
-    @property
-    def rate_limits(self) -> RateLimitsConfig:
-        rate_limits = load_rate_limits(self.rate_limits_file)  # type: ignore
-        return rate_limits
+    @pydantic.model_validator(mode="after")  # type: ignore
+    def load_rate_limits(self) -> None:
+        self.rate_limits: RateLimitsConfig = load_rate_limits(
+            pathlib.Path(self.rate_limits_file)
+        )
 
 
 settings = Settings()
