@@ -67,7 +67,7 @@ def test_validate_rate_limits() -> None:
 
 
 def test_load_rate_limits(tmp_path: pathlib.Path) -> None:
-    rate_limits_file = tmp_path / "rate-limits.yaml"
+    rate_limits_file = str(tmp_path / "rate-limits.yaml")
     rate_limits = {
         "processes/{process_id}/execution": {
             "post": {"api": ["1/second"], "ui": ["2/second"]}
@@ -78,7 +78,7 @@ def test_load_rate_limits(tmp_path: pathlib.Path) -> None:
     loaded_rate_limits = config.load_rate_limits(rate_limits_file)
     assert loaded_rate_limits == config.RateLimitsConfig(**rate_limits)
 
-    rate_limits_file = tmp_path / "not-found-rate-limits.yaml"
+    rate_limits_file = str(tmp_path / "not-found-rate-limits.yaml")
     loaded_rate_limits = config.load_rate_limits(rate_limits_file)
     assert loaded_rate_limits == config.RateLimitsConfig()
 

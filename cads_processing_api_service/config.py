@@ -189,9 +189,7 @@ class Settings(pydantic_settings.BaseSettings):
 
     @pydantic.model_validator(mode="after")  # type: ignore
     def load_rate_limits(self) -> pydantic_settings.BaseSettings:
-        self.rate_limits: RateLimitsConfig = load_rate_limits(
-            pathlib.Path(self.rate_limits_file)
-        )
+        self.rate_limits: RateLimitsConfig = load_rate_limits(self.rate_limits_file)
         return self
 
 
@@ -207,17 +205,10 @@ def validate_download_nodes_file(download_nodes_file: str) -> pathlib.Path:
 @functools.lru_cache
 def load_download_nodes(download_nodes_file: pathlib.Path) -> list[str]:
     download_nodes = []
-    if not download_nodes_file.exists():
-        raise FileNotFoundError(f"Download nodes file not found: {download_nodes_file}")
-    try:
-        with open(download_nodes_file, "r") as file:
-            for line in file:
-                if download_node := os.path.expandvars(line.rstrip("\n")):
-                    download_nodes.append(download_node)
-    except Exception as e:
-        raise ValueError(
-            f"Failed to read download nodes file: {download_nodes_file}"
-        ) from e
+    with open(download_nodes_file, "r") as file:
+        for line in file:
+            if download_node := os.path.expandvars(line.rstrip("\n")):
+                download_nodes.append(download_node)
     if not download_nodes:
         raise ValueError(
             f"No download nodes found in download nodes file: {download_nodes_file}"
