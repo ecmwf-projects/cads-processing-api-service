@@ -152,15 +152,6 @@ def load_rate_limits(rate_limits_file: str) -> RateLimitsConfig:
     return rate_limits
 
 
-def validate_rate_limits_file(rate_limits_file: str) -> pathlib.Path:
-    rate_limits_file_path = pathlib.Path(rate_limits_file)
-    if not rate_limits_file_path.exists():
-        logger.warning("Rate limits file not found", rate_limits_file=rate_limits_file)
-        return rate_limits_file_path
-    _ = load_rate_limits(rate_limits_file_path)
-    return rate_limits_file_path
-
-
 class Settings(pydantic_settings.BaseSettings):
     """General API settings."""
 
