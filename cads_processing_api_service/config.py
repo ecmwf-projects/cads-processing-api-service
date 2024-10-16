@@ -135,12 +135,21 @@ class RateLimitsConfig(pydantic.BaseModel):
         return
 
 
-def load_rate_limits(rate_limits_file: pathlib.Path) -> RateLimitsConfig:
-    rate_limits = {}
-    if os.path.exists(rate_limits_file):
+def load_rate_limits(rate_limits_file: str) -> RateLimitsConfig:
+    rate_limits = RateLimitsConfig()
+    try:
         with open(rate_limits_file, "r") as file:
-            rate_limits = yaml.safe_load(file)
-    return RateLimitsConfig(**rate_limits)
+            loaded_rate_limits = yaml.safe_load(file)
+        rate_limits = RateLimitsConfig(**loaded_rate_limits)
+    except OSError:
+        logger.exception(
+            "Failed to read rate limits file", rate_limits_file=rate_limits_file
+        )
+    except pydantic.ValidationError:
+        logger.exception(
+            "Failed to validate rate limits file", rate_limits_file=rate_limits_file
+        )
+    return rate_limits
 
 
 def validate_rate_limits_file(rate_limits_file: str) -> pathlib.Path:
@@ -172,7 +181,6 @@ class Settings(pydantic_settings.BaseSettings):
     cache_users_maxsize: int = 2000
     cache_users_ttl: int = 60
     cache_resources_maxsize: int = 1000
-    # cache_resources_ttl: int = 10
     cache_resources_ttl: int = 10
 
     api_request_template: str = API_REQUEST_TEMPLATE
@@ -185,9 +193,7 @@ class Settings(pydantic_settings.BaseSettings):
         "{base_url}/datasets/{process_id}?tab=download#manage-licences"
     )
 
-    rate_limits_file: Annotated[
-        str, pydantic.AfterValidator(validate_rate_limits_file)
-    ] = "/etc/retrieve-api/rate-limits.yaml"
+    rate_limits_file: str = "/etc/retrieve-api/rate-limits.yaml"
     rate_limits: RateLimitsConfig = pydantic.Field(default=RateLimitsConfig())
 
     @pydantic.model_validator(mode="after")  # type: ignore

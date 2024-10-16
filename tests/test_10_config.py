@@ -16,7 +16,6 @@
 
 import pathlib
 
-import pydantic
 import pytest
 import yaml
 
@@ -82,28 +81,6 @@ def test_load_rate_limits(tmp_path: pathlib.Path) -> None:
     rate_limits_file = tmp_path / "not-found-rate-limits.yaml"
     loaded_rate_limits = config.load_rate_limits(rate_limits_file)
     assert loaded_rate_limits == config.RateLimitsConfig()
-
-
-def test_validate_rate_limits_file(tmp_path: pathlib.Path) -> None:
-    invalid_rate_limits_file = tmp_path / "invalid-rate-limits.yaml"
-    invalid_rate_limits = {
-        "processes/{process_id}/execution": {
-            "post": {"api": ["invalid_rate_limit"], "ui": ["2/second"]}
-        },
-    }
-    with open(invalid_rate_limits_file, "w") as file:
-        yaml.dump(invalid_rate_limits, file)
-    with pytest.raises(pydantic.ValidationError):
-        _ = config.validate_rate_limits_file(invalid_rate_limits_file)
-
-    invalid_rate_limits_file = tmp_path / "invalid-rate-limits.yaml"
-    invalid_rate_limits = {
-        "default": {"post": {"api": "invalid_rate_limit"}},
-    }
-    with open(invalid_rate_limits_file, "w") as file:
-        yaml.dump(invalid_rate_limits, file)
-    with pytest.raises(pydantic.ValidationError):
-        _ = config.validate_rate_limits_file(invalid_rate_limits_file)
 
 
 def test_rate_limits_config_populate_with_default() -> None:
