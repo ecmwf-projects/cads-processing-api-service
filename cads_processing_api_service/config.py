@@ -191,10 +191,11 @@ class Settings(pydantic_settings.BaseSettings):
     rate_limits: RateLimitsConfig = pydantic.Field(default=RateLimitsConfig())
 
     @pydantic.model_validator(mode="after")  # type: ignore
-    def load_rate_limits(self) -> None:
+    def load_rate_limits(self) -> pydantic_settings.BaseSettings:
         self.rate_limits: RateLimitsConfig = load_rate_limits(
             pathlib.Path(self.rate_limits_file)
         )
+        return self
 
 
 settings = Settings()
