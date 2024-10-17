@@ -34,15 +34,8 @@ VERIFICATION_ENDPOINT = {
 REQUEST_ORIGIN = {"PRIVATE-TOKEN": "api", "Authorization": "ui"}
 
 
-def get_auth_header(
-    pat: str | None = fastapi.Header(
-        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
-    ),
-    jwt: str | None = fastapi.Header(
-        None, description="JSON Web Token", alias="Authorization"
-    ),
-) -> tuple[str, str]:
-    """Get authentication header from the incoming HTTP request.
+def get_auth_header(pat: str | None = None, jwt: str | None = None) -> tuple[str, str]:
+    """Infer authentication header based on authentication tokens.
 
     Parameters
     ----------
@@ -68,7 +61,6 @@ def get_auth_header(
         )
     if pat:
         auth_header = ("PRIVATE-TOKEN", pat)
-
     elif jwt:
         auth_header = ("Authorization", jwt)
 
@@ -83,7 +75,7 @@ def get_auth_header(
 )
 def authenticate_user(
     auth_header: tuple[str, str], portal_header: str | None = None
-) -> tuple[str | None, str | None]:
+) -> tuple[str, str | None]:
     """Verify user authentication.
 
     Verify if the provided authentication header corresponds to a registered user.
@@ -96,7 +88,7 @@ def authenticate_user(
 
     Returns
     -------
-    tuple[str, str] | None
+    tuple[str, str | None]
         User identifier and role.
 
     Raises
@@ -124,10 +116,53 @@ def authenticate_user(
             detail="operation not allowed",
         )
     response.raise_for_status()
-    user: dict[str, Any] = response.json()
-    user_uid: str | None = user.get("sub", None)
+    user: dict[str, str] = response.json()
+    user_uid: str = user["sub"]
     user_role: str | None = user.get("role", None)
     return user_uid, user_role
+
+
+def get_auth_info(
+    pat: str | None = fastapi.Header(
+        None, description="Personal Access Token", alias="PRIVATE-TOKEN"
+    ),
+    jwt: str | None = fastapi.Header(
+        None, description="JSON Web Token", alias="Authorization"
+    ),
+    portal_header: str | None = fastapi.Header(None, alias=SETTINGS.portal_header_name),
+) -> models.AuthInfo | None:
+    """Get authentication information from the incoming HTTP request.
+
+    Parameters
+    ----------
+    pat : str | None, optional
+        Personal Access Token
+    jwt : str | None, optional
+        JSON Web Token
+    portal_header : str | None, optional
+        Portal header
+
+    Returns
+    -------
+    dict[str, str] | None
+        User identifier and role.
+
+    Raises
+    ------
+    exceptions.PermissionDenied
+        Raised if none of the expected authentication headers is provided.
+    """
+    auth_header = get_auth_header(pat, jwt)
+    user_uid, user_role = authenticate_user(auth_header, portal_header)
+    request_origin = REQUEST_ORIGIN[auth_header[0]]
+    auth_info = models.AuthInfo(
+        user_uid=user_uid,
+        user_role=user_role,
+        request_origin=request_origin,
+        auth_header=auth_header,
+        portal_header=portal_header,
+    )
+    return auth_info
 
 
 def verify_permission(user_uid: str, job: cads_broker.SystemRequest) -> None:

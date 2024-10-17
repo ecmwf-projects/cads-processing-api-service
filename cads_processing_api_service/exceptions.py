@@ -55,6 +55,14 @@ class InvalidRequest(ogc_api_processes_fastapi.exceptions.OGCAPIException):
     title: str = "invalid request"
 
 
+@attrs.define
+class RateLimitExceeded(ogc_api_processes_fastapi.exceptions.OGCAPIException):
+    type: str = "rate limit exceeded"
+    status_code: int = fastapi.status.HTTP_429_TOO_MANY_REQUESTS
+    title: str = "rate limit exceeded"
+    retry_after: int = 0
+
+
 def format_exception_content(
     exc: ogc_api_processes_fastapi.exceptions.OGCAPIException,
     request: fastapi.Request | None = None,
@@ -113,6 +121,36 @@ def exception_handler(
     out = fastapi.responses.JSONResponse(
         status_code=exc.status_code,
         content=format_exception_content(exc=exc, request=request),
+    )
+    return out
+
+
+def rate_limit_exceeded_exception_handler(
+    request: fastapi.Request, exc: RateLimitExceeded
+) -> fastapi.responses.JSONResponse:
+    """Handle RateLimitExceeded exception.
+
+    Parameters
+    ----------
+    request : fastapi.Request
+        HTTP request object.
+    exc : RateLimitExceeded
+        Exception to be handled.
+
+    Returns
+    -------
+    fastapi.responses.JSONResponse
+        JSON response.
+    """
+    logger.error(
+        exc.title,
+        exception="".join(traceback.TracebackException.from_exception(exc).format()),
+        url=str(request.url),
+    )
+    out = fastapi.responses.JSONResponse(
+        status_code=exc.status_code,
+        content=format_exception_content(exc=exc, request=request),
+        headers={"Retry-After": str(exc.retry_after)},
     )
     return out
 
@@ -196,6 +234,7 @@ def include_exception_handlers(app: fastapi.FastAPI) -> fastapi.FastAPI:
     app.add_exception_handler(InvalidParameter, exception_handler)  # type: ignore
     app.add_exception_handler(InvalidRequest, exception_handler)  # type: ignore
     app.add_exception_handler(JobResultsExpired, exception_handler)  # type: ignore
+    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_exception_handler)  # type: ignore
     app.add_exception_handler(
         requests.exceptions.ReadTimeout,
         request_readtimeout_handler,  # type: ignore

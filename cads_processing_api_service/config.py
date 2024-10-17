@@ -23,9 +23,11 @@ import pathlib
 import random
 from typing import Annotated
 
+import limits
 import pydantic
 import pydantic_settings
 import structlog
+import yaml
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -64,6 +66,91 @@ MISSING_LICENCES_MESSAGE = (
     "to accept the required licence(s)."
 )
 
+RATE_LIMITS_STORAGE = limits.storage.MemoryStorage()
+RATE_LIMITS_LIMITER = limits.strategies.FixedWindowRateLimiter(RATE_LIMITS_STORAGE)
+
+
+def validate_rate_limits(rate_limits: list[str]) -> list[str]:
+    """Validate rate limits configuration."""
+    for rate_limit in rate_limits:
+        limits.parse(rate_limit)
+    return rate_limits
+
+
+class RateLimitsMethodConfig(pydantic.BaseModel):
+    """Rate limits configuration for a specific origin."""
+
+    api: Annotated[list[str], pydantic.AfterValidator(validate_rate_limits)] = (
+        pydantic.Field(default=[])
+    )
+    ui: Annotated[list[str], pydantic.AfterValidator(validate_rate_limits)] = (
+        pydantic.Field(default=[])
+    )
+
+
+class RateLimitsRouteConfig(pydantic.BaseModel):
+    post: RateLimitsMethodConfig = pydantic.Field(default=RateLimitsMethodConfig())
+    get: RateLimitsMethodConfig = pydantic.Field(default=RateLimitsMethodConfig())
+    delete: RateLimitsMethodConfig = pydantic.Field(default=RateLimitsMethodConfig())
+
+
+class RateLimitsConfig(pydantic.BaseModel):
+    default: RateLimitsRouteConfig = pydantic.Field(
+        default=RateLimitsRouteConfig(), validate_default=True
+    )
+    process_execution: RateLimitsRouteConfig = pydantic.Field(
+        default=RateLimitsRouteConfig(),
+        alias="processes/{process_id}/execution",
+        validate_default=True,
+    )
+    jobs: RateLimitsRouteConfig = pydantic.Field(
+        default=RateLimitsRouteConfig(), alias="jobs", validate_default=True
+    )
+    job: RateLimitsRouteConfig = pydantic.Field(
+        default=RateLimitsRouteConfig(), alias="jobs/{job_id}", validate_default=True
+    )
+    job_results: RateLimitsRouteConfig = pydantic.Field(
+        default=RateLimitsRouteConfig(),
+        alias="jobs/{job_id}/results",
+        validate_default=True,
+    )
+
+    @pydantic.model_validator(mode="after")  # type: ignore
+    def populate_fields_with_default(self) -> None:
+        default = self.default
+        if default is RateLimitsRouteConfig():
+            return
+        routes = self.model_fields
+        for route in routes:
+            if route == "default":
+                continue
+            route_config: RateLimitsRouteConfig = getattr(self, route)
+            for method in route_config.model_fields:
+                method_config: RateLimitsMethodConfig = getattr(route_config, method)
+                for origin in method_config.model_fields:
+                    set_value = getattr(getattr(getattr(self, route), method), origin)
+                    if not set_value:
+                        default_value = getattr(getattr(default, method), origin)
+                        setattr(getattr(route_config, method), origin, default_value)
+        return
+
+
+def load_rate_limits(rate_limits_file: str) -> RateLimitsConfig:
+    rate_limits = RateLimitsConfig()
+    try:
+        with open(rate_limits_file, "r") as file:
+            loaded_rate_limits = yaml.safe_load(file)
+        rate_limits = RateLimitsConfig(**loaded_rate_limits)
+    except OSError:
+        logger.exception(
+            "Failed to read rate limits file", rate_limits_file=rate_limits_file
+        )
+    except pydantic.ValidationError:
+        logger.exception(
+            "Failed to validate rate limits file", rate_limits_file=rate_limits_file
+        )
+    return rate_limits
+
 
 class Settings(pydantic_settings.BaseSettings):
     """General API settings."""
@@ -85,7 +172,6 @@ class Settings(pydantic_settings.BaseSettings):
     cache_users_maxsize: int = 2000
     cache_users_ttl: int = 60
     cache_resources_maxsize: int = 1000
-    # cache_resources_ttl: int = 10
     cache_resources_ttl: int = 10
 
     api_request_template: str = API_REQUEST_TEMPLATE
@@ -98,26 +184,21 @@ class Settings(pydantic_settings.BaseSettings):
         "{base_url}/datasets/{process_id}?tab=download#manage-licences"
     )
 
+    rate_limits_file: str = "/etc/retrieve-api/rate-limits.yaml"
+    rate_limits: RateLimitsConfig = pydantic.Field(default=RateLimitsConfig())
+
+    @pydantic.model_validator(mode="after")  # type: ignore
+    def load_rate_limits(self) -> pydantic_settings.BaseSettings:
+        self.rate_limits: RateLimitsConfig = load_rate_limits(self.rate_limits_file)
+        return self
+
 
 settings = Settings()
 
 
 def validate_download_nodes_file(download_nodes_file: str) -> pathlib.Path:
     download_nodes_file_path = pathlib.Path(download_nodes_file)
-    if not download_nodes_file_path.exists():
-        raise FileNotFoundError(
-            f"Download nodes file not found: {download_nodes_file_path}"
-        )
-    try:
-        with open(download_nodes_file_path, "r") as file:
-            lines = file.readlines()
-            line_count = len(lines)
-            if line_count == 0:
-                raise ValueError("Download nodes file is empty")
-    except Exception as e:
-        raise ValueError(
-            f"Failed to read download nodes file: {download_nodes_file_path}"
-        ) from e
+    _ = load_download_nodes(download_nodes_file_path)
     return download_nodes_file_path
 
 
@@ -128,6 +209,10 @@ def load_download_nodes(download_nodes_file: pathlib.Path) -> list[str]:
         for line in file:
             if download_node := os.path.expandvars(line.rstrip("\n")):
                 download_nodes.append(download_node)
+    if not download_nodes:
+        raise ValueError(
+            f"No download nodes found in download nodes file: {download_nodes_file}"
+        )
     return download_nodes
 
 
