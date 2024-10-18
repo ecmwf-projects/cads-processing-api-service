@@ -100,26 +100,26 @@ class RateLimitsConfig(pydantic.BaseModel):
     )
     process_execution: RateLimitsRouteConfig = pydantic.Field(
         default=RateLimitsRouteConfig(),
-        alias="processes/{process_id}/execution",
+        alias="/processes/{process_id}/execution",
         validate_default=True,
     )
     jobs: RateLimitsRouteConfig = pydantic.Field(
-        default=RateLimitsRouteConfig(), alias="jobs", validate_default=True
+        default=RateLimitsRouteConfig(), alias="/jobs", validate_default=True
     )
     job: RateLimitsRouteConfig = pydantic.Field(
-        default=RateLimitsRouteConfig(), alias="jobs/{job_id}", validate_default=True
+        default=RateLimitsRouteConfig(), alias="/jobs/{job_id}", validate_default=True
     )
     job_results: RateLimitsRouteConfig = pydantic.Field(
         default=RateLimitsRouteConfig(),
-        alias="jobs/{job_id}/results",
+        alias="/jobs/{job_id}/results",
         validate_default=True,
     )
 
     @pydantic.model_validator(mode="after")  # type: ignore
-    def populate_fields_with_default(self) -> None:
+    def populate_fields_with_default(self) -> pydantic.BaseModel:
         default = self.default
         if default is RateLimitsRouteConfig():
-            return
+            return self
         routes = self.model_fields
         for route in routes:
             if route == "default":
@@ -132,23 +132,24 @@ class RateLimitsConfig(pydantic.BaseModel):
                     if not set_value:
                         default_value = getattr(getattr(default, method), origin)
                         setattr(getattr(route_config, method), origin, default_value)
-        return
+        return self
 
 
-def load_rate_limits(rate_limits_file: str) -> RateLimitsConfig:
+def load_rate_limits(rate_limits_file: str | None) -> RateLimitsConfig:
     rate_limits = RateLimitsConfig()
-    try:
-        with open(rate_limits_file, "r") as file:
-            loaded_rate_limits = yaml.safe_load(file)
-        rate_limits = RateLimitsConfig(**loaded_rate_limits)
-    except OSError:
-        logger.exception(
-            "Failed to read rate limits file", rate_limits_file=rate_limits_file
-        )
-    except pydantic.ValidationError:
-        logger.exception(
-            "Failed to validate rate limits file", rate_limits_file=rate_limits_file
-        )
+    if rate_limits_file is not None:
+        try:
+            with open(rate_limits_file, "r") as file:
+                loaded_rate_limits = yaml.safe_load(file)
+            rate_limits = RateLimitsConfig(**loaded_rate_limits)
+        except OSError:
+            logger.exception(
+                "Failed to read rate limits file", rate_limits_file=rate_limits_file
+            )
+        except pydantic.ValidationError:
+            logger.exception(
+                "Failed to validate rate limits file", rate_limits_file=rate_limits_file
+            )
     return rate_limits
 
 
@@ -184,7 +185,7 @@ class Settings(pydantic_settings.BaseSettings):
         "{base_url}/datasets/{process_id}?tab=download#manage-licences"
     )
 
-    rate_limits_file: str = "/etc/retrieve-api/rate-limits.yaml"
+    rate_limits_file: str | None = None
     rate_limits: RateLimitsConfig = pydantic.Field(default=RateLimitsConfig())
 
     @pydantic.model_validator(mode="after")  # type: ignore
