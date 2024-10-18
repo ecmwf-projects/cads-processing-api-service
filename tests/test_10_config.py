@@ -61,15 +61,19 @@ def test_validate_rate_limits() -> None:
     rate_limits = ["1/second", "10/minute"]
     config.validate_rate_limits(rate_limits)
 
-    rate_limits = ["not_valid_limit"]
+    rate_limits = ["invalid_limit"]
     with pytest.raises(ValueError):
         config.validate_rate_limits(rate_limits)
 
 
-def test_load_rate_limits(tmp_path: pathlib.Path) -> None:
+def test_load_rate_limits(tmp_path: pathlib.Path, caplog) -> None:
+    rate_limits_file = None
+    loaded_rate_limits = config.load_rate_limits(rate_limits_file)
+    assert loaded_rate_limits == config.RateLimitsConfig()
+
     rate_limits_file = str(tmp_path / "rate-limits.yaml")
     rate_limits = {
-        "processes/{process_id}/execution": {
+        "/processes/{process_id}/execution": {
             "post": {"api": ["1/second"], "ui": ["2/second"]}
         },
     }
@@ -77,6 +81,15 @@ def test_load_rate_limits(tmp_path: pathlib.Path) -> None:
         yaml.dump(rate_limits, file)
     loaded_rate_limits = config.load_rate_limits(rate_limits_file)
     assert loaded_rate_limits == config.RateLimitsConfig(**rate_limits)
+
+    rate_limits_file = str(tmp_path / "invalid-rate-limits.yaml")
+    rate_limits = {
+        "/processes/{process_id}/execution": {"post": {"api": ["invalid_limit"]}},
+    }
+    with open(rate_limits_file, "w") as file:
+        yaml.dump(rate_limits, file)
+    loaded_rate_limits = config.load_rate_limits(rate_limits_file)
+    assert loaded_rate_limits == config.RateLimitsConfig()
 
     rate_limits_file = str(tmp_path / "not-found-rate-limits.yaml")
     loaded_rate_limits = config.load_rate_limits(rate_limits_file)
@@ -90,7 +103,7 @@ def test_rate_limits_config_populate_with_default() -> None:
                 "post": {"api": ["1/second"], "ui": ["2/second"]},
                 "get": {"api": ["2/second"]},
             },
-            "processes/{process_id}/execution": {"post": {"api": ["1/minute"]}},
+            "/processes/{process_id}/execution": {"post": {"api": ["1/minute"]}},
         }
     )
     exp_populated_rate_limits_config = {
