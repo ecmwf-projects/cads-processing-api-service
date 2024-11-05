@@ -218,11 +218,54 @@ def get_accepted_licences(auth_header: tuple[str, str]) -> set[tuple[str, int]]:
     return accepted_licences
 
 
+def format_missing_licences_message(
+    request_url: str,
+    process_id: str,
+    portal: str | None = None,
+    missing_licences_message_template: str = SETTINGS.missing_licences_message,
+    dataset_licences_url_template: str = SETTINGS.dataset_licences_url,
+) -> str:
+    """Format a message for the user indicating that some licences are missing.
+
+    Parameters
+    ----------
+    request_url : str
+        Request URL.
+    process_id : str
+        Process identifier.
+    portal : str | None, optional
+        Dataset portal identifier.
+    missing_licences_message_template : str, optional
+        Template for the missing licences message.
+    dataset_licences_url_template : str, optional
+        Template for the dataset licences URL.
+
+    Returns
+    -------
+    str
+        Formatted message.
+    """
+    parsed_api_request_url = urllib.parse.urlparse(request_url)
+    if portal is None:
+        portal_netloc = parsed_api_request_url.netloc
+    else:
+        portal_netloc = SETTINGS.portals.get(portal, None)
+    base_url = f"{parsed_api_request_url.scheme}://{portal_netloc}"
+    dataset_licences_url = dataset_licences_url_template.format(
+        base_url=base_url, process_id=process_id
+    )
+    missing_licences_message = missing_licences_message_template.format(
+        dataset_licences_url=dataset_licences_url
+    )
+    return missing_licences_message
+
+
 def verify_licences(
     accepted_licences: set[tuple[str, int]] | list[tuple[str, int]],
     required_licences: set[tuple[str, int]] | list[tuple[str, int]],
-    api_request_url: str,
+    request_url: str,
     process_id: str,
+    dataset_portal: str | None = None,
 ) -> set[tuple[str, int]]:
     """
     Verify if all the licences required for the process submission have been accepted.
@@ -233,10 +276,12 @@ def verify_licences(
         Licences accepted by a user stored in the Extended Profiles database.
     required_licences : set[tuple[str, int]] | list[tuple[str, int]],
         Licences bound to the required process/dataset.
-    api_request_url : str
-        API request URL, required to generate the URL to the dataset licences page.
+    request_url : str
+        Request URL, required to generate the URL to the dataset licences page.
     process_id : str
         Process identifier, required to generate the URL to the dataset licences page.
+    dataset_portal : str | None, optional
+        Dataset portal identifier.
 
     Returns
     -------
@@ -254,15 +299,8 @@ def verify_licences(
         required_licences = set(required_licences)
     missing_licences = required_licences - accepted_licences
     if not len(missing_licences) == 0:
-        missing_licences_message_template = SETTINGS.missing_licences_message
-        dataset_licences_url_template = SETTINGS.dataset_licences_url
-        parsed_api_request_url = urllib.parse.urlparse(api_request_url)
-        base_url = f"{parsed_api_request_url.scheme}://{parsed_api_request_url.netloc}"
-        dataset_licences_url = dataset_licences_url_template.format(
-            base_url=base_url, process_id=process_id
-        )
-        missing_licences_message = missing_licences_message_template.format(
-            dataset_licences_url=dataset_licences_url
+        missing_licences_message = format_missing_licences_message(
+            request_url, process_id, dataset_portal
         )
         raise exceptions.PermissionDenied(
             title="required licences not accepted", detail=missing_licences_message
