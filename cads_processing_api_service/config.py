@@ -155,7 +155,7 @@ def load_rate_limits(rate_limits_file: str | None) -> RateLimitsConfig:
     return rate_limits
 
 
-def load_portals(portals_file: str) -> dict[str, str]:
+def load_portals(portals_file: str | None) -> dict[str, str]:
     portals = {}
     if portals_file is not None:
         try:

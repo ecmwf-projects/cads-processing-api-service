@@ -245,12 +245,12 @@ def format_missing_licences_message(
     str
         Formatted message.
     """
-    parsed_api_request_url = urllib.parse.urlparse(request_url)
-    if portal is None:
-        portal_netloc = parsed_api_request_url.netloc
-    else:
-        portal_netloc = SETTINGS.portals.get(portal, None)
-    base_url = f"{parsed_api_request_url.scheme}://{portal_netloc}"
+    parsed_request_url = urllib.parse.urlparse(request_url)
+    request_netloc = parsed_request_url.netloc
+    portal_netloc = request_netloc
+    if portal is not None:
+        portal_netloc = SETTINGS.portals.get(portal, request_netloc)
+    base_url = f"{parsed_request_url.scheme}://{portal_netloc}"
     dataset_licences_url = dataset_licences_url_template.format(
         base_url=base_url, process_id=process_id
     )
