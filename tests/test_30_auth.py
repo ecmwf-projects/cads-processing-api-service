@@ -22,13 +22,40 @@ import pytest
 from cads_processing_api_service import auth, exceptions, models
 
 
+def test_format_missing_licences_message(mocker) -> None:
+    request_url = "http://base_url/api/v1/processes/process_id/execution"
+    process_id = "test_process_id"
+    missing_licences_message_template = "{dataset_licences_url}"
+    res = auth.format_missing_licences_message(
+        request_url,
+        process_id,
+        missing_licences_message_template=missing_licences_message_template,
+    )
+    exp = "http://base_url/datasets/test_process_id?tab=download#manage-licences"
+    assert res == exp
+
+    request_url = "https://base_url/api/v1/processes/process_id/execution"
+    process_id = "test_process_id"
+    missing_licences_message_template = "{dataset_licences_url}"
+    portal_id = "test_portal_id"
+    mocker.patch(
+        "cads_processing_api_service.auth.SETTINGS.portals",
+        {"test_portal_id": "test_portal_netloc"},
+    )
+    res = auth.format_missing_licences_message(
+        request_url, process_id, portal_id, missing_licences_message_template
+    )
+    exp = "https://test_portal_netloc/datasets/test_process_id?tab=download#manage-licences"
+    assert res == exp
+
+
 def test_verify_licences() -> None:
     accepted_licences = {("licence_1", 1), ("licence_2", 2), ("licence_3", 3)}
     required_licences = {("licence_1", 1), ("licence_2", 2)}
-    api_request_url = "http://base_url/api/v1/processes/process_id/execution"
+    request_url = "http://base_url/api/v1/processes/process_id/execution"
     process_id = "process_id"
     missing_licences = auth.verify_licences(
-        accepted_licences, required_licences, api_request_url, process_id
+        accepted_licences, required_licences, request_url, process_id
     )
     assert len(missing_licences) == 0
 
@@ -36,7 +63,7 @@ def test_verify_licences() -> None:
     required_licences = {("licence_1", 1), ("licence_2", 2)}
     with pytest.raises(exceptions.PermissionDenied):
         missing_licences = auth.verify_licences(
-            accepted_licences, required_licences, api_request_url, process_id
+            accepted_licences, required_licences, request_url, process_id
         )
 
 
