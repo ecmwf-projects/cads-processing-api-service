@@ -35,6 +35,20 @@ def test_format_missing_licences_message(mocker) -> None:
     request_url = "https://base_url/api/v1/processes/process_id/execution"
     process_id = "test_process_id"
     missing_licences_message_template = "{dataset_licences_url}"
+    portal_id = "missing_test_portal_id"
+    mocker.patch(
+        "cads_processing_api_service.auth.SETTINGS.portals",
+        {"test_portal_id": "test_portal_netloc"},
+    )
+    res = auth.format_missing_licences_message(
+        request_url, process_id, portal_id, missing_licences_message_template
+    )
+    exp = "https://base_url/datasets/test_process_id?tab=download#manage-licences"
+    assert res == exp
+
+    request_url = "https://base_url/api/v1/processes/process_id/execution"
+    process_id = "test_process_id"
+    missing_licences_message_template = "{dataset_licences_url}"
     portal_id = "test_portal_id"
     mocker.patch(
         "cads_processing_api_service.auth.SETTINGS.portals",
