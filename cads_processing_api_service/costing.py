@@ -88,6 +88,7 @@ def compute_highest_cost_limit_ratio(
     """
     costs = costing_info.costs
     limits = costing_info.limits
+    min_costs = costing_info.min_costs
     highest_cost_limit_ratio = 0.0
     highest_cost = models.RequestCost()
     for limit_id, limit in limits.items():
@@ -95,7 +96,10 @@ def compute_highest_cost_limit_ratio(
         cost_limit_ratio = cost / limit if limit > 0 else 1.1
         if cost_limit_ratio > highest_cost_limit_ratio:
             highest_cost_limit_ratio = cost_limit_ratio
-            highest_cost = models.RequestCost(cost=cost, limit=limit, id=limit_id)
+            min_cost = min_costs.get(limit_id, 0.0)
+            highest_cost = models.RequestCost(
+                id=limit_id, cost=cost, limit=limit, min_cost=min_cost
+            )
     return highest_cost
 
 
@@ -130,8 +134,12 @@ def compute_costing(
     )
     costing_config: dict[str, Any] = adaptor_properties["config"].get("costing", {})
     limits: dict[str, Any] = costing_config.get("max_costs", {})
+    min_costs: dict[str, Any] = costing_config.get("min_costs", {})
     cost_bar_steps = costing_config.get("cost_bar_steps", None)
     costing_info = models.CostingInfo(
-        costs=costs, limits=limits, cost_bar_steps=cost_bar_steps
+        costs=costs,
+        limits=limits,
+        min_costs=min_costs,
+        cost_bar_steps=cost_bar_steps,
     )
     return costing_info
