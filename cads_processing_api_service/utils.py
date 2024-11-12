@@ -641,14 +641,12 @@ def make_status_info(
         finished=job["finished_at"],
         updated=job["updated_at"],
     )
-    if any(
-        field is not None for field in [request, results, dataset_metadata, qos, log]
-    ):
-        status_info.metadata = models.StatusInfoMetadata(
-            request=request,
-            results=results,
-            datasetMetadata=dataset_metadata,
-            qos=qos,
-            log=log,
-        )
+    status_info.metadata = models.StatusInfoMetadata(
+        origin=job.get("origin", None),
+        request=request,
+        results=results,
+        datasetMetadata=dataset_metadata,
+        qos=qos,
+        log=log,
+    )
     return status_info
