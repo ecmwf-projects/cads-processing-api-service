@@ -252,7 +252,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             accepted_licences = auth.get_accepted_licences(auth_info.auth_header)
             request_url = str(request.url)
             _ = auth.verify_licences(
-                accepted_licences, required_licences, request_url, process_id
+                accepted_licences,
+                required_licences,
+                request_url,
+                process_id,
+                dataset.portal,
             )
             job_message = None
         else:

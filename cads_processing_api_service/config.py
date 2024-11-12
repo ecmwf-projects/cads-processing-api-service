@@ -66,6 +66,8 @@ MISSING_LICENCES_MESSAGE = (
     "to accept the required licence(s)."
 )
 
+DATASET_LICENCES_URL = "{base_url}/datasets/{process_id}?tab=download#manage-licences"
+
 RATE_LIMITS_STORAGE = limits.storage.MemoryStorage()
 RATE_LIMITS_LIMITER = limits.strategies.FixedWindowRateLimiter(RATE_LIMITS_STORAGE)
 
@@ -153,6 +155,18 @@ def load_rate_limits(rate_limits_file: str | None) -> RateLimitsConfig:
     return rate_limits
 
 
+def load_portals(portals_file: str | None) -> dict[str, str]:
+    portals = {}
+    if portals_file is not None:
+        try:
+            with open(portals_file, "r") as file:
+                loaded_portals = yaml.safe_load(file)
+            portals = loaded_portals
+        except OSError:
+            logger.exception("Failed to read portals file", portals_file=portals_file)
+    return portals
+
+
 class Settings(pydantic_settings.BaseSettings):
     """General API settings."""
 
@@ -181,16 +195,22 @@ class Settings(pydantic_settings.BaseSettings):
     anonymous_licences_message: str = ANONYMOUS_LICENCES_MESSAGE
     deprecation_warning_message: str = DEPRECATION_WARNING_MESSAGE
     missing_licences_message: str = MISSING_LICENCES_MESSAGE
-    dataset_licences_url: str = (
-        "{base_url}/datasets/{process_id}?tab=download#manage-licences"
-    )
+    dataset_licences_url: str = DATASET_LICENCES_URL
 
     rate_limits_file: str | None = None
     rate_limits: RateLimitsConfig = pydantic.Field(default=RateLimitsConfig())
 
+    portals_file: str | None = None
+    portals: dict[str, str] = pydantic.Field(default={})
+
     @pydantic.model_validator(mode="after")  # type: ignore
     def load_rate_limits(self) -> pydantic_settings.BaseSettings:
         self.rate_limits: RateLimitsConfig = load_rate_limits(self.rate_limits_file)
+        return self
+
+    @pydantic.model_validator(mode="after")  # type: ignore
+    def load_portals(self) -> pydantic_settings.BaseSettings:
+        self.portals: dict[str, str] = load_portals(self.portals_file)
         return self
 
 
