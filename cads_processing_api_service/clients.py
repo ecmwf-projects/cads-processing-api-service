@@ -301,6 +301,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 content=message.content,
             )
             for message in dataset.messages
+            if message.live
         ]
         url = str(request.url)
         if url.rstrip("/").endswith("execute"):
