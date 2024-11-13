@@ -318,6 +318,7 @@ def test_make_status_info() -> None:
         "finished_at": "2023-01-01T16:20:12.175021",
         "updated_at": "2023-01-01T16:20:12.175021",
         "request_body": {"request": {"product_type": ["reanalysis"]}},
+        "origin": "api",
     }
     status_info = utils.make_status_info(job)
     exp_status_info = models.StatusInfo(
@@ -329,5 +330,6 @@ def test_make_status_info() -> None:
         started=job["started_at"],
         finished=job["finished_at"],
         updated=job["updated_at"],
+        metadata={"origin": "api"},
     )
     assert status_info == exp_status_info
