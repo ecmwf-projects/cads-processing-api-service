@@ -233,7 +233,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 table=self.process_table,
                 session=catalogue_session,
                 load_messages=True,
-                portals=portals,
+                portals=tuple(portals),
             )
         auth.verify_if_disabled(dataset.disabled_reason, auth_info.user_role)
         adaptor_properties = adaptors.get_adaptor_properties(dataset)

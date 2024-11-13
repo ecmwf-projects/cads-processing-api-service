@@ -62,14 +62,15 @@ class JobSortCriterion(str, enum.Enum):
     key=lambda resource_id,
     table,
     session,
-    load_messages=False: cachetools.keys.hashkey(resource_id, table, load_messages),
+    load_messages=False,
+    portals=None: cachetools.keys.hashkey(resource_id, table, load_messages, portals),
 )
 def lookup_resource_by_id(
     resource_id: str,
     table: type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
     load_messages: bool = False,
-    portals: list[str] | None = None,
+    portals: tuple[str] | None = None,
 ) -> cads_catalogue.database.Resource:
     """Look for the resource identified by `id` into the Catalogue database.
 
@@ -83,8 +84,8 @@ def lookup_resource_by_id(
         Catalogue database session.
     load_messages : bool, optional
         If True, load resource messages, by default False.
-    portals: list[str] | None, optional
-        List of portal names, by default None.
+    portals: tuple[str] | None, optional
+        Portals to filter resources by, by default None.
 
     Returns
     -------
