@@ -335,6 +335,4 @@ def test_format_api_request() -> None:
     res_output = translators.format_api_request(
         test_api_request_template, test_process_id, test_request
     )
-    print(res_output)
-    aaaa
     assert res_output == exp_output
