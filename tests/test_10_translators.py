@@ -320,17 +320,21 @@ def test_format_api_request() -> None:
         }
     }
     exp_output = (
-        "import cdsapi\n\n"
-        'dataset = "test_process_id"\n'
+        "import logging\n\n"
+        "import datapi\n\n"
+        'logging.basicConfig(level="INFO")\n\n'
+        'collection_id = "test_process_id"\n'
         "request = {\n"
         '    "variable_1": "value_1",\n'
         '    "variable_2": [\n        "value_1",\n        "value_2"\n    ],\n'
         '    "variable_3": 1\n'
         "}\n\n"
-        "client = cdsapi.Client()\n"
-        "client.retrieve(dataset, request).download()\n"
+        "client = datapi.ApiClient()\n"
+        "client.retrieve(collection_id, **request)\n"
     )
     res_output = translators.format_api_request(
         test_api_request_template, test_process_id, test_request
     )
+    print(res_output)
+    aaaa
     assert res_output == exp_output
