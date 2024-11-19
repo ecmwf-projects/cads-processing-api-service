@@ -92,14 +92,15 @@ def compute_highest_cost_limit_ratio(
     highest_cost_limit_ratio = 0.0
     highest_cost = models.RequestCost()
     for limit_id, limit in limits.items():
-        cost = costs.get(limit_id, 0.0)
-        cost_limit_ratio = cost / limit if limit > 0 else 1.1
-        if cost_limit_ratio > highest_cost_limit_ratio:
-            highest_cost_limit_ratio = cost_limit_ratio
-            min_cost = min_costs.get(limit_id, 0.0)
-            highest_cost = models.RequestCost(
-                id=limit_id, cost=cost, limit=limit, min_cost=min_cost
-            )
+        cost = costs.get(limit_id, None)
+        if cost is not None:
+            cost_limit_ratio = cost / limit if limit > 0 else 1.1
+            if cost_limit_ratio > highest_cost_limit_ratio:
+                highest_cost_limit_ratio = cost_limit_ratio
+                min_cost = min_costs.get(limit_id, None)
+                highest_cost = models.RequestCost(
+                    id=limit_id, cost=cost, limit=limit, min_cost=min_cost
+                )
     return highest_cost
 
 

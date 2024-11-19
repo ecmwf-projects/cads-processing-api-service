@@ -85,9 +85,9 @@ class CostingInfo(pydantic.BaseModel):
 
 class RequestCost(pydantic.BaseModel):
     id: str | None = None
-    cost: float = 0.0
-    limit: float = 1.0
-    min_cost: float = 0.0
+    cost: float | None = None
+    limit: float | None = None
+    min_cost: float | None = None
     cost_bar_steps: list[int] | None = None
 
 
