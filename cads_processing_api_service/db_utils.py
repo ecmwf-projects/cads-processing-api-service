@@ -56,10 +56,10 @@ def get_compute_sessionmaker(
         raise ValueError(f"Invalid connection mode: {str(mode)}")
     broker_engine = sqlalchemy.create_engine(
         connection_string,
-        pool_timeout=broker_settings.pool_timeout,
-        pool_recycle=broker_settings.pool_recycle,
-        pool_size=broker_settings.pool_size,
-        max_overflow=broker_settings.max_overflow,
+        pool_timeout=broker_settings.broker_pool_timeout,
+        pool_recycle=broker_settings.broker_pool_recycle,
+        pool_size=broker_settings.broker_pool_size,
+        max_overflow=broker_settings.broker_max_overflow,
     )
     return sqlalchemy.orm.sessionmaker(broker_engine)
 
