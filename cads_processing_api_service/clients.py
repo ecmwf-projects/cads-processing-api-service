@@ -219,6 +219,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         )
         structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         request_body = execution_content.model_dump()
+        portals = (
+            [p.strip() for p in auth_info.portal_header.split(",")]
+            if auth_info.portal_header
+            else None
+        )
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
             db_utils.ConnectionMode.read
         )
@@ -228,6 +233,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 table=self.process_table,
                 session=catalogue_session,
                 load_messages=True,
+                portals=tuple(portals),
             )
         auth.verify_if_disabled(dataset.disabled_reason, auth_info.user_role)
         adaptor_properties = adaptors.get_adaptor_properties(dataset)
@@ -295,6 +301,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 content=message.content,
             )
             for message in dataset.messages
+            if message.live
         ]
         url = str(request.url)
         if url.rstrip("/").endswith("execute"):
