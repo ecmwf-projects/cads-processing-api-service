@@ -361,10 +361,18 @@ def verify_cost(
     highest_cost: models.RequestCost = costing.compute_highest_cost_limit_ratio(
         costing_info
     )
-    if highest_cost.cost > highest_cost.limit:
-        raise exceptions.PermissionDenied(
-            title="cost limits exceeded",
-            detail="Your request is too large, please reduce your selection.",
-        )
-    else:
+    try:
+        if highest_cost.cost > highest_cost.limit:
+            raise exceptions.PermissionDenied(
+                title="cost limits exceeded",
+                detail="Your request is too large, please reduce your selection.",
+            )
+        elif highest_cost.cost < highest_cost.min_cost:
+            raise exceptions.PermissionDenied(
+                title="cost limits exceeded",
+                detail="Your request is too small, please increase your selection.",
+            )
+        else:
+            return costing_info.costs
+    except TypeError:
         return costing_info.costs
