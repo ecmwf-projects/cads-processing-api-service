@@ -27,9 +27,13 @@ def test_compute_highest_cost_limit_ratio() -> None:
             "cost_id_1": 20.0,
             "cost_id_2": 20.0,
         },
+        min_costs={
+            "cost_id_1": 5.0,
+            "cost_id_2": 5.0,
+        },
     )
     cost = costing.compute_highest_cost_limit_ratio(costing_info)
-    exp_cost = models.RequestCost(id="cost_id_1", cost=10.0, limit=20.0)
+    exp_cost = models.RequestCost(id="cost_id_1", cost=10.0, limit=20.0, min_cost=5.0)
     assert cost == exp_cost
 
     costing_info = models.CostingInfo(
@@ -43,7 +47,7 @@ def test_compute_highest_cost_limit_ratio() -> None:
         },
     )
     cost = costing.compute_highest_cost_limit_ratio(costing_info)
-    exp_cost = models.RequestCost(id="cost_id_2", cost=30.0, limit=20.0)
+    exp_cost = models.RequestCost(id="cost_id_2", cost=30.0, limit=20.0, min_cost=None)
     assert cost == exp_cost
 
     costing_info = models.CostingInfo(
@@ -57,5 +61,14 @@ def test_compute_highest_cost_limit_ratio() -> None:
         },
     )
     cost = costing.compute_highest_cost_limit_ratio(costing_info)
-    exp_cost = models.RequestCost(id="cost_id_2", cost=10.0, limit=0.0)
+    exp_cost = models.RequestCost(id="cost_id_2", cost=10.0, limit=0.0, min_cost=None)
+    assert cost == exp_cost
+
+    costing_info = models.CostingInfo(
+        costs={
+            "cost_id_1": 10.0,
+        },
+    )
+    cost = costing.compute_highest_cost_limit_ratio(costing_info)
+    exp_cost = models.RequestCost(id=None, cost=None, limit=None, min_cost=None)
     assert cost == exp_cost
