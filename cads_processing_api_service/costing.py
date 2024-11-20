@@ -24,6 +24,7 @@ import fastapi
 from . import adaptors, costing, db_utils, models, utils
 
 COST_THRESHOLDS = {"api": "max_costs", "ui": "max_costs_portal"}
+MIN_COSTS = {"api": "min_costs", "ui": "min_costs_portal"}
 
 
 class RequestOrigin(str, enum.Enum):
@@ -88,7 +89,6 @@ def compute_highest_cost_limit_ratio(
     """
     costs = costing_info.costs
     limits = costing_info.limits
-    min_costs = costing_info.min_costs
     highest_cost_limit_ratio = 0.0
     highest_cost = models.RequestCost()
     for limit_id, limit in limits.items():
@@ -97,10 +97,7 @@ def compute_highest_cost_limit_ratio(
             cost_limit_ratio = cost / limit if limit > 0 else 1.1
             if cost_limit_ratio > highest_cost_limit_ratio:
                 highest_cost_limit_ratio = cost_limit_ratio
-                min_cost = min_costs.get(limit_id, None)
-                highest_cost = models.RequestCost(
-                    id=limit_id, cost=cost, limit=limit, min_cost=min_cost
-                )
+                highest_cost = models.RequestCost(id=limit_id, cost=cost, limit=limit)
     return highest_cost
 
 
@@ -129,13 +126,18 @@ def compute_costing(
     )
     if request_origin not in COST_THRESHOLDS:
         raise ValueError(f"Invalid request origin: {request_origin}")
-    cost_threshold = COST_THRESHOLDS[request_origin]
-    costs: dict[str, float] = adaptor.estimate_costs(
-        request=request, cost_threshold=cost_threshold
-    )
+    cost_thresholds_id = COST_THRESHOLDS[request_origin]
+    min_costs_id = MIN_COSTS[request_origin]
     costing_config: dict[str, Any] = adaptor_properties["config"].get("costing", {})
-    limits: dict[str, Any] = costing_config.get("max_costs", {})
-    min_costs: dict[str, Any] = costing_config.get("min_costs", {})
+    cost_thresholds_id = (
+        cost_thresholds_id if cost_thresholds_id in costing_config else "max_costs"
+    )
+    min_costs_id = min_costs_id if min_costs_id in costing_config else "min_costs"
+    costs: dict[str, float] = adaptor.estimate_costs(
+        request=request, cost_threshold=cost_thresholds_id
+    )
+    limits: dict[str, Any] = costing_config.get(cost_thresholds_id, {})
+    min_costs: dict[str, Any] = costing_config.get(min_costs_id, {})
     cost_bar_steps = costing_config.get("cost_bar_steps", None)
     costing_info = models.CostingInfo(
         costs=costs,
