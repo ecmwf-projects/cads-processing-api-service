@@ -22,6 +22,10 @@ import cads_catalogue.config
 import sqlalchemy
 import sqlalchemy.orm
 
+from . import config
+
+SETTINGS = config.settings
+
 
 class ConnectionMode(str, enum.Enum):
     """Database connection mode."""
@@ -56,10 +60,10 @@ def get_compute_sessionmaker(
         raise ValueError(f"Invalid connection mode: {str(mode)}")
     broker_engine = sqlalchemy.create_engine(
         connection_string,
-        pool_timeout=broker_settings.broker_pool_timeout,
-        pool_recycle=broker_settings.broker_pool_recycle,
-        pool_size=broker_settings.broker_pool_size,
-        max_overflow=broker_settings.broker_max_overflow,
+        pool_timeout=SETTINGS.retrieve_api_broker_pool_timeout,
+        pool_recycle=SETTINGS.retrieve_api_broker_pool_recycle,
+        pool_size=SETTINGS.retrieve_api_broker_pool_size,
+        max_overflow=SETTINGS.retrieve_api_broker_max_overflow,
     )
     return sqlalchemy.orm.sessionmaker(broker_engine)
 

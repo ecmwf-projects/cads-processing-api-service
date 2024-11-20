@@ -197,6 +197,11 @@ class Settings(pydantic_settings.BaseSettings):
     missing_licences_message: str = MISSING_LICENCES_MESSAGE
     dataset_licences_url: str = DATASET_LICENCES_URL
 
+    retrieve_api_broker_pool_timeout: float = 1.0
+    retrieve_api_broker_pool_recycle: int = 60
+    retrieve_api_broker_pool_size: int = 5
+    retrieve_api_broker_max_overflow: int = 15
+
     rate_limits_file: str | None = None
     rate_limits: RateLimitsConfig = pydantic.Field(default=RateLimitsConfig())
 
