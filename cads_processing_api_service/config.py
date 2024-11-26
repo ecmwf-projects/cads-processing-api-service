@@ -202,6 +202,11 @@ class Settings(pydantic_settings.BaseSettings):
     retrieve_api_broker_pool_size: int = 5
     retrieve_api_broker_max_overflow: int = 15
 
+    retrieve_api_catalogue_pool_timeout: float = 0.1
+    retrieve_api_catalogue_pool_recycle: int = 60
+    retrieve_api_catalogue_pool_size: int = 5
+    retrieve_api_catalogue_max_overflow: int = 15
+
     rate_limits_file: str | None = None
     rate_limits: RateLimitsConfig = pydantic.Field(default=RateLimitsConfig())
 

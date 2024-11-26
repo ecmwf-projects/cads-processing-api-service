@@ -85,16 +85,17 @@ def get_catalogue_sessionmaker(
     sqlalchemy.orm.sessionmaker
         sqlalchemy.orm.sessionmaker object bound to the Catalogue database.
     """
-    catalogue_settings = cads_catalogue.config.ensure_settings()
-    if mode == ConnectionMode.write:
-        connection_string = catalogue_settings.connection_string
-    elif mode == ConnectionMode.read:
-        connection_string = catalogue_settings.connection_string_read
+    if mode == ConnectionMode.read:
+        read_only = True
+    elif mode == ConnectionMode.write:
+        read_only = False
     else:
         raise ValueError(f"Invalid connection mode: {str(mode)}")
-    catalogue_engine = sqlalchemy.create_engine(
-        connection_string,
-        pool_timeout=0.1,
-        pool_recycle=catalogue_settings.pool_recycle,
+    catalogue_session = cads_catalogue.database.ensure_session_obj(
+        read_only=read_only,
+        pool_timeout=SETTINGS.retrieve_api_catalogue_pool_timeout,
+        pool_recycle=SETTINGS.retrieve_api_catalogue_pool_recycle,
+        pool_size=SETTINGS.retrieve_api_catalogue_pool_size,
+        max_overflow=SETTINGS.retrieve_api_catalogue_max_overflow,
     )
-    return sqlalchemy.orm.sessionmaker(catalogue_engine)
+    return catalogue_session
