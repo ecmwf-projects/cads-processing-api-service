@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 from typing import Any
 
 import fastapi
@@ -203,6 +204,7 @@ def translate_request_ids_into_labels(
     request: dict[str, Any], cds_form: list[Any] | dict[str, Any] | None
 ) -> dict[str, Any]:
     """Translate request input values into labels."""
+    cds_form = copy.deepcopy(cds_form)
     if cds_form is None:
         cds_form = {}
     if not isinstance(cds_form, list):
