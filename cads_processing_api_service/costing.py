@@ -18,6 +18,7 @@ import enum
 from typing import Any
 
 import cads_adaptors
+import cads_adaptors.exceptions
 import cads_catalogue
 import fastapi
 
@@ -34,6 +35,7 @@ class RequestOrigin(str, enum.Enum):
 def estimate_cost(
     process_id: str = fastapi.Path(...),
     request_origin: RequestOrigin = fastapi.Query("api"),
+    mandatory_inputs: bool = fastapi.Query(False),
     execution_content: models.Execute = fastapi.Body(...),
 ) -> models.RequestCost:
     """
@@ -61,12 +63,24 @@ def estimate_cost(
             resource_id=process_id, table=table, session=catalogue_session
         )
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
+    if not mandatory_inputs:
+        request_is_valid = False
+    else:
+        try:
+            adaptor = adaptors.instantiate_adaptor(
+                adaptor_properties=adaptor_properties
+            )
+            request = adaptor.check_validity(request.get("inputs", {}))
+            request_is_valid = True
+        except cads_adaptors.exceptions.InvalidRequest:
+            request_is_valid = False
     costing_info = costing.compute_costing(
         request.get("inputs", {}), adaptor_properties, request_origin
     )
     cost = costing.compute_highest_cost_limit_ratio(costing_info)
     if costing_info.cost_bar_steps:
         cost.cost_bar_steps = costing_info.cost_bar_steps
+    costing_info.request_is_valid = request_is_valid
     return cost
 
 
