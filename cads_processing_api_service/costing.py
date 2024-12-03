@@ -18,6 +18,7 @@ import enum
 from typing import Any
 
 import cads_adaptors
+import cads_adaptors.exceptions
 import cads_catalogue
 import fastapi
 
@@ -34,6 +35,7 @@ class RequestOrigin(str, enum.Enum):
 def estimate_cost(
     process_id: str = fastapi.Path(...),
     request_origin: RequestOrigin = fastapi.Query("api"),
+    mandatory_inputs: bool = fastapi.Query(False),
     execution_content: models.Execute = fastapi.Body(...),
 ) -> models.RequestCost:
     """
@@ -61,13 +63,49 @@ def estimate_cost(
             resource_id=process_id, table=table, session=catalogue_session
         )
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
+    request_is_valid = check_request_validity(
+        request=request,
+        mandatory_inputs=mandatory_inputs,
+        adaptor_properties=adaptor_properties,
+    )
     costing_info = costing.compute_costing(
         request.get("inputs", {}), adaptor_properties, request_origin
     )
     cost = costing.compute_highest_cost_limit_ratio(costing_info)
     if costing_info.cost_bar_steps:
         cost.cost_bar_steps = costing_info.cost_bar_steps
+    costing_info.request_is_valid = request_is_valid
     return cost
+
+
+def check_request_validity(
+    request: dict[str, Any], mandatory_inputs: bool, adaptor_properties: dict[str, Any]
+) -> bool:
+    """
+    Check if the request is valid.
+
+    Parameters
+    ----------
+    request : dict[str, Any]
+        Request to be processed.
+    mandatory_inputs : bool
+        Whether mandatory inputs have been provided.
+    adaptor_properties : dict[str, Any]
+        Adaptor properties.
+
+    Returns
+    -------
+    bool
+        Whether the request is valid.
+    """
+    if not mandatory_inputs:
+        return False
+    try:
+        adaptor = adaptors.instantiate_adaptor(adaptor_properties=adaptor_properties)
+        _ = adaptor.check_validity(request.get("inputs", {}))
+        return True
+    except cads_adaptors.exceptions.InvalidRequest:
+        return False
 
 
 def compute_highest_cost_limit_ratio(

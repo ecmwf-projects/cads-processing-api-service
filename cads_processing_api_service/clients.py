@@ -240,6 +240,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         adaptor = adaptors.instantiate_adaptor(adaptor_properties=adaptor_properties)
         try:
             request_inputs = adaptor.normalise_request(request_body.get("inputs", {}))
+            _ = adaptor.check_validity(request_inputs)
         except cads_adaptors.exceptions.InvalidRequest as exc:
             raise exceptions.InvalidRequest(detail=str(exc)) from exc
         if dataset.api_enforce_constraints:
