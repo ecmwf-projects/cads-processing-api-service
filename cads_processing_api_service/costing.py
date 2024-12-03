@@ -70,7 +70,7 @@ def estimate_cost(
             adaptor = adaptors.instantiate_adaptor(
                 adaptor_properties=adaptor_properties
             )
-            request = adaptor.check_validity(request.get("inputs", {}))
+            _ = adaptor.check_validity(request.get("inputs", {}))
             request_is_valid = True
         except cads_adaptors.exceptions.InvalidRequest:
             request_is_valid = False
