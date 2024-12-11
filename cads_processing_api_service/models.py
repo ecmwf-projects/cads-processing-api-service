@@ -80,6 +80,7 @@ class CostingInfo(pydantic.BaseModel):
     costs: dict[str, float] = {}
     limits: dict[str, float] = {}
     cost_bar_steps: list[int] | None = None
+    request_is_valid: bool = True
 
 
 class RequestCost(pydantic.BaseModel):
