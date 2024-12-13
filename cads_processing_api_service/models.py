@@ -25,6 +25,7 @@ import pydantic
 class AuthInfo(pydantic.BaseModel):
     user_uid: str
     user_role: str | None = None
+    email: str | None = None
     request_origin: str
     auth_header: tuple[str, str]
     portal_header: str | None = None

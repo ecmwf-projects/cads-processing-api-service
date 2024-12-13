@@ -75,7 +75,7 @@ def get_auth_header(pat: str | None = None, jwt: str | None = None) -> tuple[str
 )
 def authenticate_user(
     auth_header: tuple[str, str], portal_header: str | None = None
-) -> tuple[str, str | None]:
+) -> tuple[str, str | None, str | None]:
     """Verify user authentication.
 
     Verify if the provided authentication header corresponds to a registered user.
@@ -88,7 +88,7 @@ def authenticate_user(
 
     Returns
     -------
-    tuple[str, str | None]
+    tuple[str, str | None, str | None]
         User identifier and role.
 
     Raises
@@ -119,7 +119,8 @@ def authenticate_user(
     user: dict[str, str] = response.json()
     user_uid: str = user["sub"]
     user_role: str | None = user.get("role", None)
-    return user_uid, user_role
+    email: str | None = user.get("email", None)
+    return user_uid, user_role, email
 
 
 def get_auth_info(
@@ -153,11 +154,12 @@ def get_auth_info(
         Raised if none of the expected authentication headers is provided.
     """
     auth_header = get_auth_header(pat, jwt)
-    user_uid, user_role = authenticate_user(auth_header, portal_header)
+    user_uid, user_role, email = authenticate_user(auth_header, portal_header)
     request_origin = REQUEST_ORIGIN[auth_header[0]]
     auth_info = models.AuthInfo(
         user_uid=user_uid,
         user_role=user_role,
+        email=email,
         request_origin=request_origin,
         auth_header=auth_header,
         portal_header=portal_header,
