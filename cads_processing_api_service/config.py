@@ -31,13 +31,18 @@ import yaml
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-API_REQUEST_TEMPLATE = """import cdsapi
+API_REQUEST_TEMPLATE = """\
+import logging
 
-dataset = "{process_id}"
+import datapi
+
+logging.basicConfig(level="INFO")
+
+collection_id = "{process_id}"
 request = {api_request_kwargs}
 
-client = cdsapi.Client()
-client.retrieve(dataset, request).download()
+client = datapi.ApiClient()
+client.retrieve(collection_id, **request)
 """
 
 API_REQUEST_MAX_LIST_LENGTH: dict[str, int] = {
