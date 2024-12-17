@@ -47,10 +47,25 @@ TEST_INPUT_CDS_SCHEMAS: dict[str, Any] = {
         },
         "type": "StringChoiceWidget",
     },
+    "string_choice_default_list": {
+        "name": "string_choice",
+        "label": "String Choice",
+        "details": {
+            "labels": {"val1": "Val1", "val2": "Val2", "val3": "Val3"},
+            "default": ["val1"],
+        },
+        "type": "StringChoiceWidget",
+    },
     "geographic_extent_map": {
         "name": "geographic_extent_map",
         "label": "Geographic Extent Map",
         "details": {"default": [1, 2, 3, 4]},
+        "type": "GeographicExtentMapWidget",
+    },
+    "geographic_extent_map_default_dict": {
+        "name": "geographic_extent_map",
+        "label": "Geographic Extent Map",
+        "details": {"default": {"n": 1, "w": 2, "s": 3, "e": 4}},
         "type": "GeographicExtentMapWidget",
     },
     "geographic_location": {
@@ -194,9 +209,25 @@ def test_translate_string_choice() -> None:
     res_output = translators.translate_string_choice(test_input)
     assert res_output == exp_ouput
 
+    test_input = TEST_INPUT_CDS_SCHEMAS["string_choice_default_list"]
+    exp_ouput = {"type": "string", "enum": ["val1", "val2", "val3"], "default": "val1"}
+    res_output = translators.translate_string_choice(test_input)
+    assert res_output == exp_ouput
+
 
 def test_translate_geographic_extent_map() -> None:
     test_input = TEST_INPUT_CDS_SCHEMAS["geographic_extent_map"]
+    exp_ouput = {
+        "type": "array",
+        "minItems": 4,
+        "maxItems": 4,
+        "items": {"type": "number"},
+        "default": [1, 2, 3, 4],
+    }
+    res_output = translators.translate_geographic_extent_map(test_input)
+    assert res_output == exp_ouput
+
+    test_input = TEST_INPUT_CDS_SCHEMAS["geographic_extent_map_default_dict"]
     exp_ouput = {
         "type": "array",
         "minItems": 4,

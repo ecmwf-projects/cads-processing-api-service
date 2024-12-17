@@ -71,21 +71,29 @@ def translate_string_list_array(
 
 def translate_string_choice(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
     labels = extract_labels(input_cds_schema)
+    default = input_cds_schema["details"].get("default", None)
+    if type(default) is not str:
+        if type(default) is list:
+            default = default[0]
     input_ogc_schema = {
         "type": "string",
         "enum": list(labels.keys()),
-        "default": input_cds_schema["details"].get("default", None),
+        "default": default,
     }
     return input_ogc_schema
 
 
 def translate_geographic_extent_map(input_cds_schema: dict[str, Any]) -> dict[str, Any]:
+    default = input_cds_schema["details"].get("default", None)
+    if type(default) is not list:
+        if type(default) is dict and "e" in default:
+            default = [default["n"], default["w"], default["s"], default["e"]]
     input_ogc_schema = {
         "type": "array",
         "minItems": 4,
         "maxItems": 4,
         "items": {"type": "number"},
-        "default": input_cds_schema["details"].get("default", None),
+        "default": default,
     }
     return input_ogc_schema
 
