@@ -292,7 +292,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 process_id=process_id,
                 portal=dataset.portal,
                 qos_tags=dataset.qos_tags,
-                metadata={"costs": costs},
+                metadata={
+                    "costs": costs,
+                    "user_data": {"email": auth_info.email},
+                },
                 **job_kwargs,
             )
         dataset_messages = [
