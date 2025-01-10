@@ -56,6 +56,8 @@ async def lifespan(application: fastapi.FastAPI) -> AsyncGenerator[Any, None]:
 
 
 logger = structlog.get_logger(__name__)
+uvicorn_error_logger = logging.getLogger("uvicorn.error")
+uvicorn_error_logger.disabled = True
 
 app = ogc_api_processes_fastapi.instantiate_app(
     client=clients.DatabaseClient(),  # type: ignore
