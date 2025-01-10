@@ -39,7 +39,7 @@ def test_check_rate_limits_for_user() -> None:
             cads_processing_api_service.limits.check_rate_limits_for_user(
                 user_uid, rate_limits
             )
-    assert exc.value.retry_after == 60
+    assert exc.value.retry_after == pytest.approx(60)
 
     rate_limit_ids = ["2/second"]
     rate_limits = [limits.parse(rate_limit_id) for rate_limit_id in rate_limit_ids]
