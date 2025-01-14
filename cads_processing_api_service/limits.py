@@ -41,7 +41,7 @@ def check_rate_limits_for_user(
             for rate_limit in rate_limits_exceeded
         ]
         expiry = storage.get_expiry(user_uid)
-        time_to_wait = int(
+        time_to_wait = round(
             max([reset_time - expiry for reset_time in rate_limiters_reset_time])
         )
         raise exceptions.RateLimitExceeded(
