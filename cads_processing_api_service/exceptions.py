@@ -213,7 +213,9 @@ def general_exception_handler(
     last_context_line = find_last_context_line(list(exc_traceback))
     logger.error(
         "internal server error",
-        exception="".join(exc_traceback[-last_context_line:]),
+        exception="".join(
+            [line for line in exc_traceback[-last_context_line:] if line is not None]
+        ),
     )
     out = fastapi.responses.JSONResponse(
         status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR,
