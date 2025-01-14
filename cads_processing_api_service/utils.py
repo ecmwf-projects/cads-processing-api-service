@@ -36,7 +36,7 @@ import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
-from . import cache, config, exceptions, models
+from . import config, exceptions, models
 
 SETTINGS = config.settings
 
@@ -120,7 +120,7 @@ def lookup_resource_by_id(
 
 
 @cachetools.cached(
-    cache=cache.TTLCache(
+    cache=cachetools.TTLCache(
         maxsize=SETTINGS.cache_resources_maxsize,
         ttl=SETTINGS.cache_resources_ttl,
     ),
