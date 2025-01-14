@@ -48,9 +48,32 @@ def add_user_request_flag(
     return event_dict
 
 
+def structlog_configure(
+    additional_processors: list[structlog.typing.Processor] = [],
+) -> None:
+    """Configure structlog logging."""
+    structlog.configure(
+        processors=[
+            structlog.stdlib.filter_by_level,
+            structlog.contextvars.merge_contextvars,
+            structlog.stdlib.add_logger_name,
+            structlog.stdlib.add_log_level,
+            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M.%S"),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            *additional_processors,
+            structlog.processors.JSONRenderer(),
+        ],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
+
+
 @asynccontextmanager
 async def lifespan(application: fastapi.FastAPI) -> AsyncGenerator[Any, None]:
-    cads_common.logging.structlog_configure([add_user_request_flag])
+    # cads_common.logging.structlog_configure([add_user_request_flag])
+    structlog_configure([add_user_request_flag])
     cads_common.logging.logging_configure()
     yield
 
@@ -93,7 +116,7 @@ async def initialize_logger(
 ) -> Any:
     structlog.contextvars.clear_contextvars()
     trace_id = str(uuid.uuid4())
-    structlog.contextvars.bind_contextvars(trace_id=trace_id)
+    structlog.contextvars.bind_contextvars(trace_id=trace_id, request=request.url.path)
     response = await call_next(request)
     return response
 
