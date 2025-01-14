@@ -63,6 +63,14 @@ class RateLimitExceeded(ogc_api_processes_fastapi.exceptions.OGCAPIException):
     retry_after: int = 0
 
 
+def find_last_context_line(lines: list[str]) -> int | None:
+    index = 0
+    for i, line in enumerate(lines):
+        if "result = context.run(func, *args)" in line:
+            index = len(lines) - i - 1
+    return index
+
+
 def format_exception_content(
     exc: ogc_api_processes_fastapi.exceptions.OGCAPIException,
     request: fastapi.Request | None = None,
@@ -201,9 +209,11 @@ def general_exception_handler(
     -------
     fastapi.responses.JSONResponse
     """
+    exc_traceback = list(traceback.TracebackException.from_exception(exc).format())
+    last_context_line = find_last_context_line(list(exc_traceback))
     logger.error(
         "internal server error",
-        exception="".join(traceback.TracebackException.from_exception(exc).format()),
+        exception="".join(exc_traceback[-last_context_line:]),
     )
     out = fastapi.responses.JSONResponse(
         status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR,
