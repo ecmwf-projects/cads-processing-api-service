@@ -63,12 +63,26 @@ class RateLimitExceeded(ogc_api_processes_fastapi.exceptions.OGCAPIException):
     retry_after: int = 0
 
 
-def find_last_context_line(lines: list[str]) -> int:
-    index = 0
-    for i, line in enumerate(lines):
-        if "result = context.run(func, *args)" in line:
-            index = len(lines) - i - 1
-    return index
+def get_exc_group_tb(exc_traceback: list[str]) -> list[str]:
+    """Get and return only the Exception Group Traceback.
+
+    Parameters
+    ----------
+    exc_traceback : list[str]
+        List of lines in the traceback.
+
+    Returns
+    -------
+    list[str]
+        List of lines in the traceback.
+    """
+    exc_group_tb = []
+    if "Exception Group Traceback" in exc_traceback[0]:
+        exc_group_tb.append(exc_traceback[0])
+        for line in exc_traceback[1:]:
+            if line.lstrip(" ").startswith(("+", "|")):
+                exc_group_tb.append(line)
+    return exc_group_tb
 
 
 def format_exception_content(
@@ -210,10 +224,12 @@ def general_exception_handler(
     fastapi.responses.JSONResponse
     """
     exc_traceback = list(traceback.TracebackException.from_exception(exc).format())
-    last_context_line = find_last_context_line(list(exc_traceback))
+    exc_group_traceback = get_exc_group_tb(exc_traceback)
     logger.error(
         "internal server error",
-        exception="".join(exc_traceback[-last_context_line:]),
+        exception="".join(
+            exc_group_traceback if exc_group_traceback else exc_traceback
+        ),
     )
     out = fastapi.responses.JSONResponse(
         status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR,
