@@ -108,7 +108,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         back : bool | None, optional
             Specifies in which sense the list of processes should be traversed, used for pagination.
         """
-        structlog.contextvars.bind_contextvars(operation="get_processes")
+        structlog.contextvars.bind_contextvars(client_endpoint="get_processes")
+        logger.info("get_processes")
         statement = sqlalchemy.select(self.process_table)
         sort_key, sort_dir = utils.parse_sortby(sortby.name)
         if cursor:
@@ -161,8 +162,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Process description.
         """
         structlog.contextvars.bind_contextvars(
-            operation="get_process", process_id=process_id
+            client_endpoint="get_process", process_id=process_id
         )
+        logger.info("get_process")
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
             db_utils.ConnectionMode.read
         )
@@ -219,10 +221,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         structlog.contextvars.bind_contextvars(
             **auth_info.model_dump(),
-            operation="post_process_execution",
+            client_endpoint="post_process_execution",
             process_id=process_id,
             execution_content=execution_content.model_dump(),
         )
+        logger.info("post_process_execution")
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.process_execution.post,
             auth_info,
@@ -379,8 +382,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             List of jobs status information.
         """
         structlog.contextvars.bind_contextvars(
-            **auth_info.model_dump(), operation="get_jobs"
+            **auth_info.model_dump(), client_endpoint="get_jobs"
         )
+        logger.info("get_jobs")
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.jobs.get,
             auth_info,
@@ -501,8 +505,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job status information.
         """
         structlog.contextvars.bind_contextvars(
-            **auth_info.model_dump(), job_id=job_id, operation="get_job"
+            **auth_info.model_dump(), job_id=job_id, client_endpoint="get_job"
         )
+        logger.info("get_job")
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.job.get,
             auth_info,
@@ -630,8 +635,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Job results.
         """
         structlog.contextvars.bind_contextvars(
-            **auth_info.model_dump(), job_id=job_id, operation="get_job_results"
+            **auth_info.model_dump(), job_id=job_id, client_endpoint="get_job_results"
         )
+        logger.info("get_job_results")
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.job_results.get,
             auth_info,

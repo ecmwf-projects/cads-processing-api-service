@@ -28,8 +28,8 @@ COST_THRESHOLDS = {"api": "max_costs", "ui": "max_costs_portal"}
 
 
 class RequestOrigin(str, enum.Enum):
-    api: str = "api"
-    ui: str = "ui"
+    api = "api"
+    ui = "ui"
 
 
 def estimate_cost(

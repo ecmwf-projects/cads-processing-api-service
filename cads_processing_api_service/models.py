@@ -32,10 +32,10 @@ class AuthInfo(pydantic.BaseModel):
 
 
 class StatusCode(str, enum.Enum):
-    accepted: str = "accepted"
-    running: str = "running"
-    successful: str = "successful"
-    failed: str = "failed"
+    accepted = "accepted"
+    running = "running"
+    successful = "successful"
+    failed = "failed"
 
 
 class StatusInfoMetadata(pydantic.BaseModel):

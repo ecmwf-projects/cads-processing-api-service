@@ -44,13 +44,13 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 class ProcessSortCriterion(str, enum.Enum):
-    resource_uid_asc: str = "id"
-    resource_uid_desc: str = "-id"
+    resource_uid_asc = "id"
+    resource_uid_desc = "-id"
 
 
 class JobSortCriterion(str, enum.Enum):
-    created_at_asc: str = "created"
-    created_at_desc: str = "-created"
+    created_at_asc = "created"
+    created_at_desc = "-created"
 
 
 @cachetools.cached(
