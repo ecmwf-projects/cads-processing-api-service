@@ -50,7 +50,18 @@ def add_user_request_flag(
 
 @asynccontextmanager
 async def lifespan(application: fastapi.FastAPI) -> AsyncGenerator[Any, None]:
-    cads_common.logging.structlog_configure([add_user_request_flag])
+    cads_common.logging.structlog_configure(
+        [
+            add_user_request_flag,
+            structlog.processors.CallsiteParameterAdder(
+                [
+                    structlog.processors.CallsiteParameter.FILENAME,
+                    structlog.processors.CallsiteParameter.FUNC_NAME,
+                    structlog.processors.CallsiteParameter.LINENO,
+                ],
+            ),
+        ]
+    )
     cads_common.logging.logging_configure()
     yield
 
@@ -94,6 +105,10 @@ async def initialize_logger(
     structlog.contextvars.clear_contextvars()
     trace_id = str(uuid.uuid4())
     structlog.contextvars.bind_contextvars(trace_id=trace_id, request=request.url.path)
+    user_ip = request.headers.get("X-Real-IP", None)
+    structlog.contextvars.bind_contextvars(
+        trace_id=trace_id, request=request.url.path, user_ip=user_ip
+    )
     response = await call_next(request)
     return response
 
