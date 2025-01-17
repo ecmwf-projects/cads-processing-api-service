@@ -463,9 +463,8 @@ def get_job_from_broker_db(
     """
     try:
         job = cads_broker.database.get_request(request_uid=job_id, session=session)
-        structlog.contextvars.bind_contextvars(job_status=job.status)
         if job.status in ("dismissed", "deleted"):
-            logger.error("job status is dismissed or deleted")
+            logger.error("job status is dismissed or deleted", job_status=job.status)
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 detail=f"job {job_id} {job.status}"
             )

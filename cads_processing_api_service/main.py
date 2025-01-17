@@ -104,7 +104,6 @@ async def initialize_logger(
 ) -> Any:
     structlog.contextvars.clear_contextvars()
     trace_id = str(uuid.uuid4())
-    structlog.contextvars.bind_contextvars(trace_id=trace_id, request=request.url.path)
     user_ip = request.headers.get("X-Real-IP", None)
     structlog.contextvars.bind_contextvars(
         trace_id=trace_id, request=request.url.path, user_ip=user_ip
