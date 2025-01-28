@@ -16,6 +16,7 @@
 
 import functools
 import traceback
+from typing import Any, Callable
 
 import attrs
 import fastapi
@@ -64,9 +65,9 @@ class RateLimitExceeded(ogc_api_processes_fastapi.exceptions.OGCAPIException):
     retry_after: int = 0
 
 
-def exception_logger(f):
+def exception_logger(f: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(f)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         try:
             res = f(*args, **kwargs)
         except requests.exceptions.ReadTimeout:
