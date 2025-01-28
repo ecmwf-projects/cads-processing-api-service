@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import functools
 import traceback
 
 import attrs
@@ -63,26 +64,28 @@ class RateLimitExceeded(ogc_api_processes_fastapi.exceptions.OGCAPIException):
     retry_after: int = 0
 
 
-def get_exc_group_tb(exc_traceback: list[str]) -> list[str]:
-    """Get and return only the Exception Group Traceback.
+def exception_logger(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            res = f(*args, **kwargs)
+        except requests.exceptions.ReadTimeout:
+            raise
+        except Exception as exc:
+            if isinstance(exc, ogc_api_processes_fastapi.exceptions.OGCAPIException):
+                exc_title = exc.title
+            else:
+                exc_title = "internal server error"
+            logger.error(
+                exc_title,
+                exception="".join(
+                    traceback.TracebackException.from_exception(exc).format()
+                ),
+            )
+            raise
+        return res
 
-    Parameters
-    ----------
-    exc_traceback : list[str]
-        List of lines in the traceback.
-
-    Returns
-    -------
-    list[str]
-        List of lines in the traceback.
-    """
-    exc_group_tb = []
-    if "Exception Group Traceback" in exc_traceback[0]:
-        exc_group_tb.append(exc_traceback[0])
-        for line in exc_traceback[1:]:
-            if line.lstrip(" ").startswith(("+", "|")):
-                exc_group_tb.append(line)
-    return exc_group_tb
+    return wrapper
 
 
 def format_exception_content(
@@ -135,11 +138,6 @@ def exception_handler(
     fastapi.responses.JSONResponse
         JSON response.
     """
-    logger.error(
-        exc.title,
-        exception="".join(traceback.TracebackException.from_exception(exc).format()),
-        url=str(request.url),
-    )
     out = fastapi.responses.JSONResponse(
         status_code=exc.status_code,
         content=format_exception_content(exc=exc, request=request),
@@ -164,11 +162,6 @@ def rate_limit_exceeded_exception_handler(
     fastapi.responses.JSONResponse
         JSON response.
     """
-    logger.error(
-        exc.title,
-        exception="".join(traceback.TracebackException.from_exception(exc).format()),
-        url=str(request.url),
-    )
     out = fastapi.responses.JSONResponse(
         status_code=exc.status_code,
         content=format_exception_content(exc=exc, request=request),
@@ -223,14 +216,6 @@ def general_exception_handler(
     -------
     fastapi.responses.JSONResponse
     """
-    exc_traceback = list(traceback.TracebackException.from_exception(exc).format())
-    exc_group_traceback = get_exc_group_tb(exc_traceback)
-    logger.error(
-        "internal server error",
-        exception="".join(
-            exc_group_traceback if exc_group_traceback else exc_traceback
-        ),
-    )
     out = fastapi.responses.JSONResponse(
         status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=models.Exception(
