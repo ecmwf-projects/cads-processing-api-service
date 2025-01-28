@@ -22,7 +22,7 @@ import cads_adaptors.exceptions
 import cads_catalogue
 import fastapi
 
-from . import adaptors, costing, db_utils, models, utils
+from . import adaptors, costing, db_utils, exceptions, models, utils
 
 COST_THRESHOLDS = {"api": "max_costs", "ui": "max_costs_portal"}
 
@@ -32,6 +32,7 @@ class RequestOrigin(str, enum.Enum):
     ui = "ui"
 
 
+@exceptions.exception_logger
 def estimate_cost(
     process_id: str = fastapi.Path(...),
     request_origin: RequestOrigin = fastapi.Query("api"),

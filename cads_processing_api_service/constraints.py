@@ -9,6 +9,7 @@ import fastapi
 from . import adaptors, db_utils, exceptions, models, utils
 
 
+@exceptions.exception_logger
 def apply_constraints(
     process_id: str = fastapi.Path(...),
     execution_content: models.Execute = fastapi.Body(...),
