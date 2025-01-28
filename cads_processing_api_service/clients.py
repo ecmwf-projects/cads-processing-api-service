@@ -234,7 +234,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             if auth_info.portal_header
             else None
         )
-        raise KeyError("auth_info")
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
             db_utils.ConnectionMode.read
         )
