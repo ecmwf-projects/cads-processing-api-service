@@ -20,7 +20,7 @@ from typing import Any
 import fastapi
 import structlog
 
-from . import config
+from . import config, exceptions
 
 SETTINGS = config.settings
 
@@ -335,6 +335,7 @@ def format_api_request(
     return api_request
 
 
+@exceptions.exception_logger
 def get_api_request(
     process_id: str = fastapi.Path(...),
     request: dict[str, Any] = fastapi.Body(...),

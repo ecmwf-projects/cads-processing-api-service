@@ -83,6 +83,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         "DeleteJob": "Dismiss the job identifed by `job_id`.",
     }
 
+    @exceptions.exception_logger
     def get_processes(
         self,
         limit: int | None = fastapi.Query(10, ge=1, le=10000),
@@ -139,6 +140,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         process_list._pagination_query_params = pagination_query_params
         return process_list
 
+    @exceptions.exception_logger
     def get_process(
         self,
         response: fastapi.Response,
@@ -188,6 +190,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return process_description
 
+    @exceptions.exception_logger
     def post_process_execution(
         self,
         request: fastapi.Request,
@@ -327,6 +330,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         status_info.message = job_message
         return status_info
 
+    @exceptions.exception_logger
     def get_jobs(
         self,
         processID: list[str] | None = fastapi.Query(None),
@@ -460,6 +464,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         return job_list
 
+    @exceptions.exception_logger
     def get_job(
         self,
         job_id: str = fastapi.Path(...),
@@ -594,6 +599,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         status_info = utils.make_status_info(job=job, **kwargs)
         return status_info
 
+    @exceptions.exception_logger
     def get_job_results(
         self,
         job_id: str = fastapi.Path(...),
@@ -656,6 +662,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         handle_download_metrics(job.process_id, results)
         return results
 
+    @exceptions.exception_logger
     def delete_job(
         self,
         job_id: str = fastapi.Path(...),
