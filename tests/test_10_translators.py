@@ -330,7 +330,7 @@ def test_format_api_request() -> None:
         '    "variable_3": 1\n'
         "}\n\n"
         "client = datapi.ApiClient()\n"
-        "client.retrieve(collection_id, **request)\n"
+        "client.retrieve(collection_id, request)\n"
     )
     res_output = translators.format_api_request(
         test_api_request_template, test_process_id, test_request

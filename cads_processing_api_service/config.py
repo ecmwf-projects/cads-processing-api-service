@@ -42,7 +42,7 @@ collection_id = "{process_id}"
 request = {api_request_kwargs}
 
 client = datapi.ApiClient()
-client.retrieve(collection_id, **request)
+client.retrieve(collection_id, request)
 """
 
 API_REQUEST_MAX_LIST_LENGTH: dict[str, int] = {
