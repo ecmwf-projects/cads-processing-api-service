@@ -109,7 +109,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         back : bool | None, optional
             Specifies in which sense the list of processes should be traversed, used for pagination.
         """
-        logger.info("get_processes")
         statement = sqlalchemy.select(self.process_table)
         sort_key, sort_dir = utils.parse_sortby(sortby.name)
         if cursor:
@@ -162,7 +161,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.ProcessDescription
             Process description.
         """
-        logger.info("get_process", process_id=process_id)
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
             db_utils.ConnectionMode.read
         )
@@ -218,12 +216,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Submitted job's status information.
         """
-        logger.info(
-            "post_process_execution",
-            **auth_info.model_dump(),
-            process_id=process_id,
-            execution_content=execution_content.model_dump(),
-        )
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.process_execution.post,
             auth_info,
@@ -379,7 +371,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             List of jobs status information.
         """
-        logger.info("get_jobs", **auth_info.model_dump())
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.jobs.get,
             auth_info,
@@ -500,7 +491,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Job status information.
         """
-        logger.info("get_job", job_id=job_id, **auth_info.model_dump())
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.job.get,
             auth_info,
@@ -621,7 +611,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.Results
             Job results.
         """
-        logger.info("get_job_results", job_id=job_id, **auth_info.model_dump())
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.job_results.get,
             auth_info,
@@ -684,7 +673,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.StatusInfo
             Job status information
         """
-        logger.info("delete_job", job_id=job_id, **auth_info.model_dump())
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.job.delete,
             auth_info,
