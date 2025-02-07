@@ -22,7 +22,7 @@ import cads_adaptors.exceptions
 import cads_catalogue
 import fastapi
 
-from . import adaptors, costing, db_utils, exceptions, models, utils
+from . import adaptors, db_utils, exceptions, models, utils
 
 COST_THRESHOLDS = {"api": "max_costs", "ui": "max_costs_portal"}
 
@@ -38,6 +38,7 @@ def estimate_cost(
     request_origin: RequestOrigin = fastapi.Query("api"),
     mandatory_inputs: bool = fastapi.Query(False),
     execution_content: models.Execute = fastapi.Body(...),
+    portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
 ) -> models.RequestCost:
     """
     Estimate the cost with the highest cost/limit ratio of the request.
@@ -61,7 +62,10 @@ def estimate_cost(
     )
     with catalogue_sessionmaker() as catalogue_session:
         dataset = utils.lookup_resource_by_id(
-            resource_id=process_id, table=table, session=catalogue_session
+            resource_id=process_id,
+            table=table,
+            session=catalogue_session,
+            portals=portals,
         )
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
     request_is_valid = check_request_validity(
@@ -69,10 +73,10 @@ def estimate_cost(
         mandatory_inputs=mandatory_inputs,
         adaptor_properties=adaptor_properties,
     )
-    costing_info = costing.compute_costing(
+    costing_info = compute_costing(
         request.get("inputs", {}), adaptor_properties, request_origin
     )
-    cost = costing.compute_highest_cost_limit_ratio(costing_info)
+    cost = compute_highest_cost_limit_ratio(costing_info)
     if costing_info.cost_bar_steps:
         cost.cost_bar_steps = costing_info.cost_bar_steps
     costing_info.request_is_valid = request_is_valid
