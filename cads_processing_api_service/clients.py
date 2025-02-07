@@ -92,6 +92,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ),
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
+        portals: list[str] | None = fastapi.Depends(utils.get_portals),
     ) -> ogc_api_processes_fastapi.models.ProcessList:
         """Implement OGC API - Processes `GET /processes` endpoint.
 
@@ -108,10 +109,14 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Hash string representing the reference to a particular process, used for pagination.
         back : bool | None, optional
             Specifies in which sense the list of processes should be traversed, used for pagination.
+        portals: list[str] | None
+            Portals
         """
         logger.info("get_processes")
         statement = sqlalchemy.select(self.process_table)
         sort_key, sort_dir = utils.parse_sortby(sortby.name)
+        if portals:
+            statement = statement.filter(self.process_table.portal.in_(portals))
         if cursor:
             statement = utils.apply_bookmark(
                 statement, self.process_table, cursor, back, sort_key, sort_dir
@@ -145,6 +150,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         response: fastapi.Response,
         process_id: str = fastapi.Path(...),
+        portals: list[str] | None = fastapi.Depends(utils.get_portals),
     ) -> ogc_api_processes_fastapi.models.ProcessDescription:
         """Implement OGC API - Processes `GET /processes/{process_id}` endpoint.
 
@@ -156,6 +162,8 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             fastapi.Response object.
         process_id : str
             Process identifier.
+        portals: list[str] | None
+            Portals
 
         Returns
         -------
@@ -171,6 +179,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 resource_id=process_id,
                 table=self.process_table,
                 session=catalogue_session,
+                portals=tuple(portals),
             )
         process_description = serializers.serialize_process_description(resource)
         process_description.outputs = {
@@ -229,11 +238,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             auth_info,
         )
         request_body = execution_content.model_dump()
-        portals = (
-            [p.strip() for p in auth_info.portal_header.split(",")]
-            if auth_info.portal_header
-            else None
-        )
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
             db_utils.ConnectionMode.read
         )
@@ -243,7 +247,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 table=self.process_table,
                 session=catalogue_session,
                 load_messages=True,
-                portals=tuple(portals),
+                portals=auth_info.portals,
             )
         auth.verify_if_disabled(dataset.disabled_reason, auth_info.user_role)
         adaptor_properties = adaptors.get_adaptor_properties(dataset)
@@ -384,16 +388,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             SETTINGS.rate_limits.jobs.get,
             auth_info,
         )
-        portals = (
-            [p.strip() for p in auth_info.portal_header.split(",")]
-            if auth_info.portal_header
-            else None
-        )
         job_filters = {
             "process_id": processID,
             "status": status,
             "user_uid": [auth_info.user_uid],
-            "portal": portals,
+            "portal": auth_info.portals,
         }
         sort_key, sort_dir = utils.parse_sortby(sortby.name)
         statement = sqlalchemy.select(self.job_table)
@@ -505,11 +504,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             SETTINGS.rate_limits.job.get,
             auth_info,
         )
-        portals = (
-            [p.strip() for p in auth_info.portal_header.split(",")]
-            if auth_info.portal_header
-            else None
-        )
         compute_connection_mode = (
             db_utils.ConnectionMode.write
             if auth_info.request_origin == "ui"
@@ -564,7 +558,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                             "user_visible_log",
                             log_start_time,
                         )
-        if job.portal not in portals:
+        if job.portal not in auth_info.portals:
             raise ogc_api_processes_fastapi.exceptions.NoSuchJob(
                 detail=f"job {job_id} not found"
             )

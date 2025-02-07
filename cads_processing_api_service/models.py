@@ -28,7 +28,7 @@ class AuthInfo(pydantic.BaseModel):
     email: str | None = None
     request_origin: str
     auth_header: tuple[str, str]
-    portal_header: str | None = None
+    portals: list[str] | None = None
 
 
 class StatusCode(str, enum.Enum):

@@ -659,3 +659,22 @@ def make_status_info(
         log=log,
     )
     return status_info
+
+
+def get_portals(
+    portal_header: str | None = fastapi.Header(None, alias=SETTINGS.portal_header_name),
+) -> list[str] | None:
+    """Get the list of portals from the incoming HTTP request's header.
+
+    Parameters
+    ----------
+    portal_header : str | None, optional
+        Portal header
+
+    Returns
+    -------
+    list[str] | None
+        List of portals.
+    """
+    portals = [p.strip() for p in portal_header.split(",")] if portal_header else None
+    return portals
