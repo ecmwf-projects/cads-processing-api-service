@@ -663,7 +663,7 @@ def make_status_info(
 
 def get_portals(
     portal_header: str | None = fastapi.Header(None, alias=SETTINGS.portal_header_name),
-) -> list[str] | None:
+) -> tuple[str] | None:
     """Get the list of portals from the incoming HTTP request's header.
 
     Parameters
@@ -673,8 +673,10 @@ def get_portals(
 
     Returns
     -------
-    list[str] | None
+    tuple[str] | None
         List of portals.
     """
-    portals = [p.strip() for p in portal_header.split(",")] if portal_header else None
+    portals = (
+        tuple([p.strip() for p in portal_header.split(",")]) if portal_header else None
+    )
     return portals

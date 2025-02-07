@@ -13,7 +13,7 @@ from . import adaptors, db_utils, exceptions, models, utils
 def apply_constraints(
     process_id: str = fastapi.Path(...),
     execution_content: models.Execute = fastapi.Body(...),
-    portals: list[str] | None = fastapi.Depends(utils.get_portals),
+    portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
 ) -> dict[str, Any]:
     request = execution_content.model_dump()
     table = cads_catalogue.database.Resource

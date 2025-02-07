@@ -38,7 +38,7 @@ def estimate_cost(
     request_origin: RequestOrigin = fastapi.Query("api"),
     mandatory_inputs: bool = fastapi.Query(False),
     execution_content: models.Execute = fastapi.Body(...),
-    portals: list[str] | None = fastapi.Depends(utils.get_portals),
+    portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
 ) -> models.RequestCost:
     """
     Estimate the cost with the highest cost/limit ratio of the request.

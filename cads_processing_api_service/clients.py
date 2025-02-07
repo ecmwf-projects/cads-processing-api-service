@@ -92,7 +92,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ),
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
-        portals: list[str] | None = fastapi.Depends(utils.get_portals),
+        portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
     ) -> ogc_api_processes_fastapi.models.ProcessList:
         """Implement OGC API - Processes `GET /processes` endpoint.
 
@@ -109,7 +109,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             Hash string representing the reference to a particular process, used for pagination.
         back : bool | None, optional
             Specifies in which sense the list of processes should be traversed, used for pagination.
-        portals: list[str] | None
+        portals: tuple[str] | None
             Portals
         """
         statement = sqlalchemy.select(self.process_table)
@@ -149,7 +149,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         response: fastapi.Response,
         process_id: str = fastapi.Path(...),
-        portals: list[str] | None = fastapi.Depends(utils.get_portals),
+        portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
     ) -> ogc_api_processes_fastapi.models.ProcessDescription:
         """Implement OGC API - Processes `GET /processes/{process_id}` endpoint.
 
@@ -161,7 +161,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             fastapi.Response object.
         process_id : str
             Process identifier.
-        portals: list[str] | None
+        portals: tuple[str] | None
             Portals
 
         Returns
@@ -177,7 +177,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 resource_id=process_id,
                 table=self.process_table,
                 session=catalogue_session,
-                portals=tuple(portals),
+                portals=portals,
             )
         process_description = serializers.serialize_process_description(resource)
         process_description.outputs = {
