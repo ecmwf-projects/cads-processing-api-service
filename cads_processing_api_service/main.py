@@ -86,6 +86,7 @@ app.router.add_api_route(
     costing.estimate_cost,
     description="Estimate costs of the submitted process execution.",
     methods=["POST"],
+    response_model_exclude_unset=True,
 )
 app.router.add_api_route(
     "/processes/{process_id}/api-request",
