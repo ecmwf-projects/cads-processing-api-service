@@ -81,7 +81,6 @@ class CostingInfo(pydantic.BaseModel):
     costs: dict[str, float] = {}
     limits: dict[str, float] = {}
     cost_bar_steps: list[int] | None = None
-    request_is_valid: bool = True
 
 
 class RequestCost(pydantic.BaseModel):
@@ -89,6 +88,8 @@ class RequestCost(pydantic.BaseModel):
     cost: float = 0.0
     limit: float = 1.0
     cost_bar_steps: list[int] | None = None
+    request_is_valid: bool = True
+    invalid_reason: str | None = None
 
 
 class Execute(ogc_api_processes_fastapi.models.Execute):
