@@ -75,7 +75,7 @@ def estimate_cost(
     if costing_info.cost_bar_steps:
         cost.cost_bar_steps = costing_info.cost_bar_steps
     try:
-        _ = check_request_validity(
+        check_request_validity(
             request=request,
             request_origin=request_origin,
             mandatory_inputs=mandatory_inputs,
