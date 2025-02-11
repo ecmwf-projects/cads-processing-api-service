@@ -13,6 +13,7 @@ from . import adaptors, db_utils, exceptions, models, utils
 def apply_constraints(
     process_id: str = fastapi.Path(...),
     execution_content: models.Execute = fastapi.Body(...),
+    portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
 ) -> dict[str, Any]:
     request = execution_content.model_dump()
     table = cads_catalogue.database.Resource
@@ -21,7 +22,10 @@ def apply_constraints(
     )
     with catalogue_sessionmaker() as catalogue_session:
         dataset = utils.lookup_resource_by_id(
-            resource_id=process_id, table=table, session=catalogue_session
+            resource_id=process_id,
+            table=table,
+            session=catalogue_session,
+            portals=portals,
         )
     adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
     try:

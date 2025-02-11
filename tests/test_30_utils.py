@@ -333,3 +333,10 @@ def test_make_status_info() -> None:
         metadata={"origin": "api"},
     )
     assert status_info == exp_status_info
+
+
+def test_get_portals() -> None:
+    portal_header = "portal1,portal2"
+    result = utils.get_portals(portal_header)
+    expected = ("portal1", "portal2")
+    assert result == expected

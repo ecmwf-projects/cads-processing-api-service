@@ -22,7 +22,7 @@ import cads_adaptors.exceptions
 import cads_catalogue
 import fastapi
 
-from . import adaptors, costing, db_utils, exceptions, models, utils
+from . import adaptors, db_utils, exceptions, models, utils
 
 COST_THRESHOLDS = {"api": "max_costs", "ui": "max_costs_portal"}
 
@@ -38,6 +38,7 @@ def estimate_cost(
     request_origin: RequestOrigin = fastapi.Query("api"),
     mandatory_inputs: bool = fastapi.Query(False),
     execution_content: models.Execute = fastapi.Body(...),
+    portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
 ) -> models.RequestCost:
     """
     Estimate the cost with the highest cost/limit ratio of the request.
@@ -61,27 +62,37 @@ def estimate_cost(
     )
     with catalogue_sessionmaker() as catalogue_session:
         dataset = utils.lookup_resource_by_id(
-            resource_id=process_id, table=table, session=catalogue_session
+            resource_id=process_id,
+            table=table,
+            session=catalogue_session,
+            portals=portals,
         )
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
-    request_is_valid = check_request_validity(
-        request=request,
-        mandatory_inputs=mandatory_inputs,
-        adaptor_properties=adaptor_properties,
-    )
-    costing_info = costing.compute_costing(
+    costing_info = compute_costing(
         request.get("inputs", {}), adaptor_properties, request_origin
     )
-    cost = costing.compute_highest_cost_limit_ratio(costing_info)
+    cost = compute_highest_cost_limit_ratio(costing_info)
     if costing_info.cost_bar_steps:
         cost.cost_bar_steps = costing_info.cost_bar_steps
-    costing_info.request_is_valid = request_is_valid
+    try:
+        check_request_validity(
+            request=request,
+            request_origin=request_origin,
+            mandatory_inputs=mandatory_inputs,
+            adaptor_properties=adaptor_properties,
+        )
+    except exceptions.InvalidRequest as exc:
+        cost.request_is_valid = False
+        cost.invalid_reason = exc.detail
     return cost
 
 
 def check_request_validity(
-    request: dict[str, Any], mandatory_inputs: bool, adaptor_properties: dict[str, Any]
-) -> bool:
+    request: dict[str, Any],
+    request_origin: RequestOrigin,
+    mandatory_inputs: bool,
+    adaptor_properties: dict[str, Any],
+) -> None:
     """
     Check if the request is valid.
 
@@ -89,6 +100,8 @@ def check_request_validity(
     ----------
     request : dict[str, Any]
         Request to be processed.
+    request_origin : RequestOrigin
+        Origin of the request.
     mandatory_inputs : bool
         Whether mandatory inputs have been provided.
     adaptor_properties : dict[str, Any]
@@ -96,17 +109,21 @@ def check_request_validity(
 
     Returns
     -------
-    bool
-        Whether the request is valid.
+    None
+
+    Raises
+    ------
+    exceptions.InvalidRequest
+        If the request is invalid.
     """
-    if not mandatory_inputs:
-        return False
+    if not mandatory_inputs and request_origin == RequestOrigin.ui:
+        raise exceptions.InvalidRequest("missing mandatory inputs")
     try:
         adaptor = adaptors.instantiate_adaptor(adaptor_properties=adaptor_properties)
         _ = adaptor.check_validity(request.get("inputs", {}))
-        return True
-    except cads_adaptors.exceptions.InvalidRequest:
-        return False
+        return
+    except cads_adaptors.exceptions.InvalidRequest as exc:
+        raise exceptions.InvalidRequest(str(exc))
 
 
 def compute_highest_cost_limit_ratio(
@@ -169,7 +186,9 @@ def compute_costing(
     )
     costing_config: dict[str, Any] = adaptor_properties["config"].get("costing", {})
     limits: dict[str, Any] = costing_config.get("max_costs", {})
-    cost_bar_steps = costing_config.get("cost_bar_steps", None)
+    cost_bar_steps = (
+        costing_config.get("cost_bar_steps", None) if request_origin == "ui" else None
+    )
     costing_info = models.CostingInfo(
         costs=costs, limits=limits, cost_bar_steps=cost_bar_steps
     )
