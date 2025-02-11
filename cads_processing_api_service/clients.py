@@ -216,6 +216,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Submitted job's status information.
         """
+        structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.process_execution.post,
             auth_info,
@@ -371,6 +372,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.JobList
             List of jobs status information.
         """
+        structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.jobs.get,
             auth_info,
@@ -491,6 +493,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         models.StatusInfo
             Job status information.
         """
+        structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.job.get,
             auth_info,
@@ -611,6 +614,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.Results
             Job results.
         """
+        structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.job_results.get,
             auth_info,
@@ -673,6 +677,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ogc_api_processes_fastapi.models.StatusInfo
             Job status information
         """
+        structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         _ = limits.check_rate_limits(
             SETTINGS.rate_limits.job.delete,
             auth_info,
