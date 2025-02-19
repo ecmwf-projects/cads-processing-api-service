@@ -31,6 +31,13 @@ import yaml
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
+API_TITLE = "CADS Processing API"
+API_DESCRIPTION = (
+    "This REST API service enables the submission of processing tasks (data retrieval) to the "
+    "CADS system, and their consequent monitoring and management. "
+    "The service is based on the [OGC API - Processes standard](https://ogcapi.ogc.org/processes/)."
+)
+
 API_REQUEST_TEMPLATE = """import cdsapi
 
 dataset = "{process_id}"
@@ -188,6 +195,9 @@ class Settings(pydantic_settings.BaseSettings):
     cache_users_ttl: int = 60
     cache_resources_maxsize: int = 1000
     cache_resources_ttl: int = 10
+
+    api_title: str = API_TITLE
+    api_description: str = API_DESCRIPTION
 
     api_request_template: str = API_REQUEST_TEMPLATE
     api_request_max_list_length: dict[str, int] = API_REQUEST_MAX_LIST_LENGTH

@@ -68,14 +68,12 @@ async def lifespan(application: fastapi.FastAPI) -> AsyncGenerator[Any, None]:
 
 logger = structlog.get_logger(__name__)
 
+
 app = ogc_api_processes_fastapi.instantiate_app(
     client=clients.DatabaseClient(),  # type: ignore
     exception_handler=exceptions.exception_handler,
-    title="CADS Processing API",
-    description=(
-        "This is a FastAPI-based implementation of the "
-        "[OGC API - Processes standard](https://ogcapi.ogc.org/processes/)."
-    ),
+    title=SETTINGS.api_title,
+    description=SETTINGS.api_description,
 )
 app = exceptions.include_exception_handlers(app)
 # FIXME : "app.router.lifespan_context" is not officially supported and would likely break
