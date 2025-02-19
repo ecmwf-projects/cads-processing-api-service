@@ -71,6 +71,11 @@ logger = structlog.get_logger(__name__)
 app = ogc_api_processes_fastapi.instantiate_app(
     client=clients.DatabaseClient(),  # type: ignore
     exception_handler=exceptions.exception_handler,
+    title="CADS Processing API",
+    description=(
+        "This is a FastAPI-based implementation of the "
+        "[OGC API - Processes standard](https://ogcapi.ogc.org/processes/)."
+    ),
 )
 app = exceptions.include_exception_handlers(app)
 # FIXME : "app.router.lifespan_context" is not officially supported and would likely break
@@ -95,7 +100,9 @@ app.router.add_api_route(
     methods=["POST"],
 )
 
-app.router.add_api_route("/metrics", starlette_exporter.handle_metrics)
+app.router.add_api_route(
+    "/metrics", starlette_exporter.handle_metrics, include_in_schema=False
+)
 app.add_middleware(middlewares.ProcessingPrometheusMiddleware, group_paths=True)
 
 

@@ -130,7 +130,9 @@ def get_auth_info(
     jwt: str | None = fastapi.Header(
         None, description="JSON Web Token", alias="Authorization"
     ),
-    portal_header: str | None = fastapi.Header(None, alias=SETTINGS.portal_header_name),
+    portal_header: str | None = fastapi.Header(
+        None, alias=SETTINGS.portal_header_name, include_in_schema=False
+    ),
 ) -> models.AuthInfo | None:
     """Get authentication information from the incoming HTTP request.
 

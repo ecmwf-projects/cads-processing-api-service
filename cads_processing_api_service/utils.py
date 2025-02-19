@@ -662,7 +662,9 @@ def make_status_info(
 
 
 def get_portals(
-    portal_header: str | None = fastapi.Header(None, alias=SETTINGS.portal_header_name),
+    portal_header: str | None = fastapi.Header(
+        None, alias=SETTINGS.portal_header_name, include_in_schema=False
+    ),
 ) -> tuple[str, ...] | None:
     """Get the list of portals from the incoming HTTP request's header.
 
