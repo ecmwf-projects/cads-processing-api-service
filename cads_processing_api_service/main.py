@@ -96,7 +96,7 @@ app.router.add_api_route(
 app.router.add_api_route(
     "/processes/{process_id}/api-request",
     translators.get_api_request,
-    description="Get API request equivalent to the submitted prrocess execution json.",
+    description="Get API request equivalent to the submitted process execution json.",
     methods=["POST"],
 )
 
