@@ -35,7 +35,12 @@ API_TITLE = "CADS Processing API"
 API_DESCRIPTION = (
     "This REST API service enables the submission of processing tasks (data retrieval) to the "
     "CADS system, and their consequent monitoring and management. "
-    "The service is based on the [OGC API - Processes standard](https://ogcapi.ogc.org/processes/)."
+    "The service is based on the [OGC API - Processes standard](https://ogcapi.ogc.org/processes/).\n\n"
+    "Being based on the OGC API - Processes standard, some terminology is inherited from it. "
+    "In the context of this specific API, each _process_ is associated with a specific dataset "
+    "and enables the retrieval of data from that dataset: as such, each _process_ identifier "
+    "corresponds to a specific dataset identifier.\n"
+    "A _job_, instead, is a specific data retrieval task that has been submitted for execution."
 )
 
 API_REQUEST_TEMPLATE = """import cdsapi

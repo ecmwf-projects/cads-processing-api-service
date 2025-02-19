@@ -34,7 +34,7 @@ class RequestOrigin(str, enum.Enum):
 
 @exceptions.exception_logger
 def estimate_cost(
-    process_id: str = fastapi.Path(...),
+    process_id: str = fastapi.Path(..., description="Process identifier."),
     request_origin: RequestOrigin = fastapi.Query("api", include_in_schema=False),
     mandatory_inputs: bool = fastapi.Query(False, include_in_schema=False),
     execution_content: models.Execute = fastapi.Body(...),

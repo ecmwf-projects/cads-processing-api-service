@@ -86,9 +86,12 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     @exceptions.exception_logger
     def get_processes(
         self,
-        limit: int | None = fastapi.Query(10, ge=1, le=10000),
+        limit: int | None = fastapi.Query(
+            10, ge=1, le=10000, description="Maximum number of results to return."
+        ),
         sortby: utils.ProcessSortCriterion | None = fastapi.Query(
-            utils.ProcessSortCriterion.resource_uid_asc
+            utils.ProcessSortCriterion.resource_uid_asc,
+            description="Sorting criterion.",
         ),
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
@@ -148,7 +151,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_process(
         self,
         response: fastapi.Response,
-        process_id: str = fastapi.Path(...),
+        process_id: str = fastapi.Path(..., description="Process identifier."),
         portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
     ) -> ogc_api_processes_fastapi.models.ProcessDescription:
         """Implement OGC API - Processes `GET /processes/{process_id}` endpoint.
@@ -201,7 +204,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def post_process_execution(
         self,
         request: fastapi.Request,
-        process_id: str = fastapi.Path(...),
+        process_id: str = fastapi.Path(..., description="Process identifier."),
         execution_content: models.Execute = fastapi.Body(...),
         auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
     ) -> models.StatusInfo:
@@ -330,18 +333,30 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     @exceptions.exception_logger
     def get_jobs(
         self,
-        processID: list[str] | None = fastapi.Query(None),
+        processID: list[str] | None = fastapi.Query(
+            None,
+            description=(
+                "Processes identifiers. Only jobs associated to the specified "
+                "processes shall be included in the response."
+            ),
+        ),
         status: list[models.StatusCode] | None = fastapi.Query(
             [
                 ogc_api_processes_fastapi.models.StatusCode.accepted,
                 ogc_api_processes_fastapi.models.StatusCode.running,
                 ogc_api_processes_fastapi.models.StatusCode.successful,
                 ogc_api_processes_fastapi.models.StatusCode.failed,
-            ]
+            ],
+            description=(
+                "Job statuses. Only jobs with the specified statuses shall be included in "
+                "the response."
+            ),
         ),
-        limit: int | None = fastapi.Query(10, ge=1, le=10000),
+        limit: int | None = fastapi.Query(
+            10, ge=1, le=10000, description="Maximum number of results to return."
+        ),
         sortby: utils.JobSortCriterion | None = fastapi.Query(
-            utils.JobSortCriterion.created_at_desc
+            utils.JobSortCriterion.created_at_desc, description="Sorting criterion."
         ),
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
@@ -459,12 +474,21 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     @exceptions.exception_logger
     def get_job(
         self,
-        job_id: str = fastapi.Path(...),
-        qos: bool = fastapi.Query(False),
-        request: bool = fastapi.Query(False),
-        log: bool = fastapi.Query(False),
+        job_id: str = fastapi.Path(..., description="Job identifier."),
+        qos: bool = fastapi.Query(
+            False, description="Whether to include job qos info in the response."
+        ),
+        request: bool = fastapi.Query(
+            False,
+            description="Whether to include the sumbitted request in the response.",
+        ),
+        log: bool = fastapi.Query(
+            False, description="Whether to include the job's log in the response."
+        ),
         log_start_time: datetime.datetime | None = fastapi.Query(
-            None, alias="logStartTime"
+            None,
+            alias="logStartTime",
+            description="Datetime of the first log message to be returned.",
         ),
         auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
     ) -> models.StatusInfo:
@@ -589,7 +613,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     @exceptions.exception_logger
     def get_job_results(
         self,
-        job_id: str = fastapi.Path(...),
+        job_id: str = fastapi.Path(..., description="Job identifier."),
         auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
     ) -> ogc_api_processes_fastapi.models.Results:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
@@ -652,7 +676,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     @exceptions.exception_logger
     def delete_job(
         self,
-        job_id: str = fastapi.Path(...),
+        job_id: str = fastapi.Path(..., description="Job identifier."),
         auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
     ) -> ogc_api_processes_fastapi.models.StatusInfo:
         """Implement OGC API - Processes `DELETE /jobs/{job_id}` endpoint.
