@@ -337,7 +337,7 @@ def format_api_request(
 
 @exceptions.exception_logger
 def get_api_request(
-    process_id: str = fastapi.Path(...),
+    process_id: str = fastapi.Path(..., description="Process identifier."),
     request: dict[str, Any] = fastapi.Body(...),
 ) -> dict[str, str]:
     """Get CADS API request equivalent to the provided processing request.

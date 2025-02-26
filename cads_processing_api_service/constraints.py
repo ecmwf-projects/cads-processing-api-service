@@ -11,7 +11,7 @@ from . import adaptors, db_utils, exceptions, models, utils
 
 @exceptions.exception_logger
 def apply_constraints(
-    process_id: str = fastapi.Path(...),
+    process_id: str = fastapi.Path(..., description="Process identifier."),
     execution_content: models.Execute = fastapi.Body(...),
     portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
 ) -> dict[str, Any]:

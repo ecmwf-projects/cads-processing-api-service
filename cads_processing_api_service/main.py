@@ -68,9 +68,12 @@ async def lifespan(application: fastapi.FastAPI) -> AsyncGenerator[Any, None]:
 
 logger = structlog.get_logger(__name__)
 
+
 app = ogc_api_processes_fastapi.instantiate_app(
     client=clients.DatabaseClient(),  # type: ignore
     exception_handler=exceptions.exception_handler,
+    title=SETTINGS.api_title,
+    description=SETTINGS.api_description,
 )
 app = exceptions.include_exception_handlers(app)
 # FIXME : "app.router.lifespan_context" is not officially supported and would likely break
@@ -91,11 +94,13 @@ app.router.add_api_route(
 app.router.add_api_route(
     "/processes/{process_id}/api-request",
     translators.get_api_request,
-    description="Get API request equivalent to the submitted prrocess execution json.",
+    description="Get API request equivalent to the submitted process execution json.",
     methods=["POST"],
 )
 
-app.router.add_api_route("/metrics", starlette_exporter.handle_metrics)
+app.router.add_api_route(
+    "/metrics", starlette_exporter.handle_metrics, include_in_schema=False
+)
 app.add_middleware(middlewares.ProcessingPrometheusMiddleware, group_paths=True)
 
 
