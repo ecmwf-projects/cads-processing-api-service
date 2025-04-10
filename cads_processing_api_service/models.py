@@ -78,7 +78,7 @@ class Exception(ogc_api_processes_fastapi.models.Exception):
 
 
 class CostingInfo(pydantic.BaseModel):
-    costs: dict[str, float | str] = {}
+    costs: dict[str, float] = {}
     limits: dict[str, float] = {}
     cost_bar_steps: list[int] | None = None
 
