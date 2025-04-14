@@ -181,15 +181,20 @@ def compute_costing(
     if request_origin not in COST_THRESHOLDS:
         raise ValueError(f"Invalid request origin: {request_origin}")
     cost_threshold = COST_THRESHOLDS[request_origin]
-    costs: dict[str, float] = adaptor.estimate_costs(
+    costs: dict[str, Any] = adaptor.estimate_costs(
         request=request, cost_threshold=cost_threshold
     )
+    costs_numeric = {
+        cost_id: cost
+        for cost_id, cost in costs.items()
+        if isinstance(cost, (int, float))
+    }
     costing_config: dict[str, Any] = adaptor_properties["config"].get("costing", {})
     limits: dict[str, Any] = costing_config.get("max_costs", {})
     cost_bar_steps = (
         costing_config.get("cost_bar_steps", None) if request_origin == "ui" else None
     )
     costing_info = models.CostingInfo(
-        costs=costs, limits=limits, cost_bar_steps=cost_bar_steps
+        costs=costs_numeric, limits=limits, cost_bar_steps=cost_bar_steps
     )
     return costing_info
