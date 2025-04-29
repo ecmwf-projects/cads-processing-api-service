@@ -143,11 +143,16 @@ def compute_highest_cost_limit_ratio(
         Info on the cost with the highest cost/limit ratio.
     """
     costs = costing_info.costs
+    costs_numeric = {
+        cost_id: cost
+        for cost_id, cost in costs.items()
+        if isinstance(cost, (int, float))
+    }
     limits = costing_info.limits
     highest_cost_limit_ratio = 0.0
     highest_cost = models.RequestCost()
     for limit_id, limit in limits.items():
-        cost = costs.get(limit_id, 0.0)
+        cost = costs_numeric.get(limit_id, 0.0)
         cost_limit_ratio = cost / limit if limit > 0 else 1.1
         if cost_limit_ratio > highest_cost_limit_ratio:
             highest_cost_limit_ratio = cost_limit_ratio
