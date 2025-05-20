@@ -106,17 +106,18 @@ def authenticate_user(
             SETTINGS.portal_header_name: portal_header,
         },
     )
+    response_content: dict[str, Any] = response.json()
     if response.status_code in (
         fastapi.status.HTTP_401_UNAUTHORIZED,
         fastapi.status.HTTP_403_FORBIDDEN,
     ):
         raise exceptions.PermissionDenied(
             status_code=response.status_code,
-            title=response.json()["title"],
-            detail="operation not allowed",
+            title=response_content["title"],
+            detail=response_content.get("detail", "operation not allowed"),
         )
     response.raise_for_status()
-    user: dict[str, str] = response.json()
+    user: dict[str, str] = response_content
     user_uid: str = user["sub"]
     user_role: str | None = user.get("role", None)
     email: str | None = user.get("email", None)
