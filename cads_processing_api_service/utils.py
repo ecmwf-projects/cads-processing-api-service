@@ -32,7 +32,6 @@ import sqlalchemy as sa
 import sqlalchemy.exc
 import sqlalchemy.orm
 import sqlalchemy.orm.attributes
-import sqlalchemy.orm.exc
 import sqlalchemy.sql.selectable
 import structlog
 
