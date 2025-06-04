@@ -23,7 +23,6 @@ import attrs
 import cacholote.extra_encoders
 import cads_adaptors.exceptions
 import cads_broker.database
-import cads_catalogue.config
 import cads_catalogue.database
 import fastapi
 import ogc_api_processes_fastapi
@@ -31,11 +30,6 @@ import ogc_api_processes_fastapi.clients
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
 import sqlalchemy
-import sqlalchemy.orm
-import sqlalchemy.orm.attributes
-import sqlalchemy.orm.decl_api
-import sqlalchemy.orm.exc
-import sqlalchemy.sql.selectable
 import structlog
 
 from . import (

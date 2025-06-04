@@ -29,11 +29,9 @@ import structlog
 from . import (
     clients,
     config,
-    constraints,
-    costing,
+    endpoints,
     exceptions,
     middlewares,
-    translators,
 )
 
 SETTINGS = config.settings
@@ -80,24 +78,31 @@ app = exceptions.include_exception_handlers(app)
 app.router.lifespan_context = lifespan
 app.router.add_api_route(
     "/processes/{process_id}/constraints",
-    constraints.apply_constraints,
+    endpoints.apply_constraints,
     description="Apply constraints to the submitted process execution.",
     methods=["POST"],
 )
 app.router.add_api_route(
     "/processes/{process_id}/costing",
-    costing.estimate_cost,
+    endpoints.estimate_cost,
     description="Estimate costs of the submitted process execution.",
     methods=["POST"],
     response_model_exclude_unset=True,
 )
 app.router.add_api_route(
     "/processes/{process_id}/api-request",
-    translators.get_api_request,
+    endpoints.get_api_request,
     description="Get API request equivalent to the submitted process execution json.",
     methods=["POST"],
 )
-
+app.router.add_api_route(
+    "/jobs/delete",
+    endpoints.delete_jobs,
+    description="Delete jobs by their identifiers.",
+    methods=["POST"],
+    response_model_exclude_unset=True,
+    response_model_exclude_none=True,
+)
 app.router.add_api_route(
     "/metrics", starlette_exporter.handle_metrics, include_in_schema=False
 )
