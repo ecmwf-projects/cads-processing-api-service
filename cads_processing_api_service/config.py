@@ -31,10 +31,10 @@ import yaml
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-API_TITLE = "CADS Processing API"
+API_TITLE = "ECMWF Data Stores Processing API"
 API_DESCRIPTION = (
     "This REST API service enables the submission of processing tasks (data retrieval) to the "
-    "CADS system, and their consequent monitoring and management. "
+    "ECMWF Data Stores system, and their consequent monitoring and management. "
     "The service is based on the [OGC API - Processes standard](https://ogcapi.ogc.org/processes/).\n\n"
     "Being based on the OGC API - Processes standard, some terminology is inherited from it. "
     "In the context of this specific API, each _process_ is associated with a specific dataset "
