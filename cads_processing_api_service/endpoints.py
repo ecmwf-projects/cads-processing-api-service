@@ -159,7 +159,7 @@ def delete_jobs(
         List of jobs that were successfully deleted.
     """
     structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
-    _ = limits.check_rate_limits(
+    limits.check_rate_limits(
         SETTINGS.rate_limits.jobs.delete,
         auth_info,
     )
