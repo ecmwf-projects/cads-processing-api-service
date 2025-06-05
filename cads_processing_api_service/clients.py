@@ -445,7 +445,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     utils.make_status_info(
                         job=job,
                         results=results,
-                        dataset_metadata={"title": dataset_title},
+                        dataset_metadata={
+                            "title": dataset_title,
+                            "catalogue": job.portal,
+                        },
                         qos={
                             "status": cads_broker.database.get_qos_status_from_request(
                                 job
@@ -601,7 +604,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             kwargs["qos"] = {
                 **job_qos_info,
             }
-        status_info = utils.make_status_info(job=job, **kwargs)
+        status_info = utils.make_status_info(
+            job=job, dataset_metadata={"catalogue": job.portal}, **kwargs
+        )
         return status_info
 
     @exceptions.exception_logger
