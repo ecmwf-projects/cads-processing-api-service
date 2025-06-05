@@ -1,7 +1,6 @@
 from typing import Any
 
 import cads_adaptors
-import cads_adaptors.constraints
 import cads_adaptors.exceptions
 import cads_catalogue
 import fastapi

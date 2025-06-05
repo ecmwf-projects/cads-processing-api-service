@@ -18,7 +18,7 @@ import enum
 import functools
 
 import cads_broker.config
-import cads_catalogue.config
+import cads_catalogue.database
 import sqlalchemy
 import sqlalchemy.orm
 

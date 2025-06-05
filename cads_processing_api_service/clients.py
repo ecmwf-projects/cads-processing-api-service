@@ -23,7 +23,6 @@ import attrs
 import cacholote.extra_encoders
 import cads_adaptors.exceptions
 import cads_broker.database
-import cads_catalogue.config
 import cads_catalogue.database
 import fastapi
 import ogc_api_processes_fastapi
@@ -31,11 +30,6 @@ import ogc_api_processes_fastapi.clients
 import ogc_api_processes_fastapi.exceptions
 import ogc_api_processes_fastapi.models
 import sqlalchemy
-import sqlalchemy.orm
-import sqlalchemy.orm.attributes
-import sqlalchemy.orm.decl_api
-import sqlalchemy.orm.exc
-import sqlalchemy.sql.selectable
 import structlog
 
 from . import (
@@ -451,7 +445,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     utils.make_status_info(
                         job=job,
                         results=results,
-                        dataset_metadata={"title": dataset_title},
+                        dataset_metadata={
+                            "title": dataset_title,
+                            "catalogue": job.portal,
+                        },
                         qos={
                             "status": cads_broker.database.get_qos_status_from_request(
                                 job
@@ -607,7 +604,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             kwargs["qos"] = {
                 **job_qos_info,
             }
-        status_info = utils.make_status_info(job=job, **kwargs)
+        status_info = utils.make_status_info(
+            job=job, dataset_metadata={"catalogue": job.portal}, **kwargs
+        )
         return status_info
 
     @exceptions.exception_logger
