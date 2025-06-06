@@ -19,10 +19,8 @@ from typing import Any
 
 import cads_adaptors
 import cads_adaptors.exceptions
-import cads_catalogue
-import fastapi
 
-from . import adaptors, db_utils, exceptions, models, utils
+from . import adaptors, exceptions, models
 
 COST_THRESHOLDS = {"api": "max_costs", "ui": "max_costs_portal"}
 
@@ -30,61 +28,6 @@ COST_THRESHOLDS = {"api": "max_costs", "ui": "max_costs_portal"}
 class RequestOrigin(str, enum.Enum):
     api = "api"
     ui = "ui"
-
-
-@exceptions.exception_logger
-def estimate_cost(
-    process_id: str = fastapi.Path(..., description="Process identifier."),
-    request_origin: RequestOrigin = fastapi.Query("api", include_in_schema=False),
-    mandatory_inputs: bool = fastapi.Query(False, include_in_schema=False),
-    execution_content: models.Execute = fastapi.Body(...),
-    portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
-) -> models.RequestCost:
-    """
-    Estimate the cost with the highest cost/limit ratio of the request.
-
-    Parameters
-    ----------
-    process_id : str
-        Process ID.
-    execution_content : models.Execute
-        Request content.
-
-    Returns
-    -------
-    models.RequestCost
-        Info on the cost with the highest cost/limit ratio.
-    """
-    request = execution_content.model_dump()
-    table = cads_catalogue.database.Resource
-    catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
-        db_utils.ConnectionMode.read
-    )
-    with catalogue_sessionmaker() as catalogue_session:
-        dataset = utils.lookup_resource_by_id(
-            resource_id=process_id,
-            table=table,
-            session=catalogue_session,
-            portals=portals,
-        )
-    adaptor_properties = adaptors.get_adaptor_properties(dataset)
-    costing_info = compute_costing(
-        request.get("inputs", {}), adaptor_properties, request_origin
-    )
-    cost = compute_highest_cost_limit_ratio(costing_info)
-    if costing_info.cost_bar_steps:
-        cost.cost_bar_steps = costing_info.cost_bar_steps
-    try:
-        check_request_validity(
-            request=request,
-            request_origin=request_origin,
-            mandatory_inputs=mandatory_inputs,
-            adaptor_properties=adaptor_properties,
-        )
-    except exceptions.InvalidRequest as exc:
-        cost.request_is_valid = False
-        cost.invalid_reason = exc.detail
-    return cost
 
 
 def check_request_validity(

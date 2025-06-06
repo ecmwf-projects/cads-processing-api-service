@@ -94,3 +94,11 @@ class RequestCost(pydantic.BaseModel):
 
 class Execute(ogc_api_processes_fastapi.models.Execute):
     inputs: dict[str, Any] | None = None
+
+
+class DeleteJobs(pydantic.BaseModel):
+    """Request body for DELETE /jobs."""
+
+    job_ids: list[str] = pydantic.Field(
+        ..., description="Identifiers of the jobs to delete."
+    )
