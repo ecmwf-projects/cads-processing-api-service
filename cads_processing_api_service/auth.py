@@ -40,7 +40,7 @@ def get_auth_header(pat: str | None = None, jwt: str | None = None) -> tuple[str
     Parameters
     ----------
     pat : str | None, optional
-        API Token
+        API key
     jwt : str | None, optional
         JSON Web Token
 
@@ -126,7 +126,7 @@ def authenticate_user(
 
 def get_auth_info(
     pat: str | None = fastapi.Header(
-        None, description="API Token.", alias="PRIVATE-TOKEN"
+        None, description="API key.", alias="PRIVATE-TOKEN"
     ),
     jwt: str | None = fastapi.Header(
         None,
@@ -143,7 +143,7 @@ def get_auth_info(
     Parameters
     ----------
     pat : str | None, optional
-        API Token
+        API key
     jwt : str | None, optional
         JSON Web Token
     portal_header : str | None, optional
