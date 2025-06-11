@@ -17,10 +17,9 @@
 import copy
 from typing import Any
 
-import fastapi
 import structlog
 
-from . import config, exceptions
+from . import config
 
 SETTINGS = config.settings
 
@@ -333,27 +332,3 @@ def format_api_request(
     ).replace("'", '"')
 
     return api_request
-
-
-@exceptions.exception_logger
-def get_api_request(
-    process_id: str = fastapi.Path(..., description="Process identifier."),
-    request: dict[str, Any] = fastapi.Body(...),
-) -> dict[str, str]:
-    """Get CADS API request equivalent to the provided processing request.
-
-    Parameters
-    ----------
-    process_id : str, optional
-        Process identifier, by default fastapi.Path(...)
-    request : dict[str, Any], optional
-        Request, by default fastapi.Body(...)
-
-    Returns
-    -------
-    dict[str, str]
-        CDS API request.
-    """
-    api_request_template = SETTINGS.api_request_template
-    api_request = format_api_request(api_request_template, process_id, request)
-    return {"api_request": api_request}
