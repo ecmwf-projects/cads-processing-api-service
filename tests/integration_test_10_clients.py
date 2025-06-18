@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import time
 import urllib.parse
 import uuid
@@ -63,7 +64,7 @@ POST_PROCESS_REQUEST_BODY_SLOW = {
 }
 TEST_PAT_1 = "00000000-0000-4000-a000-000000000000"
 TEST_PAT_2 = "00000000-0000-3000-abcd-000000000001"
-TEST_PAT_ANON = "00112233-4455-6677-c899-aabbccddeeff"
+TEST_PAT_ANON = os.getenv("ANONYMOUS_PAT", "00112233-4455-6677-c899-aabbccddeeff")
 INVALID_PAT = "0123"
 AUTH_HEADERS_VALID_1 = {"PRIVATE-TOKEN": TEST_PAT_1}
 AUTH_HEADERS_VALID_2 = {"PRIVATE-TOKEN": TEST_PAT_2}
