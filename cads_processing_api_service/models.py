@@ -37,6 +37,15 @@ class StatusCode(str, enum.Enum):
     successful = "successful"
     failed = "failed"
     rejected = "rejected"
+    dismissed = "dismissed"
+
+
+class SearchableStatusCode(str, enum.Enum):
+    accepted = "accepted"
+    running = "running"
+    successful = "successful"
+    failed = "failed"
+    rejected = "rejected"
 
 
 class StatusInfoMetadata(pydantic.BaseModel):
