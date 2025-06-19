@@ -334,7 +334,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 "processes shall be included in the response."
             ),
         ),
-        status: list[models.StatusCode] | None = fastapi.Query(
+        status: list[models.SearchableStatusCode] | None = fastapi.Query(
             [
                 models.StatusCode.accepted,
                 models.StatusCode.running,
