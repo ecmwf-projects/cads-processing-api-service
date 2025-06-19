@@ -336,10 +336,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ),
         status: list[models.StatusCode] | None = fastapi.Query(
             [
-                ogc_api_processes_fastapi.models.StatusCode.accepted,
-                ogc_api_processes_fastapi.models.StatusCode.running,
-                ogc_api_processes_fastapi.models.StatusCode.successful,
-                ogc_api_processes_fastapi.models.StatusCode.failed,
+                models.StatusCode.accepted,
+                models.StatusCode.running,
+                models.StatusCode.successful,
+                models.StatusCode.failed,
+                models.StatusCode.rejected,
             ],
             description=(
                 "Job statuses. Only jobs with the specified statuses shall be included in "
@@ -677,7 +678,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         job_id: str = fastapi.Path(..., description="Job identifier."),
         auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
-    ) -> ogc_api_processes_fastapi.models.StatusInfo:
+    ) -> models.StatusInfo:
         """Implement OGC API - Processes `DELETE /jobs/{job_id}` endpoint.
 
         Dismiss the job identifed by `job_id`.
@@ -691,7 +692,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
 
         Returns
         -------
-        ogc_api_processes_fastapi.models.StatusInfo
+        models.StatusInfo
             Job status information
         """
         structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)

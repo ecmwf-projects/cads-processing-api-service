@@ -15,7 +15,6 @@
 # limitations under the License
 
 import datetime
-import enum
 from typing import Any
 
 import ogc_api_processes_fastapi.models
@@ -31,11 +30,8 @@ class AuthInfo(pydantic.BaseModel):
     portals: tuple[str, ...] | None = None
 
 
-class StatusCode(str, enum.Enum):
-    accepted = "accepted"
-    running = "running"
-    successful = "successful"
-    failed = "failed"
+class StatusCode(ogc_api_processes_fastapi.models.StatusCode):
+    rejected = "rejected"
 
 
 class StatusInfoMetadata(pydantic.BaseModel):
@@ -48,6 +44,7 @@ class StatusInfoMetadata(pydantic.BaseModel):
 
 
 class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
+    status: StatusCode
     metadata: StatusInfoMetadata | None = None
 
 

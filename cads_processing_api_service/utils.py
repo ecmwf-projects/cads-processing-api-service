@@ -395,8 +395,7 @@ def apply_limit(
 
 def make_cursor(
     entries: (
-        list[ogc_api_processes_fastapi.models.StatusInfo]
-        | list[ogc_api_processes_fastapi.models.ProcessSummary]
+        list[models.StatusInfo] | list[ogc_api_processes_fastapi.models.ProcessSummary]
     ),
     sort_key: str,
     page: str,
@@ -413,8 +412,7 @@ def make_cursor(
 
 def make_pagination_query_params(
     entries: (
-        list[ogc_api_processes_fastapi.models.StatusInfo]
-        | list[ogc_api_processes_fastapi.models.ProcessSummary]
+        list[models.StatusInfo] | list[ogc_api_processes_fastapi.models.ProcessSummary]
     ),
     sort_key: str,
 ) -> ogc_api_processes_fastapi.models.PaginationQueryParameters:
