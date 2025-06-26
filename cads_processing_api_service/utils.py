@@ -519,13 +519,18 @@ def get_results_from_job(
             asset_value["file:local_path"], config.DownloadNodesSettings().download_node
         )
         results = {"asset": {"value": asset_value}}
-    elif job_status == "failed":
+    elif job_status in ("failed", "rejected"):
         error_messages = get_job_events(
             job=job, session=session, event_type="user_visible_error"
         )
         traceback = "\n".join([message[1] for message in error_messages])
+        match job_status:
+            case "failed":
+                exc_title = "The job has failed"
+            case "rejected":
+                exc_title = "The job has been rejected"
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
-            title="The job has failed.",
+            title=exc_title,
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
             traceback=traceback,
         )
