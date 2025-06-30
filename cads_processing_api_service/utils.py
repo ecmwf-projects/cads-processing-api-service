@@ -395,8 +395,7 @@ def apply_limit(
 
 def make_cursor(
     entries: (
-        list[ogc_api_processes_fastapi.models.StatusInfo]
-        | list[ogc_api_processes_fastapi.models.ProcessSummary]
+        list[models.StatusInfo] | list[ogc_api_processes_fastapi.models.ProcessSummary]
     ),
     sort_key: str,
     page: str,
@@ -413,8 +412,7 @@ def make_cursor(
 
 def make_pagination_query_params(
     entries: (
-        list[ogc_api_processes_fastapi.models.StatusInfo]
-        | list[ogc_api_processes_fastapi.models.ProcessSummary]
+        list[models.StatusInfo] | list[ogc_api_processes_fastapi.models.ProcessSummary]
     ),
     sort_key: str,
 ) -> ogc_api_processes_fastapi.models.PaginationQueryParameters:
@@ -521,13 +519,18 @@ def get_results_from_job(
             asset_value["file:local_path"], config.DownloadNodesSettings().download_node
         )
         results = {"asset": {"value": asset_value}}
-    elif job_status == "failed":
+    elif job_status in ("failed", "rejected"):
         error_messages = get_job_events(
             job=job, session=session, event_type="user_visible_error"
         )
         traceback = "\n".join([message[1] for message in error_messages])
+        match job_status:
+            case "failed":
+                exc_title = "The job has failed"
+            case "rejected":
+                exc_title = "The job has been rejected"
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
-            title="The job has failed.",
+            title=exc_title,  # type: ignore
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
             traceback=traceback,
         )

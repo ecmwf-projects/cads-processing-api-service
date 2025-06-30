@@ -36,6 +36,16 @@ class StatusCode(str, enum.Enum):
     running = "running"
     successful = "successful"
     failed = "failed"
+    rejected = "rejected"
+    dismissed = "dismissed"
+
+
+class SearchableStatusCode(str, enum.Enum):
+    accepted = "accepted"
+    running = "running"
+    successful = "successful"
+    failed = "failed"
+    rejected = "rejected"
 
 
 class StatusInfoMetadata(pydantic.BaseModel):
@@ -48,6 +58,7 @@ class StatusInfoMetadata(pydantic.BaseModel):
 
 
 class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
+    status: StatusCode  # type: ignore
     metadata: StatusInfoMetadata | None = None
 
 
