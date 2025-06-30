@@ -58,7 +58,7 @@ class StatusInfoMetadata(pydantic.BaseModel):
 
 
 class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
-    status: StatusCode
+    status: StatusCode  # type: ignore
     metadata: StatusInfoMetadata | None = None
 
 

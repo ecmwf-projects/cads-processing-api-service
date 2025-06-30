@@ -530,7 +530,7 @@ def get_results_from_job(
             case "rejected":
                 exc_title = "The job has been rejected"
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
-            title=exc_title,
+            title=exc_title,  # type: ignore
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
             traceback=traceback,
         )
