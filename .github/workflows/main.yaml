@@ -1,0 +1,25 @@
+name: Build cads-processing-api-service docker image
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - automatic_package_update
+    tags:
+      - "v*"
+    pull_request:
+      branches:
+        - main
+
+
+
+jobs:
+  build_docker_image:
+    name: Build docker image
+    uses: ecmwf-projects/cads-build-farm/.github/workflows/docker-build.yaml@helm-chart-pipeline
+    with:
+      dockerfile: 'Retrieve.Dockerfile'
+      chart-repo: 'ecmwf/dss-retrive-api-chart'
+      enable-package-update: false
+    secrets: inherit
