@@ -624,7 +624,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def get_job_results(
         self,
         job_id: str = fastapi.Path(..., description="Job identifier."),
-        auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
+        auth_info: models.AuthInfo = fastapi.Depends(
+            exceptions.exception_logger(auth.get_auth_info)
+        ),
     ) -> ogc_api_processes_fastapi.models.Results:
         """Implement OGC API - Processes `GET /jobs/{job_id}/results` endpoint.
 
