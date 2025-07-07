@@ -66,6 +66,13 @@ class RateLimitExceeded(ogc_api_processes_fastapi.exceptions.OGCAPIException):
 
 
 def exception_logger(f: Callable[..., Any]) -> Callable[..., Any]:
+    """Log exceptions raised by the decorated function.
+
+    Using this instead of logging exceptions in the exceptions handler avoids
+    including starlette-related tracebacks in the logs, which are not useful
+    and typically very long.
+    """
+
     @functools.wraps(f)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         try:

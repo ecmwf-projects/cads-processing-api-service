@@ -89,7 +89,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ),
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
-        portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
+        portals: tuple[str] | None = fastapi.Depends(
+            exceptions.exception_logger(utils.get_portals)
+        ),
     ) -> ogc_api_processes_fastapi.models.ProcessList:
         """Implement OGC API - Processes `GET /processes` endpoint.
 
@@ -146,7 +148,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         self,
         response: fastapi.Response,
         process_id: str = fastapi.Path(..., description="Process identifier."),
-        portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
+        portals: tuple[str] | None = fastapi.Depends(
+            exceptions.exception_logger(utils.get_portals)
+        ),
     ) -> ogc_api_processes_fastapi.models.ProcessDescription:
         """Implement OGC API - Processes `GET /processes/{process_id}` endpoint.
 
@@ -200,7 +204,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         request: fastapi.Request,
         process_id: str = fastapi.Path(..., description="Process identifier."),
         execution_content: models.Execute = fastapi.Body(...),
-        auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
+        auth_info: models.AuthInfo = fastapi.Depends(
+            exceptions.exception_logger(auth.get_auth_info)
+        ),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `POST /processes/{process_id}/execution` endpoint.
 
@@ -355,7 +361,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         ),
         cursor: str | None = fastapi.Query(None, include_in_schema=False),
         back: bool | None = fastapi.Query(None, include_in_schema=False),
-        auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
+        auth_info: models.AuthInfo = fastapi.Depends(
+            exceptions.exception_logger(auth.get_auth_info)
+        ),
     ) -> models.JobList:
         """Implement OGC API - Processes `GET /jobs` endpoint.
 
@@ -488,7 +496,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             alias="logStartTime",
             description="Datetime of the first log message to be returned.",
         ),
-        auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
+        auth_info: models.AuthInfo = fastapi.Depends(
+            exceptions.exception_logger(auth.get_auth_info)
+        ),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `GET /jobs/{job_id}` endpoint.
 
@@ -677,7 +687,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
     def delete_job(
         self,
         job_id: str = fastapi.Path(..., description="Job identifier."),
-        auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
+        auth_info: models.AuthInfo = fastapi.Depends(
+            exceptions.exception_logger(auth.get_auth_info)
+        ),
     ) -> models.StatusInfo:
         """Implement OGC API - Processes `DELETE /jobs/{job_id}` endpoint.
 

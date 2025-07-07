@@ -30,7 +30,9 @@ SETTINGS = config.settings
 def apply_constraints(
     process_id: str = fastapi.Path(..., description="Process identifier."),
     execution_content: models.Execute = fastapi.Body(...),
-    portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
+    portals: tuple[str] | None = fastapi.Depends(
+        exceptions.exception_logger(utils.get_portals)
+    ),
 ) -> dict[str, Any]:
     request = execution_content.model_dump()
     table = cads_catalogue.database.Resource
@@ -66,7 +68,9 @@ def estimate_cost(
     ),
     mandatory_inputs: bool = fastapi.Query(False, include_in_schema=False),
     execution_content: models.Execute = fastapi.Body(...),
-    portals: tuple[str] | None = fastapi.Depends(utils.get_portals),
+    portals: tuple[str] | None = fastapi.Depends(
+        exceptions.exception_logger(utils.get_portals)
+    ),
 ) -> models.RequestCost:
     """
     Estimate the cost with the highest cost/limit ratio of the request.
@@ -144,7 +148,9 @@ def get_api_request(
 @exceptions.exception_logger
 def delete_jobs(
     request: models.DeleteJobs = fastapi.Body(...),
-    auth_info: models.AuthInfo = fastapi.Depends(auth.get_auth_info),
+    auth_info: models.AuthInfo = fastapi.Depends(
+        exceptions.exception_logger(auth.get_auth_info)
+    ),
 ) -> models.JobList:
     """Delete jobs from the processing queue.
 
