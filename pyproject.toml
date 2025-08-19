@@ -85,6 +85,7 @@ convention = "numpy"
 packages = ["cads_processing_api_service"]
 
 [tool.setuptools_scm]
+fallback_version = "999"
 write_to = "cads_processing_api_service/version.py"
 write_to_template = '''
 # Do not change! Do not track in version control!
