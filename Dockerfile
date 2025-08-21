@@ -4,7 +4,7 @@ COPY . /src/cads-processing-api-service
 
 WORKDIR /src/cads-processing-api-service
 
-RUN conda install -c conda-forge make gcc python=3.10 \
+RUN conda install -c conda-forge make gcc python=3.12 \
     && make conda-env-update CONDAFLAGS="-n base"
 
 RUN pip install --no-deps -e .

@@ -6,6 +6,7 @@ CADS Processing API service.
 :caption: 'Contents:'
 :maxdepth: 2
 
+README.md
 API Reference <_api/cads_processing_api_service/index>
 ```
 
