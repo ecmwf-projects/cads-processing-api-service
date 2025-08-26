@@ -108,45 +108,36 @@ class RateLimitsRouteConfig(pydantic.BaseModel):
     delete: RateLimitsMethodConfig = pydantic.Field(default=RateLimitsMethodConfig())
 
 
+class RateLimitsProcessExecutionRouteConfig(pydantic.BaseModel):
+    __pydantic_extra__: dict[str, RateLimitsRouteConfig] = pydantic.Field(init=False)
+
+    default: RateLimitsRouteConfig = pydantic.Field(default=RateLimitsRouteConfig())
+
+    model_config = pydantic.ConfigDict(extra="allow")
+
+
 class RateLimitsConfig(pydantic.BaseModel):
     default: RateLimitsRouteConfig = pydantic.Field(
         default=RateLimitsRouteConfig(), validate_default=True
     )
-    process_execution: RateLimitsRouteConfig = pydantic.Field(
-        default=RateLimitsRouteConfig(),
-        alias="/processes/{process_id}/execution",
-        validate_default=True,
+    processes_processid_execution: RateLimitsProcessExecutionRouteConfig = (
+        pydantic.Field(
+            alias="/processes/{process_id}/execution",
+            default=RateLimitsProcessExecutionRouteConfig(),
+            validate_default=True,
+        )
     )
     jobs: RateLimitsRouteConfig = pydantic.Field(
         default=RateLimitsRouteConfig(), alias="/jobs", validate_default=True
     )
-    job: RateLimitsRouteConfig = pydantic.Field(
+    jobs_jobsid: RateLimitsRouteConfig = pydantic.Field(
         default=RateLimitsRouteConfig(), alias="/jobs/{job_id}", validate_default=True
     )
-    job_results: RateLimitsRouteConfig = pydantic.Field(
+    jobs_jobsid_results: RateLimitsRouteConfig = pydantic.Field(
         default=RateLimitsRouteConfig(),
         alias="/jobs/{job_id}/results",
         validate_default=True,
     )
-
-    @pydantic.model_validator(mode="after")  # type: ignore
-    def populate_fields_with_default(self) -> pydantic.BaseModel:
-        default = self.default
-        if default is RateLimitsRouteConfig():
-            return self
-        routes = self.model_fields
-        for route in routes:
-            if route == "default":
-                continue
-            route_config: RateLimitsRouteConfig = getattr(self, route)
-            for method in route_config.model_fields:
-                method_config: RateLimitsMethodConfig = getattr(route_config, method)
-                for origin in method_config.model_fields:
-                    set_value = getattr(getattr(getattr(self, route), method), origin)
-                    if not set_value:
-                        default_value = getattr(getattr(default, method), origin)
-                        setattr(getattr(route_config, method), origin, default_value)
-        return self
 
 
 def load_rate_limits(rate_limits_file: str | None) -> RateLimitsConfig:
