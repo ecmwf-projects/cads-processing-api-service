@@ -40,8 +40,10 @@ def get_rate_limits(
     rate_limits = rate_limits_config.model_dump()
     route_rate_limits: dict[str, Any] = rate_limits.get(route, {})
     if route_param is not None:
-        route_rate_limits: dict[str, Any] = route_rate_limits.get(route_param, {})
-    method_rate_limits: dict[str, Any] = route_rate_limits.get(method, {})
+        route_param_rate_limits: dict[str, Any] = route_rate_limits.get(route_param, {})
+    else:
+        route_param_rate_limits = route_rate_limits
+    method_rate_limits: dict[str, Any] = route_param_rate_limits.get(method, {})
     rate_limit_ids: list[str] = method_rate_limits.get(request_origin, [])
     return rate_limit_ids
 
