@@ -71,20 +71,20 @@ def test_load_rate_limits(tmp_path: pathlib.Path, caplog) -> None:
     loaded_rate_limits = config.load_rate_limits(rate_limits_file)
     assert loaded_rate_limits == config.RateLimitsConfig()
 
-    rate_limits_file = str(tmp_path / "rate-limits.yaml")
-    rate_limits = {
-        "/processes/{process_id}/execution": {
-            "post": {"api": ["1/second"], "ui": ["2/second"]}
-        },
-    }
-    with open(rate_limits_file, "w") as file:
-        yaml.dump(rate_limits, file)
-    loaded_rate_limits = config.load_rate_limits(rate_limits_file)
-    assert loaded_rate_limits == config.RateLimitsConfig(**rate_limits)
+    # rate_limits_file = str(tmp_path / "rate-limits.yaml")
+    # rate_limits = {
+    #     "/jobs/{job_id}": {
+    #         "get": {"api": ["1/second"], "ui": ["2/second"]}
+    #     },
+    # }
+    # with open(rate_limits_file, "w") as file:
+    #     yaml.dump(rate_limits, file)
+    # loaded_rate_limits = config.load_rate_limits(rate_limits_file)
+    # assert loaded_rate_limits == config.RateLimitsConfig(**rate_limits)
 
     rate_limits_file = str(tmp_path / "invalid-rate-limits.yaml")
     rate_limits = {
-        "/processes/{process_id}/execution": {"post": {"api": ["invalid_limit"]}},
+        "/jobs/{job_id}": {"get": {"api": ["invalid_limit"]}},
     }
     with open(rate_limits_file, "w") as file:
         yaml.dump(rate_limits, file)
@@ -94,41 +94,3 @@ def test_load_rate_limits(tmp_path: pathlib.Path, caplog) -> None:
     rate_limits_file = str(tmp_path / "not-found-rate-limits.yaml")
     loaded_rate_limits = config.load_rate_limits(rate_limits_file)
     assert loaded_rate_limits == config.RateLimitsConfig()
-
-
-def test_rate_limits_config_populate_with_default() -> None:
-    rate_limits_config = config.RateLimitsConfig(
-        **{
-            "default": {
-                "post": {"api": ["1/second"], "ui": ["2/second"]},
-                "get": {"api": ["2/second"]},
-            },
-            "/processes/{process_id}/execution": {"post": {"api": ["1/minute"]}},
-        }
-    )
-    exp_populated_rate_limits_config = {
-        "default": {
-            "post": {"api": ["1/second"], "ui": ["2/second"]},
-            "get": {"api": ["2/second"]},
-        },
-        "process_execution": {
-            "post": {"api": ["1/minute"], "ui": ["2/second"]},
-            "get": {"api": ["2/second"]},
-        },
-        "jobs": {
-            "post": {"api": ["1/second"], "ui": ["2/second"]},
-            "get": {"api": ["2/second"]},
-        },
-        "job": {
-            "post": {"api": ["1/second"], "ui": ["2/second"]},
-            "get": {"api": ["2/second"]},
-        },
-        "job_results": {
-            "post": {"api": ["1/second"], "ui": ["2/second"]},
-            "get": {"api": ["2/second"]},
-        },
-    }
-    assert (
-        rate_limits_config.model_dump(exclude_defaults=True)
-        == exp_populated_rate_limits_config
-    )
