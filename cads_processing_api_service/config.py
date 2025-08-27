@@ -138,6 +138,9 @@ class RateLimitsConfig(pydantic.BaseModel):
         alias="/jobs/{job_id}/results",
         validate_default=True,
     )
+    jobs_delete: RateLimitsRouteConfig = pydantic.Field(
+        default=RateLimitsRouteConfig(), alias="/jobs/delete", validate_default=True
+    )
 
 
 def load_rate_limits(rate_limits_file: str | None) -> RateLimitsConfig:
