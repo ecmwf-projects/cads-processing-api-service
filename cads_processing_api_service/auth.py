@@ -141,7 +141,7 @@ def get_auth_info(
         None, alias=SETTINGS.portal_header_name, include_in_schema=False
     ),
     allow_unauthenticated: bool = False,
-) -> models.AuthInfo | None:
+) -> models.AuthInfo:
     """Get authentication information from the incoming HTTP request.
 
     Parameters
@@ -155,7 +155,7 @@ def get_auth_info(
 
     Returns
     -------
-    dict[str, str] | None
+    models.AuthInfo
         User identifier and role.
 
     Raises

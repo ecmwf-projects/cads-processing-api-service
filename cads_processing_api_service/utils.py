@@ -69,7 +69,7 @@ def lookup_resource_by_id(
     table: type[cads_catalogue.database.Resource],
     session: sqlalchemy.orm.Session,
     load_messages: bool = False,
-    portals: tuple[str] | None = None,
+    portals: tuple[str, ...] | None = None,
 ) -> cads_catalogue.database.Resource:
     """Look for the resource identified by `id` into the Catalogue database.
 
@@ -83,7 +83,7 @@ def lookup_resource_by_id(
         Catalogue database session.
     load_messages : bool, optional
         If True, load resource messages, by default False.
-    portals: tuple[str] | None, optional
+    portals: tuple[str, ...] | None, optional
         Portals to filter resources by, by default None.
 
     Returns
