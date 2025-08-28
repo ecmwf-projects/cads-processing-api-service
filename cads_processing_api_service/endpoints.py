@@ -1,5 +1,6 @@
 """Additional endpoints for the CADS Processing API Service."""
 
+import functools
 from typing import Any
 
 import cads_adaptors
@@ -25,13 +26,17 @@ from . import (
 
 SETTINGS = config.settings
 
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
 
 @exceptions.exception_logger
 def apply_constraints(
     process_id: str = fastapi.Path(..., description="Process identifier."),
     execution_content: models.Execute = fastapi.Body(...),
-    portals: tuple[str] | None = fastapi.Depends(
-        exceptions.exception_logger(utils.get_portals)
+    auth_info: models.AuthInfo = fastapi.Depends(
+        exceptions.exception_logger(
+            functools.partial(auth.get_auth_info, allow_unauthenticated=True)
+        )
     ),
 ) -> dict[str, Any]:
     request = execution_content.model_dump()
@@ -44,7 +49,7 @@ def apply_constraints(
             resource_id=process_id,
             table=table,
             session=catalogue_session,
-            portals=portals,
+            portals=auth_info.portals,
         )
     adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
     try:
@@ -56,7 +61,6 @@ def apply_constraints(
         cads_adaptors.exceptions.InvalidRequest,
     ) as exc:
         raise exceptions.InvalidParameter(detail=str(exc)) from exc
-
     return constraints
 
 
@@ -68,8 +72,10 @@ def estimate_cost(
     ),
     mandatory_inputs: bool = fastapi.Query(False, include_in_schema=False),
     execution_content: models.Execute = fastapi.Body(...),
-    portals: tuple[str] | None = fastapi.Depends(
-        exceptions.exception_logger(utils.get_portals)
+    auth_info: models.AuthInfo = fastapi.Depends(
+        exceptions.exception_logger(
+            functools.partial(auth.get_auth_info, allow_unauthenticated=True)
+        )
     ),
 ) -> models.RequestCost:
     """
@@ -97,7 +103,7 @@ def estimate_cost(
             resource_id=process_id,
             table=table,
             session=catalogue_session,
-            portals=portals,
+            portals=auth_info.portals,
         )
     adaptor_properties = adaptors.get_adaptor_properties(dataset)
     costing_info = costing.compute_costing(

@@ -34,7 +34,9 @@ VERIFICATION_ENDPOINT = {
 REQUEST_ORIGIN = {"PRIVATE-TOKEN": "api", "Authorization": "ui"}
 
 
-def get_auth_header(pat: str | None = None, jwt: str | None = None) -> tuple[str, str]:
+def get_auth_header(
+    pat: str | None = None, jwt: str | None = None
+) -> tuple[str | None, str | None]:
     """Infer authentication header based on authentication tokens.
 
     Parameters
@@ -46,57 +48,21 @@ def get_auth_header(pat: str | None = None, jwt: str | None = None) -> tuple[str
 
     Returns
     -------
-    tuple[str, str]
+    tuple[str | None, str | None]
         Authentication header.
-
-    Raises
-    ------
-    exceptions.PermissionDenied
-        Raised if none of the expected authentication headers is provided.
     """
-    if not pat and not jwt:
-        raise exceptions.PermissionDenied(
-            status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
-            detail="authentication required",
-        )
     if pat:
         auth_header = ("PRIVATE-TOKEN", pat)
     elif jwt:
         auth_header = ("Authorization", jwt)
-
+    else:
+        auth_header = (None, None)
     return auth_header
 
 
-@cachetools.cached(
-    cache=cachetools.TTLCache(
-        maxsize=SETTINGS.cache_users_maxsize,
-        ttl=SETTINGS.cache_users_ttl,
-    ),
-)
 def authenticate_user(
     auth_header: tuple[str, str], portal_header: str | None = None
-) -> tuple[str, str | None, str | None]:
-    """Verify user authentication.
-
-    Verify if the provided authentication header corresponds to a registered user.
-    If so, returns the registered user identifier.
-
-    Parameters
-    ----------
-    auth_header : tuple[str, str]
-        Authentication header.
-
-    Returns
-    -------
-    tuple[str, str | None, str | None]
-        User identifier and role.
-
-    Raises
-    ------
-    exceptions.PermissionDenied
-        Raised if the provided authentication header doesn't correspond to a
-        registered/authorized user.
-    """
+) -> dict[str, str]:
     verification_endpoint = VERIFICATION_ENDPOINT[auth_header[0]]
     request_url = urllib.parse.urljoin(SETTINGS.profiles_api_url, verification_endpoint)
     response = requests.post(
@@ -117,10 +83,47 @@ def authenticate_user(
             detail=response_content.get("detail", "operation not allowed"),
         )
     response.raise_for_status()
-    user: dict[str, str] = response_content
-    user_uid: str = user["sub"]
-    user_role: str | None = user.get("role", None)
-    email: str | None = user.get("email", None)
+    user_info = response_content
+    return user_info
+
+
+@cachetools.cached(
+    cache=cachetools.TTLCache(
+        maxsize=SETTINGS.cache_users_maxsize,
+        ttl=SETTINGS.cache_users_ttl,
+    ),
+)
+def get_user_info(
+    auth_header: tuple[str | None, str | None], portal_header: str | None = None
+) -> tuple[str, str | None, str | None]:
+    """Verify user authentication.
+
+    Verify if the provided authentication header corresponds to a registered user.
+    If so, returns the registered user identifier.
+
+    Parameters
+    ----------
+    auth_header : tuple[str | None, str | None]
+        Authentication header.
+
+    Returns
+    -------
+    tuple[str, str | None, str | None]
+        User identifier and role.
+
+    Raises
+    ------
+    exceptions.PermissionDenied
+        Raised if the provided authentication header doesn't correspond to a
+        registered/authorized user.
+    """
+    if auth_header[0] is not None:
+        user_info = authenticate_user(auth_header, portal_header)
+    else:
+        user_info = {"sub": "unauthenticated"}
+    user_uid: str = user_info["sub"]
+    user_role: str | None = user_info.get("role", None)
+    email: str | None = user_info.get("email", None)
     return user_uid, user_role, email
 
 
@@ -137,6 +140,7 @@ def get_auth_info(
     portal_header: str | None = fastapi.Header(
         None, alias=SETTINGS.portal_header_name, include_in_schema=False
     ),
+    allow_unauthenticated: bool = False,
 ) -> models.AuthInfo | None:
     """Get authentication information from the incoming HTTP request.
 
@@ -159,9 +163,16 @@ def get_auth_info(
     exceptions.PermissionDenied
         Raised if none of the expected authentication headers is provided.
     """
+    if pat is None and jwt is None and not allow_unauthenticated:
+        raise exceptions.PermissionDenied(
+            status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
+            detail="authentication required",
+        )
     auth_header = get_auth_header(pat, jwt)
-    user_uid, user_role, email = authenticate_user(auth_header, portal_header)
-    request_origin = REQUEST_ORIGIN[auth_header[0]]
+    user_uid, user_role, email = get_user_info(auth_header, portal_header)
+    request_origin = (
+        REQUEST_ORIGIN[auth_header[0]] if auth_header[0] is not None else None
+    )
     portals = utils.get_portals(portal_header)
     auth_info = models.AuthInfo(
         user_uid=user_uid,
