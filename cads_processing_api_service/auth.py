@@ -51,17 +51,16 @@ def get_auth_header(
     tuple[str | None, str | None]
         Authentication header.
     """
+    auth_header: tuple[str | None, str | None] = (None, None)
     if pat:
         auth_header = ("PRIVATE-TOKEN", pat)
     elif jwt:
         auth_header = ("Authorization", jwt)
-    else:
-        auth_header = (None, None)
     return auth_header
 
 
 def authenticate_user(
-    auth_header: tuple[str, str], portal_header: str | None = None
+    auth_header: tuple[str, str | None], portal_header: str | None = None
 ) -> dict[str, str]:
     verification_endpoint = VERIFICATION_ENDPOINT[auth_header[0]]
     request_url = urllib.parse.urljoin(SETTINGS.profiles_api_url, verification_endpoint)
@@ -118,7 +117,7 @@ def get_user_info(
         registered/authorized user.
     """
     if auth_header[0] is not None:
-        user_info = authenticate_user(auth_header, portal_header)
+        user_info = authenticate_user(auth_header, portal_header)  # type: ignore
     else:
         user_info = {"sub": "unauthenticated"}
     user_uid: str = user_info["sub"]
