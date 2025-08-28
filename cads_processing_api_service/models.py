@@ -24,10 +24,10 @@ import pydantic
 
 class AuthInfo(pydantic.BaseModel):
     user_uid: str
+    request_origin: str
     user_role: str | None = None
     email: str | None = None
-    request_origin: str
-    auth_header: tuple[str, str]
+    auth_header: tuple[str, str] | None = None
     portals: tuple[str, ...] | None = None
 
 

@@ -20,6 +20,105 @@ import pytest
 from cads_processing_api_service import auth, exceptions, models
 
 
+@pytest.mark.parametrize(
+    "pat, jwt, expected",
+    [
+        ("test_pat", None, ("PRIVATE-TOKEN", "test_pat")),
+        (None, "test_jwt", ("Authorization", "test_jwt")),
+        (None, None, None),
+    ],
+    ids=["pat", "jwt", "neither"],
+)
+def test_get_auth_header(pat, jwt, expected) -> None:
+    auth_header = auth.get_auth_header(pat, jwt)
+    assert auth_header == expected
+
+
+def test_get_user_info_authenticated(mocker) -> None:
+    auth_header = ("PRIVATE-TOKEN", "test_pat")
+    portal_header = "test_portal"
+    mocker.patch(
+        "cads_processing_api_service.auth.authenticate_user",
+        return_value={
+            "sub": "test_user",
+            "role": "user",
+            "email": "test_user@example.com",
+        },
+    )
+    expected = ("test_user", "user", "test_user@example.com")
+    user_info = auth.get_user_info(auth_header, portal_header)
+    assert user_info == expected
+
+
+def test_get_user_info_unauthenticated() -> None:
+    auth_header = None
+    portal_header = "test_portal"
+    user_info = auth.get_user_info(auth_header, portal_header)
+    assert user_info == ("unauthenticated", None, None)
+
+
+def test_get_request_origin_from_auth_header() -> None:
+    auth_header = ("Auth-Header-1", "test_token")
+    referer = None
+    auth_header_to_request_origin = {
+        "Auth-Header-1": "origin_1",
+        "Auth-Header-2": "origin_2",
+    }
+    request_origin = auth.get_request_origin(
+        auth_header, referer, auth_header_to_request_origin
+    )
+    assert request_origin == "origin_1"
+
+
+def test_get_request_origin_from_referer_defined() -> None:
+    auth_header = None
+    referer = "http://example.com/some/path"
+    request_origin = auth.get_request_origin(auth_header, referer)
+    assert request_origin == "ui"
+
+
+def test_get_request_origin_from_referer_not_defined() -> None:
+    auth_header = None
+    referer = None
+    request_origin = auth.get_request_origin(auth_header, referer)
+    assert request_origin == "api"
+
+
+def test_get_auth_info_not_allowed_unauthenticated() -> None:
+    pat = None
+    jwt = None
+    portal_header = "test_portal"
+    allow_unauthenticated = False
+    with pytest.raises(exceptions.PermissionDenied):
+        auth.get_auth_info(
+            pat, jwt, portal_header, allow_unauthenticated=allow_unauthenticated
+        )
+
+
+def test_get_auth_info_allowed_unauthenticated() -> None:
+    pat = None
+    jwt = None
+    referer = None
+    portal_header = "test_portal"
+    allow_unauthenticated = True
+    expected = models.AuthInfo(
+        user_uid="unauthenticated",
+        user_role=None,
+        email=None,
+        request_origin="api",
+        auth_header=None,
+        portals=("test_portal",),
+    )
+    auth_info = auth.get_auth_info(
+        pat,
+        jwt,
+        referer,
+        portal_header,
+        allow_unauthenticated,
+    )
+    assert auth_info == expected
+
+
 def test_format_missing_licences_message(mocker) -> None:
     request_url = "http://base_url/api/v1/processes/process_id/execution"
     process_id = "test_process_id"
