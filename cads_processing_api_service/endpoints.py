@@ -26,8 +26,6 @@ from . import (
 
 SETTINGS = config.settings
 
-logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-
 
 @exceptions.exception_logger
 def apply_constraints(
