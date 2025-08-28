@@ -20,6 +20,69 @@ import pytest
 from cads_processing_api_service import auth, exceptions, models
 
 
+@pytest.mark.parametrize(
+    "pat, jwt, expected",
+    [
+        ("test_pat", None, ("PRIVATE-TOKEN", "test_pat")),
+        (None, "test_jwt", ("Authorization", "test_jwt")),
+        (None, None, (None, None)),
+    ],
+    ids=["pat", "jwt", "neither"],
+)
+def test_get_auth_header(pat, jwt, expected) -> None:
+    auth_header = auth.get_auth_header(pat, jwt)
+    assert auth_header == expected
+
+
+def test_get_user_info_authenticated(mocker) -> None:
+    auth_header = ("PRIVATE-TOKEN", "test_pat")
+    portal_header = "test_portal"
+    mocker.patch(
+        "cads_processing_api_service.auth.authenticate_user",
+        return_value={
+            "sub": "test_user",
+            "role": "user",
+            "email": "test_user@example.com",
+        },
+    )
+    expected = ("test_user", "user", "test_user@example.com")
+    user_info = auth.get_user_info(auth_header, portal_header)
+    assert user_info == expected
+
+
+def test_get_user_info_unauthenticated() -> None:
+    auth_header = (None, None)
+    portal_header = "test_portal"
+    user_info = auth.get_user_info(auth_header, portal_header)
+    assert user_info == ("unauthenticated", None, None)
+
+
+def test_get_auth_info_not_allowed_unauthenticated() -> None:
+    pat = None
+    jwt = None
+    portal_header = "test_portal"
+    allow_unauthenticated = False
+    with pytest.raises(exceptions.PermissionDenied):
+        auth.get_auth_info(pat, jwt, portal_header, allow_unauthenticated)
+
+
+def test_get_auth_info_allowed_unauthenticated() -> None:
+    pat = None
+    jwt = None
+    portal_header = "test_portal"
+    allow_unauthenticated = True
+    expected = models.AuthInfo(
+        user_uid="unauthenticated",
+        user_role=None,
+        email=None,
+        request_origin=None,
+        auth_header=(None, None),
+        portals=("test_portal",),
+    )
+    auth_info = auth.get_auth_info(pat, jwt, portal_header, allow_unauthenticated)
+    assert auth_info == expected
+
+
 def test_format_missing_licences_message(mocker) -> None:
     request_url = "http://base_url/api/v1/processes/process_id/execution"
     process_id = "test_process_id"
