@@ -36,7 +36,7 @@ REQUEST_ORIGIN = {"PRIVATE-TOKEN": "api", "Authorization": "ui"}
 
 def get_auth_header(
     pat: str | None = None, jwt: str | None = None
-) -> tuple[str | None, str | None]:
+) -> tuple[str, str] | None:
     """Infer authentication header based on authentication tokens.
 
     Parameters
@@ -48,10 +48,10 @@ def get_auth_header(
 
     Returns
     -------
-    tuple[str | None, str | None]
+    tuple[str, str] | None
         Authentication header.
     """
-    auth_header: tuple[str | None, str | None] = (None, None)
+    auth_header: tuple[str, str] | None = None
     if pat:
         auth_header = ("PRIVATE-TOKEN", pat)
     elif jwt:
@@ -60,7 +60,7 @@ def get_auth_header(
 
 
 def authenticate_user(
-    auth_header: tuple[str, str | None], portal_header: str | None = None
+    auth_header: tuple[str, str], portal_header: str | None = None
 ) -> dict[str, str]:
     verification_endpoint = VERIFICATION_ENDPOINT[auth_header[0]]
     request_url = urllib.parse.urljoin(SETTINGS.profiles_api_url, verification_endpoint)
@@ -93,7 +93,8 @@ def authenticate_user(
     ),
 )
 def get_user_info(
-    auth_header: tuple[str | None, str | None], portal_header: str | None = None
+    auth_header: tuple[str, str] | None,
+    portal_header: str | None = None,
 ) -> tuple[str, str | None, str | None]:
     """Verify user authentication.
 
@@ -102,8 +103,10 @@ def get_user_info(
 
     Parameters
     ----------
-    auth_header : tuple[str | None, str | None]
+    auth_header : tuple[str, str] | None
         Authentication header.
+    portal_header : str | None, optional
+        Portal header value.
 
     Returns
     -------
@@ -116,14 +119,48 @@ def get_user_info(
         Raised if the provided authentication header doesn't correspond to a
         registered/authorized user.
     """
-    if auth_header[0] is not None:
-        user_info = authenticate_user(auth_header, portal_header)  # type: ignore
+    if auth_header is not None:
+        user_info = authenticate_user(auth_header, portal_header)
     else:
         user_info = {"sub": "unauthenticated"}
     user_uid: str = user_info["sub"]
     user_role: str | None = user_info.get("role", None)
     email: str | None = user_info.get("email", None)
     return user_uid, user_role, email
+
+
+def get_request_origin(
+    auth_header: tuple[str, str] | None,
+    referer: str | None = None,
+    auth_header_to_request_origin: dict[str, str] = REQUEST_ORIGIN,
+) -> str:
+    """Get the request origin based on the authentication header.
+
+    Parameters
+    ----------
+    auth_header : tuple[str, str] | None
+        Authentication header.
+    referer : str | None, optional
+        Referer header value.
+    auth_header_to_request_origin : dict[str, str], optional
+        Mapping of authentication headers to request origins.
+
+    Returns
+    -------
+    str
+        Request origin.
+    """
+    request_origin = (
+        auth_header_to_request_origin[auth_header[0]]
+        if auth_header is not None
+        else None
+    )
+    if request_origin is None:
+        if referer is not None:
+            request_origin = "ui"
+        else:
+            request_origin = "api"
+    return request_origin
 
 
 def get_auth_info(
@@ -135,6 +172,9 @@ def get_auth_info(
         description="JSON Web Token",
         alias="Authorization",
         include_in_schema=False,
+    ),
+    referer: str | None = fastapi.Header(
+        None, description="Referer header", alias="Referer", include_in_schema=False
     ),
     portal_header: str | None = fastapi.Header(
         None, alias=SETTINGS.portal_header_name, include_in_schema=False
@@ -149,6 +189,8 @@ def get_auth_info(
         API key
     jwt : str | None, optional
         JSON Web Token
+    referer : str | None, optional
+        Referer header
     portal_header : str | None, optional
         Portal header
 
@@ -169,9 +211,7 @@ def get_auth_info(
         )
     auth_header = get_auth_header(pat, jwt)
     user_uid, user_role, email = get_user_info(auth_header, portal_header)
-    request_origin = (
-        REQUEST_ORIGIN[auth_header[0]] if auth_header[0] is not None else None
-    )
+    request_origin = get_request_origin(auth_header, referer)
     portals = utils.get_portals(portal_header)
     auth_info = models.AuthInfo(
         user_uid=user_uid,
