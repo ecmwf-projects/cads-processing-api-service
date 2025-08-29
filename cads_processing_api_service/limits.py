@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+from typing import Any
+
 import limits
 import structlog
 
@@ -25,6 +27,47 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 storage = config.RATE_LIMITS_STORAGE
 limiter = config.RATE_LIMITS_LIMITER
+
+
+def get_rate_limits(
+    rate_limits_config: config.RateLimitsConfig,
+    route: str,
+    method: str,
+    request_origin: str,
+    route_param: str | None = None,
+) -> list[str]:
+    """Get the rate limits for a specific route and method."""
+    rate_limits = rate_limits_config.model_dump()
+    route_rate_limits: dict[str, Any] = rate_limits.get(route, {})
+    if route_param is not None:
+        route_param_rate_limits: dict[str, Any] = route_rate_limits.get(route_param, {})
+    else:
+        route_param_rate_limits = route_rate_limits
+    method_rate_limits: dict[str, Any] = route_param_rate_limits.get(method, {})
+    rate_limit_ids: list[str] = method_rate_limits.get(request_origin, [])
+    return rate_limit_ids
+
+
+def get_rate_limits_defaulted(
+    rate_limits_config: config.RateLimitsConfig,
+    route: str,
+    method: str,
+    request_origin: str,
+    route_param: str | None = None,
+) -> list[str]:
+    """Get the rate limits for a specific route and method, with defaults."""
+    rate_limits = get_rate_limits(
+        rate_limits_config, route, method, request_origin, route_param
+    )
+    if not rate_limits:
+        rate_limits = get_rate_limits(
+            rate_limits_config, route, method, request_origin, "default"
+        )
+    if not rate_limits:
+        rate_limits = get_rate_limits(
+            rate_limits_config, "default", method, request_origin
+        )
+    return rate_limits
 
 
 def check_rate_limits_for_user(
@@ -52,13 +95,18 @@ def check_rate_limits_for_user(
 
 
 def check_rate_limits(
-    method_rate_limits: config.RateLimitsMethodConfig,
+    rate_limits_config: config.RateLimitsConfig,
+    route: str,
+    method: str,
     auth_info: models.AuthInfo,
+    route_param: str | None = None,
 ) -> None:
     """Check if the rate limits are exceeded."""
-    user_uid = auth_info.user_uid
     request_origin = auth_info.request_origin
-    rate_limit_ids = getattr(method_rate_limits, request_origin)
-    rate_limits = [limits.parse(rate_limit_id) for rate_limit_id in rate_limit_ids]
-    check_rate_limits_for_user(user_uid, rate_limits)
+    user_uid = auth_info.user_uid
+    rate_limits = get_rate_limits_defaulted(
+        rate_limits_config, route, method, request_origin, route_param
+    )
+    rate_limits_parsed = [limits.parse(rate_limit) for rate_limit in rate_limits]
+    check_rate_limits_for_user(user_uid, rate_limits_parsed)
     return None
