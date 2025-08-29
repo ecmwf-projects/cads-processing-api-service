@@ -37,6 +37,13 @@ def apply_constraints(
         )
     ),
 ) -> dict[str, Any]:
+    _ = limits.check_rate_limits(
+        SETTINGS.rate_limits,
+        "processes_processid_constraints",
+        "post",
+        auth_info,
+        process_id,
+    )
     request = execution_content.model_dump()
     table = cads_catalogue.database.Resource
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
@@ -91,6 +98,13 @@ def estimate_cost(
     models.RequestCost
         Info on the cost with the highest cost/limit ratio.
     """
+    _ = limits.check_rate_limits(
+        SETTINGS.rate_limits,
+        "processes_processid_costing",
+        "post",
+        auth_info,
+        process_id,
+    )
     request = execution_content.model_dump()
     table = cads_catalogue.database.Resource
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(

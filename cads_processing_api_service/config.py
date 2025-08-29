@@ -108,7 +108,7 @@ class RateLimitsRouteConfig(pydantic.BaseModel):
     delete: RateLimitsMethodConfig = pydantic.Field(default=RateLimitsMethodConfig())
 
 
-class RateLimitsProcessExecutionRouteConfig(pydantic.BaseModel):
+class RateLimitsRouteParamConfig(pydantic.BaseModel):
     __pydantic_extra__: dict[str, RateLimitsRouteConfig] = pydantic.Field(init=False)
 
     default: RateLimitsRouteConfig = pydantic.Field(default=RateLimitsRouteConfig())
@@ -120,12 +120,20 @@ class RateLimitsConfig(pydantic.BaseModel):
     default: RateLimitsRouteConfig = pydantic.Field(
         default=RateLimitsRouteConfig(), validate_default=True
     )
-    processes_processid_execution: RateLimitsProcessExecutionRouteConfig = (
-        pydantic.Field(
-            alias="/processes/{process_id}/execution",
-            default=RateLimitsProcessExecutionRouteConfig(),
-            validate_default=True,
-        )
+    processes_processid_execution: RateLimitsRouteParamConfig = pydantic.Field(
+        alias="/processes/{process_id}/execution",
+        default=RateLimitsRouteParamConfig(),
+        validate_default=True,
+    )
+    processes_processid_constraints: RateLimitsRouteParamConfig = pydantic.Field(
+        alias="/processes/{process_id}/constraints",
+        default=RateLimitsRouteParamConfig(),
+        validate_default=True,
+    )
+    processes_processid_costing: RateLimitsRouteParamConfig = pydantic.Field(
+        alias="/processes/{process_id}/costing",
+        default=RateLimitsRouteParamConfig(),
+        validate_default=True,
     )
     jobs: RateLimitsRouteConfig = pydantic.Field(
         default=RateLimitsRouteConfig(), alias="/jobs", validate_default=True
