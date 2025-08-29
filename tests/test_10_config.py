@@ -71,16 +71,39 @@ def test_load_rate_limits(tmp_path: pathlib.Path, caplog) -> None:
     loaded_rate_limits = config.load_rate_limits(rate_limits_file)
     assert loaded_rate_limits == config.RateLimitsConfig()
 
-    # rate_limits_file = str(tmp_path / "rate-limits.yaml")
-    # rate_limits = {
-    #     "/jobs/{job_id}": {
-    #         "get": {"api": ["1/second"], "ui": ["2/second"]}
-    #     },
-    # }
-    # with open(rate_limits_file, "w") as file:
-    #     yaml.dump(rate_limits, file)
-    # loaded_rate_limits = config.load_rate_limits(rate_limits_file)
-    # assert loaded_rate_limits == config.RateLimitsConfig(**rate_limits)
+    rate_limits_file = str(tmp_path / "rate-limits.yaml")
+    rate_limits = {
+        "/jobs/{job_id}": {"get": {"api": ["1/second"], "ui": ["2/second"]}},
+        "/processes/{process_id}/constraints": {
+            "default": {"get": {"api": ["1/second"], "ui": ["2/second"]}},
+            "process-id": {"post": {"api": ["1/second"], "ui": ["2/second"]}},
+        },
+    }
+    with open(rate_limits_file, "w") as file:
+        yaml.dump(rate_limits, file)
+    loaded_rate_limits = config.load_rate_limits(rate_limits_file).model_dump()
+    expected_jobs_limits = {
+        "get": {"api": ["1/second"], "ui": ["2/second"]},
+        "post": {"api": [], "ui": []},
+        "delete": {"api": [], "ui": []},
+    }
+    assert loaded_rate_limits["jobs_jobsid"] == expected_jobs_limits
+    expected_process_constraints_limits = {
+        "default": {
+            "get": {"api": ["1/second"], "ui": ["2/second"]},
+            "post": {"api": [], "ui": []},
+            "delete": {"api": [], "ui": []},
+        },
+        "process-id": {
+            "get": {"api": [], "ui": []},
+            "post": {"api": ["1/second"], "ui": ["2/second"]},
+            "delete": {"api": [], "ui": []},
+        },
+    }
+    assert (
+        loaded_rate_limits["processes_processid_constraints"]
+        == expected_process_constraints_limits
+    )
 
     rate_limits_file = str(tmp_path / "invalid-rate-limits.yaml")
     rate_limits = {
