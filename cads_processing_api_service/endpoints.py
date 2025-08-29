@@ -37,7 +37,7 @@ def apply_constraints(
         )
     ),
 ) -> dict[str, Any]:
-    _ = limits.check_rate_limits(
+    limits.check_rate_limits(
         SETTINGS.rate_limits,
         "processes_processid_constraints",
         "post",
@@ -98,7 +98,7 @@ def estimate_cost(
     models.RequestCost
         Info on the cost with the highest cost/limit ratio.
     """
-    _ = limits.check_rate_limits(
+    limits.check_rate_limits(
         SETTINGS.rate_limits,
         "processes_processid_costing",
         "post",
