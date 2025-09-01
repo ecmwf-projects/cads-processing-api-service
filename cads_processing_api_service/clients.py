@@ -230,8 +230,11 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         _ = limits.check_rate_limits(
-            SETTINGS.rate_limits.process_execution.post,
+            SETTINGS.rate_limits,
+            "processes_processid_execution",
+            "post",
             auth_info,
+            process_id,
         )
         request_body = execution_content.model_dump()
         catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
@@ -396,7 +399,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         _ = limits.check_rate_limits(
-            SETTINGS.rate_limits.jobs.get,
+            SETTINGS.rate_limits,
+            "jobs",
+            "get",
             auth_info,
         )
         job_filters = {
@@ -526,7 +531,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         _ = limits.check_rate_limits(
-            SETTINGS.rate_limits.job.get,
+            SETTINGS.rate_limits,
+            "jobs_jobid",
+            "get",
             auth_info,
         )
         compute_connection_mode = (
@@ -646,7 +653,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         _ = limits.check_rate_limits(
-            SETTINGS.rate_limits.job_results.get,
+            SETTINGS.rate_limits,
+            "jobs_jobsid_results",
+            "get",
             auth_info,
         )
         compute_connection_mode = (
@@ -711,7 +720,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         """
         structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
         _ = limits.check_rate_limits(
-            SETTINGS.rate_limits.job.delete,
+            SETTINGS.rate_limits,
+            "jobs_jobsid",
+            "delete",
             auth_info,
         )
         compute_sessionmaker = db_utils.get_compute_sessionmaker(

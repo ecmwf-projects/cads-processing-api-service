@@ -26,8 +26,6 @@ from . import (
 
 SETTINGS = config.settings
 
-logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-
 
 @exceptions.exception_logger
 def apply_constraints(
@@ -39,6 +37,13 @@ def apply_constraints(
         )
     ),
 ) -> dict[str, Any]:
+    limits.check_rate_limits(
+        SETTINGS.rate_limits,
+        "processes_processid_constraints",
+        "post",
+        auth_info,
+        process_id,
+    )
     request = execution_content.model_dump()
     table = cads_catalogue.database.Resource
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
@@ -93,6 +98,13 @@ def estimate_cost(
     models.RequestCost
         Info on the cost with the highest cost/limit ratio.
     """
+    limits.check_rate_limits(
+        SETTINGS.rate_limits,
+        "processes_processid_costing",
+        "post",
+        auth_info,
+        process_id,
+    )
     request = execution_content.model_dump()
     table = cads_catalogue.database.Resource
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
@@ -172,7 +184,9 @@ def delete_jobs(
     """
     structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
     limits.check_rate_limits(
-        SETTINGS.rate_limits.jobs.delete,
+        SETTINGS.rate_limits,
+        "jobs_delete",
+        "post",
         auth_info,
     )
     job_ids = request.job_ids
