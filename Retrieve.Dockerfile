@@ -9,6 +9,7 @@ COPY ./git-*-repos.py /src/
 
 COPY environment.${MODE} /src/environment
 COPY environment-common.yml /src/environment-common.yml
+COPY . /src/cads-processing-api-service
 
 RUN conda install -y -n base -c conda-forge gitpython typer conda-merge
 
