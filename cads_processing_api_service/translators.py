@@ -163,6 +163,20 @@ def make_request_labels(
     input_value_ids: Any,
     cds_input_schema: dict[str, Any],
 ) -> list[str]:
+    """Translate request's input value ids into labels.
+
+    Parameters
+    ----------
+    input_value_ids : Any
+        Input value ids.
+    cds_input_schema : dict[str, Any]
+        CDS input schema.
+
+    Returns
+    -------
+    list[str]
+        List of input value labels.
+    """
     if not isinstance(input_value_ids, list):
         input_value_ids = [input_value_ids]
     if cds_input_schema["type"] in (
