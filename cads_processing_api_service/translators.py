@@ -238,7 +238,20 @@ def make_request_labels_group(
 def translate_request_ids_into_labels(
     request: dict[str, Any], cds_form: list[Any] | dict[str, Any] | None
 ) -> dict[str, Any]:
-    """Translate request input values into labels."""
+    """Translate request input values into labels.
+
+    Parameters
+    ----------
+    request : dict[str, Any]
+        Request.
+    cds_form : list[Any] | dict[str, Any] | None
+        CDS form.
+
+    Returns
+    -------
+    dict[str, Any]
+        Request with input values translated into labels.
+    """
     cds_form = copy.deepcopy(cds_form)
     if cds_form is None:
         cds_form = {}
