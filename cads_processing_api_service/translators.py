@@ -27,16 +27,30 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 def extract_groups_labels(
-    groups: list[Any], values: dict[str, str] | None = None
+    groups: list[Any], labels: dict[str, str] | None = None
 ) -> dict[str, str]:
-    if values is None:
-        values = {}
+    """Extract labels from groups.
+
+    Parameters
+    ----------
+    groups : list[Any]
+        List of groups.
+    values : dict[str, str] | None, optional
+        Dictionary to populate, by default None
+
+    Returns
+    -------
+    dict[str, str]
+        Extracted labels, with keys as label ids and values as label names.
+    """
+    if labels is None:
+        labels = {}
     for group in groups:
         if "labels" in group:
-            values.update(group["labels"])
+            labels.update(group["labels"])
         elif "groups" in group:
-            values = extract_groups_labels(group["groups"], values)
-    return values
+            labels = extract_groups_labels(group["groups"], labels)
+    return labels
 
 
 def extract_labels(input_cds_schema: dict[str, Any]) -> dict[str, str]:
