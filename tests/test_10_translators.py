@@ -18,6 +18,8 @@
 
 from typing import Any
 
+import pytest
+
 from cads_processing_api_service import config, translators
 
 TEST_INPUT_CDS_SCHEMAS: dict[str, Any] = {
@@ -120,56 +122,107 @@ TEST_INPUT_CDS_SCHEMAS: dict[str, Any] = {
         "type": "Child2Widget",
         "details": {},
     },
+    "inclusive_group_widget_group_output_false": {
+        "name": "inclusive_group_widget",
+        "label": "Inclusive Group Widget",
+        "type": "InclusiveGroupWidget",
+        "children": ["child_3", "child_4"],
+        "details": {"group_output": False},
+    },
+    "child_3": {
+        "name": "child_3",
+        "label": "Child 3",
+        "type": "Child3Widget",
+        "details": {},
+    },
+    "child_4": {
+        "name": "child_4",
+        "label": "Child 4",
+        "type": "Child4Widget",
+        "details": {},
+    },
+    "inclusive_group_widget_group_output_true": {
+        "name": "inclusive_group_widget",
+        "label": "Inclusive Group Widget",
+        "type": "InclusiveGroupWidget",
+        "children": ["child_5", "child_6"],
+        "details": {"group_output": True},
+    },
+    "child_5": {
+        "name": "child_5",
+        "label": "Child 5",
+        "type": "Child5Widget",
+        "details": {},
+    },
+    "child_6": {
+        "name": "child_6",
+        "label": "Child 6",
+        "type": "Child6Widget",
+        "details": {},
+    },
 }
 
 
-def test_extract_groups_labels() -> None:
-    test_groups = TEST_INPUT_CDS_SCHEMAS["string_list_array"]["details"]["groups"]
-    test_values = {"test_value": "Test Value"}
-    exp_output = {
-        "test_value": "Test Value",
-        "val1": "Val1",
-        "val2": "Val2",
-        "val3": "Val3",
-    }
-    res_output = translators.extract_groups_labels(test_groups, test_values)
-    assert res_output == exp_output
+@pytest.mark.parametrize(
+    "groups, labels, expected_output",
+    [
+        (
+            TEST_INPUT_CDS_SCHEMAS["string_list_array"]["details"]["groups"],
+            None,
+            {"val1": "Val1", "val2": "Val2", "val3": "Val3"},
+        ),
+        (
+            TEST_INPUT_CDS_SCHEMAS["string_list_array"]["details"]["groups"],
+            {"test_value": "Test Label"},
+            {
+                "test_value": "Test Label",
+                "val1": "Val1",
+                "val2": "Val2",
+                "val3": "Val3",
+            },
+        ),
+        (
+            TEST_INPUT_CDS_SCHEMAS["string_list_array_groups"]["details"]["groups"],
+            None,
+            {
+                "val1": "Val1",
+                "val2": "Val2",
+                "val3": "Val3",
+                "val4": "Val4",
+                "val5": "Val5",
+                "val6": "Val6",
+            },
+        ),
+    ],
+    ids=[
+        "StringListArrayWidget without labels",
+        "StringListArrayWidget with labels",
+        "StringListArrayWidget with bested groups",
+    ],
+)
+def test_extract_groups_labels(groups, labels, expected_output) -> None:
+    output = translators.extract_groups_labels(groups, labels)
+    assert output == expected_output
 
-    test_groups = TEST_INPUT_CDS_SCHEMAS["string_list_array"]["details"]["groups"]
-    exp_output = {"val1": "Val1", "val2": "Val2", "val3": "Val3"}
-    res_output = translators.extract_groups_labels(test_groups)
-    assert res_output == exp_output
 
-    test_groups = TEST_INPUT_CDS_SCHEMAS["string_list_array_groups"]["details"][
-        "groups"
-    ]
-    exp_output = {
-        "val1": "Val1",
-        "val2": "Val2",
-        "val3": "Val3",
-        "val4": "Val4",
-        "val5": "Val5",
-        "val6": "Val6",
-    }
-    res_output = translators.extract_groups_labels(test_groups)
-    assert res_output == exp_output
-
-
-def test_extract_labels() -> None:
-    test_inputs_cds_schema = TEST_INPUT_CDS_SCHEMAS["string_list_array"]
-    exp_output = {"val1": "Val1", "val2": "Val2", "val3": "Val3"}
-    res_output = translators.extract_labels(test_inputs_cds_schema)
-    assert res_output == exp_output
-
-    test_inputs_cds_schema = TEST_INPUT_CDS_SCHEMAS["string_list"]
-    exp_output = {"val1": "Val1", "val2": "Val2", "val3": "Val3"}
-    res_output = translators.extract_labels(test_inputs_cds_schema)
-    assert res_output == exp_output
-
-    test_inputs_cds_schema = TEST_INPUT_CDS_SCHEMAS["free_edition_widget"]
-    exp_output = {}
-    res_output = translators.extract_labels(test_inputs_cds_schema)
-    assert res_output == exp_output
+@pytest.mark.parametrize(
+    "cds_schema, expected_output",
+    [
+        (
+            TEST_INPUT_CDS_SCHEMAS["string_list_array"],
+            {"val1": "Val1", "val2": "Val2", "val3": "Val3"},
+        ),
+        (
+            TEST_INPUT_CDS_SCHEMAS["string_list"],
+            {"val1": "Val1", "val2": "Val2", "val3": "Val3"},
+        ),
+        (TEST_INPUT_CDS_SCHEMAS["free_edition_widget"], {}),
+    ],
+    ids=["StringListArrayWidget", "StringListWidget", "FreeEditionWidget"],
+)
+def test_extract_labels(cds_schema, expected_output) -> None:
+    output = translators.extract_labels(cds_schema)
+    assert output == expected_output
 
 
 def test_translate_string_list() -> None:
@@ -182,132 +235,165 @@ def test_translate_string_list() -> None:
     assert res_output == exp_ouput
 
 
-def test_translate_string_list_array() -> None:
-    test_input = TEST_INPUT_CDS_SCHEMAS["string_list_array"]
-    exp_ouput = {
-        "type": "array",
-        "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
-    }
-    res_output = translators.translate_string_list_array(test_input)
-    assert res_output == exp_ouput
-
-    test_input = TEST_INPUT_CDS_SCHEMAS["string_list_array_groups"]
-    exp_ouput = {
-        "type": "array",
-        "items": {
-            "type": "string",
-            "enum": ["val1", "val2", "val3", "val4", "val5", "val6"],
-        },
-    }
-    res_output = translators.translate_string_list_array(test_input)
-    assert res_output == exp_ouput
-
-
-def test_translate_string_choice() -> None:
-    test_input = TEST_INPUT_CDS_SCHEMAS["string_choice"]
-    exp_ouput = {"type": "string", "enum": ["val1", "val2", "val3"], "default": "val1"}
-    res_output = translators.translate_string_choice(test_input)
-    assert res_output == exp_ouput
-
-    test_input = TEST_INPUT_CDS_SCHEMAS["string_choice_default_list"]
-    exp_ouput = {"type": "string", "enum": ["val1", "val2", "val3"], "default": "val1"}
-    res_output = translators.translate_string_choice(test_input)
-    assert res_output == exp_ouput
+@pytest.mark.parametrize(
+    "cds_schema, expected_output",
+    [
+        (
+            TEST_INPUT_CDS_SCHEMAS["string_list_array"],
+            {
+                "type": "array",
+                "items": {"type": "string", "enum": ["val1", "val2", "val3"]},
+            },
+        ),
+        (
+            TEST_INPUT_CDS_SCHEMAS["string_list_array_groups"],
+            {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "enum": ["val1", "val2", "val3", "val4", "val5", "val6"],
+                },
+            },
+        ),
+    ],
+    ids=["shallow groups", "nested groups"],
+)
+def test_translate_string_list_array(cds_schema, expected_output) -> None:
+    output = translators.translate_string_list_array(cds_schema)
+    assert output == expected_output
 
 
-def test_translate_geographic_extent_map() -> None:
-    test_input = TEST_INPUT_CDS_SCHEMAS["geographic_extent_map"]
-    exp_ouput = {
-        "type": "array",
-        "minItems": 4,
-        "maxItems": 4,
-        "items": {"type": "number"},
-        "default": [1, 2, 3, 4],
-    }
-    res_output = translators.translate_geographic_extent_map(test_input)
-    assert res_output == exp_ouput
-
-    test_input = TEST_INPUT_CDS_SCHEMAS["geographic_extent_map_default_dict"]
-    exp_ouput = {
-        "type": "array",
-        "minItems": 4,
-        "maxItems": 4,
-        "items": {"type": "number"},
-        "default": [1, 2, 3, 4],
-    }
-    res_output = translators.translate_geographic_extent_map(test_input)
-    assert res_output == exp_ouput
+@pytest.mark.parametrize(
+    "cds_schema, expected_output",
+    [
+        (
+            TEST_INPUT_CDS_SCHEMAS["string_choice"],
+            {"type": "string", "enum": ["val1", "val2", "val3"], "default": "val1"},
+        ),
+        (
+            TEST_INPUT_CDS_SCHEMAS["string_choice_default_list"],
+            {"type": "string", "enum": ["val1", "val2", "val3"], "default": "val1"},
+        ),
+    ],
+    ids=["default as string", "default as list"],
+)
+def test_translate_string_choice(cds_schema, expected_output) -> None:
+    output = translators.translate_string_choice(cds_schema)
+    assert output == expected_output
 
 
-def test_make_request_labels() -> None:
-    test_input_value_ids = ["1", "1", "1", "1"]
-    test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["geographic_extent_map"]
-    exp_output = ["North: 1°", "West: 1°", "South: 1°", "East: 1°"]
-    res_output = translators.make_request_labels(
-        test_input_value_ids, test_input_cds_schema
-    )
-    assert res_output == exp_output
-
-    test_input_value_ids = [{"latitude": 10, "longitude": 10}]
-    test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["geographic_location"]
-    exp_output = ["Latitude: 10°", "Longitude: 10°"]
-    res_output = translators.make_request_labels(
-        test_input_value_ids, test_input_cds_schema
-    )
-    assert res_output == exp_output
-
-    test_input_value_ids = ["val1", "val2"]
-    test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["string_list"]
-    exp_output = ["Val1", "Val2"]
-    res_output = translators.make_request_labels(
-        test_input_value_ids, test_input_cds_schema
-    )
-    assert res_output == exp_output
-
-    test_input_value_ids = ["val1", "val4"]
-    test_input_cds_schema = TEST_INPUT_CDS_SCHEMAS["string_list"]
-    exp_output = ["Val1", "val4"]
-    res_output = translators.make_request_labels(
-        test_input_value_ids, test_input_cds_schema
-    )
-    assert res_output == exp_output
+@pytest.mark.parametrize(
+    "cds_schema, expected_output",
+    [
+        (
+            TEST_INPUT_CDS_SCHEMAS["geographic_extent_map"],
+            {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "items": {"type": "number"},
+                "default": [1, 2, 3, 4],
+            },
+        ),
+        (
+            TEST_INPUT_CDS_SCHEMAS["geographic_extent_map_default_dict"],
+            {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "items": {"type": "number"},
+                "default": [1, 2, 3, 4],
+            },
+        ),
+    ],
+    ids=["default as list", "default as dict"],
+)
+def test_translate_geographic_extent_map(cds_schema, expected_output) -> None:
+    output = translators.translate_geographic_extent_map(cds_schema)
+    assert output == expected_output
 
 
-def test_translate_request_ids_into_labels() -> None:
-    request = {"key1": "val1", "key2": "val2"}
-    cds_schema = None
-    exp_output = {"key1": "val1", "key2": "val2"}
-    res_output = translators.translate_request_ids_into_labels(request, cds_schema)
-    assert res_output == exp_output
+@pytest.mark.parametrize(
+    "input_value_ids, cds_schema, expected_output",
+    [
+        (
+            ["1", "1", "1", "1"],
+            TEST_INPUT_CDS_SCHEMAS["geographic_extent_map"],
+            ["North: 1°", "West: 1°", "South: 1°", "East: 1°"],
+        ),
+        (
+            [{"latitude": 10, "longitude": 10}],
+            TEST_INPUT_CDS_SCHEMAS["geographic_location"],
+            ["Latitude: 10°", "Longitude: 10°"],
+        ),
+        (
+            ["val1", "val2"],
+            TEST_INPUT_CDS_SCHEMAS["string_list"],
+            ["Val1", "Val2"],
+        ),
+        (
+            ["val1", "val4"],
+            TEST_INPUT_CDS_SCHEMAS["string_list"],
+            ["Val1", "val4"],
+        ),
+    ],
+    ids=[
+        "GeographicExtentMapWidget",
+        "GeographicLocationWidget",
+        "StringListWidget with known values",
+        "StringListWidget with unknown value",
+    ],
+)
+def test_make_labels_from_ids(input_value_ids, cds_schema, expected_output) -> None:
+    output = translators.make_labels_from_ids(input_value_ids, cds_schema)
+    assert output == expected_output
 
-    request = {
-        "string_list": ["val1", "val2"],
-        "string_choice": "val1",
-        "unknown_key": "unknown_value",
-    }
-    cds_schema = [
-        TEST_INPUT_CDS_SCHEMAS["string_list"],
-        TEST_INPUT_CDS_SCHEMAS["string_choice"],
-    ]
-    exp_output = {
-        "String List": ["Val1", "Val2"],
-        "String Choice": ["Val1"],
-        "unknown_key": "unknown_value",
-    }
-    res_output = translators.translate_request_ids_into_labels(request, cds_schema)
-    assert res_output == exp_output
 
-    request = {}
-    cds_schema = [
-        TEST_INPUT_CDS_SCHEMAS["string_choice"],
-        TEST_INPUT_CDS_SCHEMAS["exclusive_group_widget"],
-        TEST_INPUT_CDS_SCHEMAS["child_1"],
-        TEST_INPUT_CDS_SCHEMAS["child_2"],
-    ]
-    exp_output = {
-        "String Choice": ["Val1"],
-        "Exclusive Group Widget": ["Child 1"],
-    }
+@pytest.mark.parametrize(
+    "request_ids, cds_schema, expected_output",
+    [
+        (
+            {"key1": "val1", "key2": "val2"},
+            None,
+            {"key1": "val1", "key2": "val2"},
+        ),
+        (
+            {
+                "string_list": ["val1", "val2"],
+                "string_choice": "val1",
+                "unknown_key": "unknown_value",
+            },
+            [
+                TEST_INPUT_CDS_SCHEMAS["string_list"],
+                TEST_INPUT_CDS_SCHEMAS["string_choice"],
+            ],
+            {
+                "String List": ["Val1", "Val2"],
+                "String Choice": ["Val1"],
+                "unknown_key": "unknown_value",
+            },
+        ),
+        (
+            {},
+            [
+                TEST_INPUT_CDS_SCHEMAS["string_choice"],
+                TEST_INPUT_CDS_SCHEMAS["exclusive_group_widget"],
+                TEST_INPUT_CDS_SCHEMAS["child_1"],
+                TEST_INPUT_CDS_SCHEMAS["child_2"],
+            ],
+            {
+                "String Choice": ["Val1"],
+                "Exclusive Group Widget": ["Child 1"],
+            },
+        ),
+    ],
+    ids=["no cds_schema", "request with unknown key", "empty request with defaults"],
+)
+def test_translate_request_ids_into_labels(
+    request_ids, cds_schema, expected_output
+) -> None:
+    output = translators.translate_request_ids_into_labels(request_ids, cds_schema)
+    assert output == expected_output
 
 
 def test_format_list() -> None:
