@@ -159,7 +159,7 @@ def translate_cds_form(
     return ogc_inputs
 
 
-def make_request_labels(
+def make_labels_from_ids(
     input_value_ids: Any,
     cds_input_schema: dict[str, Any],
 ) -> list[str]:
@@ -227,7 +227,7 @@ def make_request_labels_group(
             input_key_id = cds_input_schema["name"]
             if input_key_id in request:
                 input_value_ids = request[input_key_id]
-                request_labels = make_request_labels(input_value_ids, cds_input_schema)
+                request_labels = make_labels_from_ids(input_value_ids, cds_input_schema)
                 cds_form.remove(cds_input_schema)
                 return request_labels
             elif input_key_id == default:
@@ -282,7 +282,7 @@ def translate_request_ids_into_labels(
                 continue
             if not isinstance(input_value_ids, list):
                 input_value_ids = [input_value_ids]
-            request_labels[input_key_label] = make_request_labels(
+            request_labels[input_key_label] = make_labels_from_ids(
                 input_value_ids, cds_input_schema
             )
     return request_labels
