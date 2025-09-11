@@ -304,7 +304,20 @@ def translate_request_ids_into_labels(
 def format_list(
     value_list: list[int | float | str], max_items_per_line: int = 1
 ) -> str:
-    """Format a list into a string representation."""
+    """Format a list into a string representation.
+
+    Parameters
+    ----------
+    value_list : list[int | float | str]
+        List of values to format.
+    max_items_per_line : int, optional
+        Maximum number of items per line, by default 1.
+
+    Returns
+    -------
+    str
+        Formatted string representation of the list.
+    """
     if len(value_list) > max_items_per_line:
         formatted = "[\n"
         for i in range(0, len(value_list), max_items_per_line):
@@ -323,6 +336,20 @@ def format_request_value(
     request_value: int | float | str | list[int | float | str],
     key: str | None = None,
 ) -> str:
+    """Format a request value into a string representation.
+
+    Parameters
+    ----------
+    request_value : int | float | str | list[int | float | str]
+        Request value to format.
+    key : str | None, optional
+        Request key, by default None.
+
+    Returns
+    -------
+    str
+        Formatted string representation of the request value.
+    """
     if isinstance(request_value, list):
         if key is None:
             formatted_request_value = format_list(request_value)
