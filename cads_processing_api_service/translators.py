@@ -304,6 +304,7 @@ def translate_request_ids_into_labels(
 def format_list(
     value_list: list[int | float | str], max_items_per_line: int = 1
 ) -> str:
+    """Format a list into a string representation."""
     if len(value_list) > max_items_per_line:
         formatted = "[\n"
         for i in range(0, len(value_list), max_items_per_line):
