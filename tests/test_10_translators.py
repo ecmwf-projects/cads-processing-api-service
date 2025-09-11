@@ -396,34 +396,39 @@ def test_translate_request_ids_into_labels(
     assert output == expected_output
 
 
-def test_format_list() -> None:
-    value_list = ["test_value_1", "test_value_2"]
-    max_items_per_line = 1
-    exp_output = "[\n        'test_value_1',\n        'test_value_2'\n    ]"
-    res_output = translators.format_list(value_list, max_items_per_line)
-    assert res_output == exp_output
+@pytest.mark.parametrize(
+    "value_list, max_items_per_line, expected_output",
+    [
+        (
+            ["test_value_1", "test_value_2"],
+            1,
+            "[\n        'test_value_1',\n        'test_value_2'\n    ]",
+        ),
+        (["test_value_1", "test_value_2"], 2, "['test_value_1', 'test_value_2']"),
+    ],
+    ids=["max_items_per_line = 1", "max_items_per_line = 2"],
+)
+def test_format_list(value_list, max_items_per_line, expected_output) -> None:
+    output = translators.format_list(value_list, max_items_per_line)
+    assert output == expected_output
 
-    max_items_per_line = 2
-    exp_output = "['test_value_1', 'test_value_2']"
-    res_output = translators.format_list(value_list, max_items_per_line)
-    assert res_output == exp_output
 
-
-def test_format_request_value() -> None:
-    test_value = "test_value"
-    exp_output = '"test_value"'
-    res_output = translators.format_request_value(test_value)
-    assert res_output == exp_output
-
-    test_value = 1
-    exp_output = "1"
-    res_output = translators.format_request_value(test_value)
-    assert res_output == exp_output
-
-    test_value = ["test_value_1", "test_value_2"]
-    exp_output = "[\n        'test_value_1',\n        'test_value_2'\n    ]"
-    res_output = translators.format_request_value(test_value)
-    assert res_output == exp_output
+@pytest.mark.parametrize(
+    "value, key, expected_output",
+    [
+        ("test_value", None, '"test_value"'),
+        (1, None, "1"),
+        (
+            ["test_value_1", "test_value_2"],
+            None,
+            "[\n        'test_value_1',\n        'test_value_2'\n    ]",
+        ),
+    ],
+    ids=["string value", "integer value", "list value"],
+)
+def test_format_request_value(value, key, expected_output) -> None:
+    output = translators.format_request_value(value, key)
+    assert output == expected_output
 
 
 def test_format_api_request() -> None:
