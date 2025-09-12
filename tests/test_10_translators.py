@@ -122,44 +122,6 @@ TEST_INPUT_CDS_SCHEMAS: dict[str, Any] = {
         "type": "Child2Widget",
         "details": {},
     },
-    "inclusive_group_widget_group_output_false": {
-        "name": "inclusive_group_widget",
-        "label": "Inclusive Group Widget",
-        "type": "InclusiveGroupWidget",
-        "children": ["child_3", "child_4"],
-        "details": {"group_output": False},
-    },
-    "child_3": {
-        "name": "child_3",
-        "label": "Child 3",
-        "type": "Child3Widget",
-        "details": {},
-    },
-    "child_4": {
-        "name": "child_4",
-        "label": "Child 4",
-        "type": "Child4Widget",
-        "details": {},
-    },
-    "inclusive_group_widget_group_output_true": {
-        "name": "inclusive_group_widget",
-        "label": "Inclusive Group Widget",
-        "type": "InclusiveGroupWidget",
-        "children": ["child_5", "child_6"],
-        "details": {"group_output": True},
-    },
-    "child_5": {
-        "name": "child_5",
-        "label": "Child 5",
-        "type": "Child5Widget",
-        "details": {},
-    },
-    "child_6": {
-        "name": "child_6",
-        "label": "Child 6",
-        "type": "Child6Widget",
-        "details": {},
-    },
 }
 
 
@@ -353,41 +315,115 @@ def test_make_labels_from_ids(input_value_ids, cds_schema, expected_output) -> N
     "request_ids, cds_schema, expected_output",
     [
         (
-            {"key1": "val1", "key2": "val2"},
+            {"key_1": "val_1"},
             None,
-            {"key1": "val1", "key2": "val2"},
+            {"key_1": "val_1"},
         ),
         (
-            {
-                "string_list": ["val1", "val2"],
-                "string_choice": "val1",
-                "unknown_key": "unknown_value",
-            },
+            {"key_1": "val_1"},
             [
-                TEST_INPUT_CDS_SCHEMAS["string_list"],
-                TEST_INPUT_CDS_SCHEMAS["string_choice"],
+                {
+                    "name": "key_1",
+                    "label": "Key 1",
+                    "details": {"labels": {"val_1": "Val 1"}},
+                }
             ],
-            {
-                "String List": ["Val1", "Val2"],
-                "String Choice": ["Val1"],
-                "unknown_key": "unknown_value",
-            },
+            {"Key 1": "Val 1"},
         ),
         (
-            {},
+            {"key_1": "val_2"},
             [
-                TEST_INPUT_CDS_SCHEMAS["string_choice"],
-                TEST_INPUT_CDS_SCHEMAS["exclusive_group_widget"],
-                TEST_INPUT_CDS_SCHEMAS["child_1"],
-                TEST_INPUT_CDS_SCHEMAS["child_2"],
+                {
+                    "name": "key_1",
+                    "label": "Key 1",
+                    "details": {"labels": {"val_1": "Val 1"}},
+                }
             ],
-            {
-                "String Choice": ["Val1"],
-                "Exclusive Group Widget": ["Child 1"],
-            },
+            {"Key 1": "val_2"},
+        ),
+        (
+            {"key_1": ["val_1", "val_2"]},
+            [
+                {
+                    "name": "key_1",
+                    "label": "Key 1",
+                    "details": {"labels": {"val_1": "Val 1", "val_2": "Val 2"}},
+                }
+            ],
+            {"Key 1": ["Val 1", "Val 2"]},
+        ),
+        (
+            {"key_1": ["val_1", "val_3"]},
+            [
+                {
+                    "name": "key_1",
+                    "label": "Key 1",
+                    "details": {"labels": {"val_1": "Val 1", "val_2": "Val 2"}},
+                }
+            ],
+            {"Key 1": ["Val 1", "val_3"]},
+        ),
+        (
+            {"key_1": {"key_11": "val_1", "key_12": "val_1"}},
+            [
+                {
+                    "name": "key_1",
+                    "label": "Key 1",
+                },
+                {
+                    "name": "key_11",
+                    "label": "Key 11",
+                    "details": {"labels": {"val_1": "Val 1"}},
+                },
+                {
+                    "name": "key_12",
+                    "label": "Key 12",
+                    "details": {"labels": {"val_1": "Val 1"}},
+                },
+            ],
+            {"Key 1": {"Key 11": "Val 1", "Key 12": "Val 1"}},
+        ),
+        (
+            {"key_1": {"key_11": "val_2", "key_12": "val_2"}},
+            [
+                {
+                    "name": "key_1",
+                    "label": "Key 1",
+                },
+                {
+                    "name": "key_11",
+                    "label": "Key 11",
+                    "details": {"labels": {"val_1": "Val 1"}},
+                },
+                {
+                    "name": "key_12",
+                    "label": "Key 12",
+                    "details": {"labels": {"val_1": "Val 1"}},
+                },
+            ],
+            {"Key 1": {"Key 11": "val_2", "Key 12": "val_2"}},
+        ),
+        (
+            {"key_1": {"key_11": "val_1", "key_12": "val_1"}},
+            [
+                {
+                    "name": "key_1",
+                    "label": "Key 1",
+                },
+            ],
+            {"Key 1": {"key_11": "val_1", "key_12": "val_1"}},
         ),
     ],
-    ids=["no cds_schema", "request with unknown key", "empty request with defaults"],
+    ids=[
+        "no cds_schema",
+        "single value",
+        "single unknown value",
+        "list of values",
+        "list with unknown value",
+        "dict",
+        "dict with unknown values",
+        "dict without children schema",
+    ],
 )
 def test_translate_request_ids_into_labels(
     request_ids, cds_schema, expected_output
