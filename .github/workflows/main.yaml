@@ -20,4 +20,5 @@ jobs:
       dockerfile: 'Retrieve.Dockerfile'
       chart-repo: 'ecmwf/dss-retrieve-api-chart'
       package-ref: "CADS_PROCESSING_API_SERVICE_REF"
+      image-name: retrieve-api
     secrets: inherit
