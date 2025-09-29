@@ -1,0 +1,7 @@
+# CADS repositories versions
+CACHOLOTE_REF="main"
+CADS_ADAPTORS_REF="main"
+CADS_BROKER_REF="main"
+CADS_CATALOGUE_REF="main"
+CADS_COMMON_REF="main"
+OGC_API_PROCESSES_FASTAPI_REF="main"
