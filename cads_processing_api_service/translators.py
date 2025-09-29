@@ -374,14 +374,14 @@ def format_list(
 
 
 def format_request_value(
-    request_value: int | float | str | list[int | float | str],
+    request_value: int | float | str | list[int | float | str] | dict[str, Any],
     key: str | None = None,
 ) -> str:
     """Format a request value into a string representation.
 
     Parameters
     ----------
-    request_value : int | float | str | list[int | float | str]
+    request_value : int | float | str | list[int | float | str] | dict[str, Any]
         Request value to format.
     key : str | None, optional
         Request key, by default None.
