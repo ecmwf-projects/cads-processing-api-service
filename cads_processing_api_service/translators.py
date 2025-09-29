@@ -184,14 +184,14 @@ def make_labels_from_geographic_extent_widget_ids(
     return request_labels
 
 
-def make_labels_from_geographic_location_widgetids(
-    input_value_ids: dict[str, str | float],
+def make_labels_from_geographic_location_widget_ids(
+    input_value_ids: list[dict[str, str | float]],
 ) -> list[str]:
     """Translate geographic location input value ids into labels.
 
     Parameters
     ----------
-    input_value_ids : dict[str, str | float]
+    input_value_ids : list[dict[str, str | float]]
         Input value ids.
 
     Returns
@@ -216,13 +216,13 @@ def make_labels_from_geographic_location_widgetids(
 
 
 def make_labels_from_generic_widget_ids(
-    input_value_ids: list[str | float], cds_input_schema: dict[str, Any]
+    input_value_ids: list[str], cds_input_schema: dict[str, Any]
 ) -> list[str]:
     """Translate generic input value ids into labels.
 
     Parameters
     ----------
-    input_value_ids : list[str | float]
+    input_value_ids : list[str]
         Input value ids.
 
     Returns
@@ -243,19 +243,19 @@ def make_labels_from_generic_widget_ids(
 LABELS_GENERATORS = {
     "GeographicExtentWidget": make_labels_from_geographic_extent_widget_ids,
     "GeographicExtentMapWidget": make_labels_from_geographic_extent_widget_ids,
-    "GeographicLocationWidget": make_labels_from_geographic_location_widgetids,
+    "GeographicLocationWidget": make_labels_from_geographic_location_widget_ids,
 }
 
 
 def make_labels_from_ids(
-    input_value_ids: list[str | float] | dict[str, str | float],
+    input_value_ids: list[str | dict[str, str | float]],
     cds_input_schema: dict[str, Any],
 ) -> list[str]:
     """Translate request's input value ids into labels.
 
     Parameters
     ----------
-    input_value_ids : list[str | float] | dict[str, str | float]
+    input_value_ids : list[str]
         Input value ids.
     cds_input_schema : dict[str, Any]
         CDS input schema.
@@ -267,10 +267,10 @@ def make_labels_from_ids(
     """
     if cds_input_schema.get("type", None) in LABELS_GENERATORS:
         input_value_label_generator = LABELS_GENERATORS[cds_input_schema["type"]]
-        request_labels = input_value_label_generator(input_value_ids)
+        request_labels: list[str] = input_value_label_generator(input_value_ids) # type: ignore
     else:
         request_labels = make_labels_from_generic_widget_ids(
-            input_value_ids, cds_input_schema
+            input_value_ids, cds_input_schema # type: ignore
         )
     return request_labels
 
