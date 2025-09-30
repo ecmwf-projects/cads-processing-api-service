@@ -27,16 +27,30 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 def extract_groups_labels(
-    groups: list[Any], values: dict[str, str] | None = None
+    groups: list[Any], labels: dict[str, str] | None = None
 ) -> dict[str, str]:
-    if values is None:
-        values = {}
+    """Extract labels from groups.
+
+    Parameters
+    ----------
+    groups : list[Any]
+        List of groups.
+    values : dict[str, str] | None, optional
+        Dictionary to populate, by default None
+
+    Returns
+    -------
+    dict[str, str]
+        Extracted labels, with keys as label ids and values as label names.
+    """
+    if labels is None:
+        labels = {}
     for group in groups:
         if "labels" in group:
-            values.update(group["labels"])
+            labels.update(group["labels"])
         elif "groups" in group:
-            values = extract_groups_labels(group["groups"], values)
-    return values
+            labels = extract_groups_labels(group["groups"], labels)
+    return labels
 
 
 def extract_labels(input_cds_schema: dict[str, Any]) -> dict[str, str]:
@@ -145,46 +159,122 @@ def translate_cds_form(
     return ogc_inputs
 
 
-def make_request_labels(
-    input_value_ids: Any,
+def make_labels_from_geographic_extent_widget_ids(
+    input_value_ids: list[str | float],
+) -> list[str]:
+    """Translate geographic extent input value ids into labels.
+
+    Parameters
+    ----------
+    input_value_ids : list[str | float]
+        Input value ids.
+
+    Returns
+    -------
+    list[str]
+        List of input value labels.
+    """
+    request_labels = [
+        f"{label}: {value}°"
+        for label, value in zip(
+            ["North", "West", "South", "East"],
+            input_value_ids,
+        )
+    ]
+    return request_labels
+
+
+def make_labels_from_geographic_location_widget_ids(
+    input_value_ids: list[dict[str, str | float]],
+) -> list[str]:
+    """Translate geographic location input value ids into labels.
+
+    Parameters
+    ----------
+    input_value_ids : list[dict[str, str | float]]
+        Input value ids.
+
+    Returns
+    -------
+    list[str]
+        List of input value labels.
+    """
+    location = input_value_ids[0]
+    try:
+        latitude = f"{location['latitude']}°"
+        longitude = f"{location['longitude']}°"
+    except Exception as e:
+        logger.error(
+            "Error extracting latitude and longitude from geographic location", error=e
+        )
+        latitude = longitude = "Unknown"
+    request_labels = [
+        f"Latitude: {latitude}",
+        f"Longitude: {longitude}",
+    ]
+    return request_labels
+
+
+def make_labels_from_generic_widget_ids(
+    input_value_ids: list[Any], cds_input_schema: dict[str, Any]
+) -> list[str]:
+    """Translate generic input value ids into labels.
+
+    Parameters
+    ----------
+    input_value_ids : list[Any]
+        Input value ids.
+
+    Returns
+    -------
+    list[str]
+        List of input value labels.
+    """
+    input_value_label = extract_labels(cds_input_schema)
+    request_labels = []
+    for input_value_id in input_value_ids:
+        if not isinstance(input_value_id, str):
+            input_value_id = str(input_value_id)
+        if input_value_id in input_value_label:
+            request_labels.append(input_value_label[input_value_id])
+        else:
+            request_labels.append(input_value_id)
+    return request_labels
+
+
+LABELS_GENERATORS = {
+    "GeographicExtentWidget": make_labels_from_geographic_extent_widget_ids,
+    "GeographicExtentMapWidget": make_labels_from_geographic_extent_widget_ids,
+    "GeographicLocationWidget": make_labels_from_geographic_location_widget_ids,
+}
+
+
+def make_labels_from_ids(
+    input_value_ids: list[str | dict[str, str | float]],
     cds_input_schema: dict[str, Any],
 ) -> list[str]:
-    if not isinstance(input_value_ids, list):
-        input_value_ids = [input_value_ids]
-    if cds_input_schema["type"] in (
-        "GeographicExtentWidget",
-        "GeographicExtentMapWidget",
-    ):
-        request_labels = [
-            f"{label}: {value}°"
-            for label, value in zip(
-                ["North", "West", "South", "East"],
-                input_value_ids,
-            )
-        ]
-    elif cds_input_schema["type"] == "GeographicLocationWidget":
-        location = input_value_ids[0]
-        try:
-            latitude = f"{location['latitude']}°"
-            longitude = f"{location['longitude']}°"
-        except Exception as e:
-            logger.error(
-                "Error extracting latitude and longitude from geographic location",
-                error=e,
-            )
-            latitude = longitude = "Unknown"
-        request_labels = [
-            f"Latitude: {latitude}",
-            f"Longitude: {longitude}",
-        ]
+    """Translate request's input value ids into labels.
+
+    Parameters
+    ----------
+    input_value_ids : list[str]
+        Input value ids.
+    cds_input_schema : dict[str, Any]
+        CDS input schema.
+
+    Returns
+    -------
+    list[str]
+        List of input value labels.
+    """
+    if cds_input_schema.get("type", None) in LABELS_GENERATORS:
+        input_value_label_generator = LABELS_GENERATORS[cds_input_schema["type"]]
+        request_labels: list[str] = input_value_label_generator(input_value_ids)  # type: ignore
     else:
-        input_value_label = extract_labels(cds_input_schema)
-        request_labels = []
-        for input_value_id in input_value_ids:
-            if input_value_id in input_value_label:
-                request_labels.append(input_value_label[input_value_id])
-            else:
-                request_labels.append(input_value_id)
+        request_labels = make_labels_from_generic_widget_ids(
+            input_value_ids,
+            cds_input_schema,
+        )
     return request_labels
 
 
@@ -199,7 +289,7 @@ def make_request_labels_group(
             input_key_id = cds_input_schema["name"]
             if input_key_id in request:
                 input_value_ids = request[input_key_id]
-                request_labels = make_request_labels(input_value_ids, cds_input_schema)
+                request_labels = make_labels_from_ids(input_value_ids, cds_input_schema)
                 cds_form.remove(cds_input_schema)
                 return request_labels
             elif input_key_id == default:
@@ -210,59 +300,68 @@ def make_request_labels_group(
 def translate_request_ids_into_labels(
     request: dict[str, Any], cds_form: list[Any] | dict[str, Any] | None
 ) -> dict[str, Any]:
-    """Translate request input values into labels."""
-    cds_form = copy.deepcopy(cds_form)
+    """Translate request input values into labels.
+
+    Parameters
+    ----------
+    request : dict[str, Any]
+        Request.
+    cds_form : list[Any] | dict[str, Any] | None
+        CDS form.
+
+    Returns
+    -------
+    dict[str, Any]
+        Request with input values translated into labels.
+    """
     if cds_form is None:
-        cds_form = {}
-    if not isinstance(cds_form, list):
+        return request
+    elif not isinstance(cds_form, list):
         cds_form = [cds_form]
-    # This will include in the labels the input keys that are not associated with
-    # any cds_input_schema in the cds_form
-    request_labels: dict[str, Any] = {
-        input_key_id: str(input_value_id)
-        for input_key_id, input_value_id in request.items()
+    cds_form_names_map = {
+        cds_input_schema["name"]: cds_input_schema for cds_input_schema in cds_form
     }
-    exclusive_group_widgets_children = []
-    for cds_input_schema in cds_form:
-        if cds_input_schema.get("type", None) == "ExclusiveGroupWidget":
-            exclusive_group_widgets_children.extend(cds_input_schema["children"])
-    for cds_input_schema in cds_form:
-        cds_input_schema_name = cds_input_schema.get("name", None)
-        if cds_input_schema_name in exclusive_group_widgets_children:
-            continue
-        if cds_input_schema.get("type", None) == "ExclusiveGroupWidget":
-            input_key_label = cds_input_schema["label"]
-            children = cds_input_schema["children"]
-            if keys_to_remove := list(set(request_labels.keys()) & set(children)):
-                for key_to_remove in keys_to_remove:
-                    del request_labels[key_to_remove]
-            default = cds_input_schema.get("details", {}).get("default", None)
-            request_labels[input_key_label] = make_request_labels_group(
-                request, children, default, cds_form
-            )
+    request_labels = {}
+    for input_key_id, input_value_ids in request.items():
+        if input_key_id not in cds_form_names_map:
+            request_labels[input_key_id] = copy.deepcopy(input_value_ids)
         else:
-            input_key_id = cds_input_schema.get("name", None)
-            input_key_label = cds_input_schema.get("label", None)
-            if input_key_id in request_labels:
-                del request_labels[input_key_id]
-                input_value_ids = request[input_key_id]
-            elif default_value_ids := cds_input_schema.get("details", {}).get(
-                "default", None
-            ):
-                input_value_ids = default_value_ids
+            input_key_label = cds_form_names_map[input_key_id]["label"]
+            if not isinstance(input_value_ids, dict):
+                if not isinstance(input_value_ids, list):
+                    input_value_ids = [input_value_ids]
+                input_value_labels = make_labels_from_ids(
+                    input_value_ids, cds_form_names_map[input_key_id]
+                )
+                request_labels[input_key_label] = (
+                    input_value_labels
+                    if len(input_value_labels) > 1
+                    else input_value_labels[0]
+                )
             else:
-                continue
-            if not isinstance(input_value_ids, list):
-                input_value_ids = [input_value_ids]
-            request_labels[input_key_label] = make_request_labels(
-                input_value_ids, cds_input_schema
-            )
+                request_labels[input_key_label] = translate_request_ids_into_labels(
+                    input_value_ids, cds_form
+                )
     return request_labels
 
 
 def format_list(
     value_list: list[int | float | str], max_items_per_line: int = 1
 ) -> str:
+    """Format a list into a string representation.
+
+    Parameters
+    ----------
+    value_list : list[int | float | str]
+        List of values to format.
+    max_items_per_line : int, optional
+        Maximum number of items per line, by default 1.
+
+    Returns
+    -------
+    str
+        Formatted string representation of the list.
+    """
     if len(value_list) > max_items_per_line:
         formatted = "[\n"
         for i in range(0, len(value_list), max_items_per_line):
@@ -278,9 +377,23 @@ def format_list(
 
 
 def format_request_value(
-    request_value: int | float | str | list[int | float | str],
+    request_value: int | float | str | list[int | float | str] | dict[str, Any],
     key: str | None = None,
 ) -> str:
+    """Format a request value into a string representation.
+
+    Parameters
+    ----------
+    request_value : int | float | str | list[int | float | str] | dict[str, Any]
+        Request value to format.
+    key : str | None, optional
+        Request key, by default None.
+
+    Returns
+    -------
+    str
+        Formatted string representation of the request value.
+    """
     if isinstance(request_value, list):
         if key is None:
             formatted_request_value = format_list(request_value)
