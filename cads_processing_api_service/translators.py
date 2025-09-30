@@ -216,13 +216,13 @@ def make_labels_from_geographic_location_widget_ids(
 
 
 def make_labels_from_generic_widget_ids(
-    input_value_ids: list[str], cds_input_schema: dict[str, Any]
+    input_value_ids: list[Any], cds_input_schema: dict[str, Any]
 ) -> list[str]:
     """Translate generic input value ids into labels.
 
     Parameters
     ----------
-    input_value_ids : list[str]
+    input_value_ids : list[Any]
         Input value ids.
 
     Returns
@@ -233,6 +233,8 @@ def make_labels_from_generic_widget_ids(
     input_value_label = extract_labels(cds_input_schema)
     request_labels = []
     for input_value_id in input_value_ids:
+        if not isinstance(input_value_id, str):
+            input_value_id = str(input_value_id)
         if input_value_id in input_value_label:
             request_labels.append(input_value_label[input_value_id])
         else:
@@ -271,7 +273,7 @@ def make_labels_from_ids(
     else:
         request_labels = make_labels_from_generic_widget_ids(
             input_value_ids,
-            cds_input_schema,  # type: ignore
+            cds_input_schema,
         )
     return request_labels
 
