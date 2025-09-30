@@ -267,10 +267,11 @@ def make_labels_from_ids(
     """
     if cds_input_schema.get("type", None) in LABELS_GENERATORS:
         input_value_label_generator = LABELS_GENERATORS[cds_input_schema["type"]]
-        request_labels: list[str] = input_value_label_generator(input_value_ids) # type: ignore
+        request_labels: list[str] = input_value_label_generator(input_value_ids)  # type: ignore
     else:
         request_labels = make_labels_from_generic_widget_ids(
-            input_value_ids, cds_input_schema # type: ignore
+            input_value_ids,
+            cds_input_schema,  # type: ignore
         )
     return request_labels
 
