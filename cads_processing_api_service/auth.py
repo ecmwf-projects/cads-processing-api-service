@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
 import urllib.parse
 from typing import Any
 
@@ -91,6 +92,7 @@ def authenticate_user(
         maxsize=SETTINGS.cache_users_maxsize,
         ttl=SETTINGS.cache_users_ttl,
     ),
+    lock=threading.Lock(),
 )
 def get_user_info(
     auth_header: tuple[str, str] | None,
