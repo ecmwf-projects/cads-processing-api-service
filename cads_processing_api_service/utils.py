@@ -123,6 +123,7 @@ def lookup_resource_by_id(
         maxsize=SETTINGS.cache_resources_maxsize,
         ttl=SETTINGS.cache_resources_ttl,
     ),
+    lock=threading.Lock(),
     key=lambda resource_id, table, properties, session: cachetools.keys.hashkey(
         resource_id, table, properties
     ),
