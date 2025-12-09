@@ -73,11 +73,13 @@ def test_load_rate_limits(tmp_path: pathlib.Path, caplog) -> None:
 
     rate_limits_file = str(tmp_path / "rate-limits.yaml")
     rate_limits = {
-        "/jobs/{job_id}": {"get": {"api": ["1/second"], "ui": ["2/second"]}},
-        "/processes/{process_id}/constraints": {
-            "default": {"get": {"api": ["1/second"], "ui": ["2/second"]}},
-            "process-id": {"post": {"api": ["1/second"], "ui": ["2/second"]}},
-        },
+        "auth": {
+            "/jobs/{job_id}": {"get": {"api": ["1/second"], "ui": ["2/second"]}},
+            "/processes/{process_id}/constraints": {
+                "default": {"get": {"api": ["1/second"], "ui": ["2/second"]}},
+                "process-id": {"post": {"api": ["1/second"], "ui": ["2/second"]}},
+            },
+        }
     }
     with open(rate_limits_file, "w") as file:
         yaml.dump(rate_limits, file)
@@ -87,7 +89,8 @@ def test_load_rate_limits(tmp_path: pathlib.Path, caplog) -> None:
         "post": {"api": [], "ui": []},
         "delete": {"api": [], "ui": []},
     }
-    assert loaded_rate_limits["jobs_jobsid"] == expected_jobs_limits
+    assert "auth" in loaded_rate_limits
+    assert loaded_rate_limits["auth"]["jobs_jobsid"] == expected_jobs_limits
     expected_process_constraints_limits = {
         "default": {
             "get": {"api": ["1/second"], "ui": ["2/second"]},
@@ -101,13 +104,15 @@ def test_load_rate_limits(tmp_path: pathlib.Path, caplog) -> None:
         },
     }
     assert (
-        loaded_rate_limits["processes_processid_constraints"]
+        loaded_rate_limits["auth"]["processes_processid_constraints"]
         == expected_process_constraints_limits
     )
 
     rate_limits_file = str(tmp_path / "invalid-rate-limits.yaml")
     rate_limits = {
-        "/jobs/{job_id}": {"get": {"api": ["invalid_limit"]}},
+        "auth": {
+            "/jobs/{job_id}": {"get": {"api": ["invalid_limit"]}},
+        }
     }
     with open(rate_limits_file, "w") as file:
         yaml.dump(rate_limits, file)

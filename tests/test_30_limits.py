@@ -22,14 +22,15 @@ from cads_processing_api_service import config, exceptions
 
 
 def test_get_rate_limits() -> None:
-    rate_limits = {"/jobs/{job_id}": {"get": {"api": ["2/second"]}}}
+    rate_limits = {"auth": {"/jobs/{job_id}": {"get": {"api": ["2/second"]}}}}
     rate_limits_config = config.RateLimitsConfig(**rate_limits)
 
+    user_type = "auth"
     route = "jobs_jobsid"
     method = "get"
     request_origin = "api"
     rate_limits = cads_processing_api_service.limits.get_rate_limits(
-        rate_limits_config, route, method, request_origin
+        rate_limits_config, user_type, route, method, request_origin
     )
     exp_rate_limits = ["2/second"]
     assert rate_limits == exp_rate_limits
@@ -37,18 +38,21 @@ def test_get_rate_limits() -> None:
 
 def test_get_rate_limits_route_param() -> None:
     rate_limits = {
-        "/processes/{process_id}/execution": {
-            "process_id": {"post": {"api": ["2/second"]}}
+        "auth": {
+            "/processes/{process_id}/execution": {
+                "process_id": {"post": {"api": ["2/second"]}}
+            }
         }
     }
     rate_limits_config = config.RateLimitsConfig(**rate_limits)
 
+    user_type = "auth"
     route = "processes_processid_execution"
     route_param = "process_id"
     method = "post"
     request_origin = "api"
     rate_limits = cads_processing_api_service.limits.get_rate_limits(
-        rate_limits_config, route, method, request_origin, route_param
+        rate_limits_config, user_type, route, method, request_origin, route_param
     )
     exp_rate_limits = ["2/second"]
     assert rate_limits == exp_rate_limits
@@ -56,16 +60,18 @@ def test_get_rate_limits_route_param() -> None:
 
 def test_get_rate_limits_defaulted_actual_value() -> None:
     rate_limits = {
-        "/jobs/{job_id}": {"get": {"api": ["2/second"]}},
-        "default": {"get": {"api": ["1/second"]}},
+        "auth": {
+            "/jobs/{job_id}": {"get": {"api": ["2/second"]}},
+            "default": {"get": {"api": ["1/second"]}},
+        }
     }
     rate_limits_config = config.RateLimitsConfig(**rate_limits)
-
+    user_type = "auth"
     route = "jobs_jobsid"
     method = "get"
     request_origin = "api"
     rate_limits = cads_processing_api_service.limits.get_rate_limits_defaulted(
-        rate_limits_config, route, method, request_origin
+        rate_limits_config, user_type, route, method, request_origin
     )
     exp_rate_limits = ["2/second"]
     assert rate_limits == exp_rate_limits
@@ -73,17 +79,19 @@ def test_get_rate_limits_defaulted_actual_value() -> None:
 
 def test_get_rate_limits_defaulted_default_value() -> None:
     rate_limits = {
-        "/jobs/{job_id}": {"post": {"api": ["2/second"]}},
-        "/jobs": {"get": {"api": ["2/second"]}},
-        "default": {"post": {"ui": ["1/second"]}},
+        "auth": {
+            "/jobs/{job_id}": {"post": {"api": ["2/second"]}},
+            "/jobs": {"get": {"api": ["2/second"]}},
+            "default": {"post": {"ui": ["1/second"]}},
+        }
     }
     rate_limits_config = config.RateLimitsConfig(**rate_limits)
-
+    user_type = "auth"
     route = "jobs_jobsid"
     method = "post"
     request_origin = "ui"
     rate_limits = cads_processing_api_service.limits.get_rate_limits_defaulted(
-        rate_limits_config, route, method, request_origin
+        rate_limits_config, user_type, route, method, request_origin
     )
     exp_rate_limits = ["1/second"]
     assert rate_limits == exp_rate_limits
@@ -92,7 +100,7 @@ def test_get_rate_limits_defaulted_default_value() -> None:
     method = "post"
     request_origin = "ui"
     rate_limits = cads_processing_api_service.limits.get_rate_limits_defaulted(
-        rate_limits_config, route, method, request_origin
+        rate_limits_config, user_type, route, method, request_origin
     )
     exp_rate_limits = ["1/second"]
     assert rate_limits == exp_rate_limits
@@ -101,7 +109,7 @@ def test_get_rate_limits_defaulted_default_value() -> None:
     method = "post"
     request_origin = "ui"
     rate_limits = cads_processing_api_service.limits.get_rate_limits_defaulted(
-        rate_limits_config, route, method, request_origin
+        rate_limits_config, user_type, route, method, request_origin
     )
     exp_rate_limits = ["1/second"]
     assert rate_limits == exp_rate_limits
@@ -109,19 +117,21 @@ def test_get_rate_limits_defaulted_default_value() -> None:
 
 def test_get_rate_limits_defaulted_route_param_actual_value() -> None:
     rate_limits = {
-        "/processes/{process_id}/execution": {
-            "test_process_id": {"post": {"api": ["2/second"]}}
-        },
-        "default": {"post": {"ui": ["1/second"]}},
+        "auth": {
+            "/processes/{process_id}/execution": {
+                "test_process_id": {"post": {"api": ["2/second"]}}
+            },
+            "default": {"post": {"ui": ["1/second"]}},
+        }
     }
     rate_limits_config = config.RateLimitsConfig(**rate_limits)
-
+    user_type = "auth"
     route = "processes_processid_execution"
     method = "post"
     request_origin = "api"
     route_param = "test_process_id"
     rate_limits = cads_processing_api_service.limits.get_rate_limits_defaulted(
-        rate_limits_config, route, method, request_origin, route_param
+        rate_limits_config, user_type, route, method, request_origin, route_param
     )
     exp_rate_limits = ["2/second"]
     assert rate_limits == exp_rate_limits
@@ -129,20 +139,22 @@ def test_get_rate_limits_defaulted_route_param_actual_value() -> None:
 
 def test_get_rate_limits_defaulted_route_param_default_value() -> None:
     rate_limits = {
-        "/processes/{process_id}/execution": {
-            "test_process_id": {"post": {"api": ["2/second"]}},
-            "default": {"post": {"api": ["1/second"]}},
-        },
-        "default": {"post": {"ui": ["1/minute"]}},
+        "auth": {
+            "/processes/{process_id}/execution": {
+                "test_process_id": {"post": {"api": ["2/second"]}},
+                "default": {"post": {"api": ["1/second"]}},
+            },
+            "default": {"post": {"ui": ["1/minute"]}},
+        }
     }
     rate_limits_config = config.RateLimitsConfig(**rate_limits)
-
+    user_type = "auth"
     route = "processes_processid_execution"
     method = "post"
     request_origin = "api"
     route_param = "missing_test_process_id"
     rate_limits = cads_processing_api_service.limits.get_rate_limits_defaulted(
-        rate_limits_config, route, method, request_origin, route_param
+        rate_limits_config, user_type, route, method, request_origin, route_param
     )
     exp_rate_limits = ["1/second"]
     assert rate_limits == exp_rate_limits
@@ -152,21 +164,21 @@ def test_get_rate_limits_defaulted_route_param_default_value() -> None:
     request_origin = "ui"
     route_param = "missing_test_process_id"
     rate_limits = cads_processing_api_service.limits.get_rate_limits_defaulted(
-        rate_limits_config, route, method, request_origin, route_param
+        rate_limits_config, user_type, route, method, request_origin, route_param
     )
     exp_rate_limits = ["1/minute"]
     assert rate_limits == exp_rate_limits
 
 
 def test_get_rate_limits_undefined() -> None:
-    rate_limits = {"/jobs": {"get": {"api": ["2/second"]}}}
+    rate_limits = {"auth": {"/jobs": {"get": {"api": ["2/second"]}}}}
     rate_limits_config = config.RateLimitsConfig.model_validate(rate_limits)
-
+    user_type = "auth"
     route = "jobs"
     method = "get"
     request_origin = "ui"
     rate_limits = cads_processing_api_service.limits.get_rate_limits(
-        rate_limits_config, route, method, request_origin
+        rate_limits_config, user_type, route, method, request_origin
     )
     exp_rate_limits = []
     assert rate_limits == exp_rate_limits
@@ -175,7 +187,7 @@ def test_get_rate_limits_undefined() -> None:
     method = "post"
     request_origin = "ui"
     rate_limits = cads_processing_api_service.limits.get_rate_limits(
-        rate_limits_config, route, method, request_origin
+        rate_limits_config, user_type, route, method, request_origin
     )
     exp_rate_limits = []
     assert rate_limits == exp_rate_limits
@@ -184,7 +196,7 @@ def test_get_rate_limits_undefined() -> None:
     method = "get"
     request_origin = "ui"
     rate_limits = cads_processing_api_service.limits.get_rate_limits(
-        rate_limits_config, route, method, request_origin
+        rate_limits_config, user_type, route, method, request_origin
     )
     exp_rate_limits = []
     assert rate_limits == exp_rate_limits

@@ -31,6 +31,7 @@ limiter = config.RATE_LIMITS_LIMITER
 
 def get_rate_limits(
     rate_limits_config: config.RateLimitsConfig,
+    user_type: str,
     route: str,
     method: str,
     request_origin: str,
@@ -38,7 +39,8 @@ def get_rate_limits(
 ) -> list[str]:
     """Get the rate limits for a specific route and method."""
     rate_limits = rate_limits_config.model_dump()
-    route_rate_limits: dict[str, Any] = rate_limits.get(route, {})
+    user_type_rate_limits: dict[str, Any] = rate_limits.get(user_type, {})
+    route_rate_limits: dict[str, Any] = user_type_rate_limits.get(route, {})
     if route_param is not None:
         route_param_rate_limits: dict[str, Any] = route_rate_limits.get(route_param, {})
     else:
@@ -50,6 +52,7 @@ def get_rate_limits(
 
 def get_rate_limits_defaulted(
     rate_limits_config: config.RateLimitsConfig,
+    user_type: str,
     route: str,
     method: str,
     request_origin: str,
@@ -57,15 +60,15 @@ def get_rate_limits_defaulted(
 ) -> list[str]:
     """Get the rate limits for a specific route and method, with defaults."""
     rate_limits = get_rate_limits(
-        rate_limits_config, route, method, request_origin, route_param
+        rate_limits_config, user_type, route, method, request_origin, route_param
     )
     if not rate_limits:
         rate_limits = get_rate_limits(
-            rate_limits_config, route, method, request_origin, "default"
+            rate_limits_config, user_type, route, method, request_origin, "default"
         )
     if not rate_limits:
         rate_limits = get_rate_limits(
-            rate_limits_config, "default", method, request_origin
+            rate_limits_config, user_type, "default", method, request_origin
         )
     return rate_limits
 
@@ -104,8 +107,9 @@ def check_rate_limits(
     """Check if the rate limits are exceeded."""
     request_origin = auth_info.request_origin
     user_uid = auth_info.user_uid
+    user_type = "anon" if auth_info.user_uid == "unauthenticated" else "auth"
     rate_limits = get_rate_limits_defaulted(
-        rate_limits_config, route, method, request_origin, route_param
+        rate_limits_config, user_type, route, method, request_origin, route_param
     )
     rate_limits_parsed = [limits.parse(rate_limit) for rate_limit in rate_limits]
     check_rate_limits_for_user(user_uid, rate_limits_parsed)

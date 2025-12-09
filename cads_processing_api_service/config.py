@@ -116,7 +116,7 @@ class RateLimitsRouteParamConfig(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(extra="allow")
 
 
-class RateLimitsConfig(pydantic.BaseModel):
+class RateLimitsUserConfig(pydantic.BaseModel):
     default: RateLimitsRouteConfig = pydantic.Field(
         default=RateLimitsRouteConfig(), validate_default=True
     )
@@ -148,6 +148,18 @@ class RateLimitsConfig(pydantic.BaseModel):
     )
     jobs_delete: RateLimitsRouteConfig = pydantic.Field(
         default=RateLimitsRouteConfig(), alias="/jobs/delete", validate_default=True
+    )
+
+
+class RateLimitsConfig(pydantic.BaseModel):
+    """Rate limits configuration."""
+
+    auth: RateLimitsUserConfig = pydantic.Field(
+        default=RateLimitsUserConfig(),
+        description="Rate limits for authenticated users.",
+    )
+    anon: RateLimitsUserConfig = pydantic.Field(
+        default=RateLimitsUserConfig(), description="Rate limits for anonymous users."
     )
 
 
