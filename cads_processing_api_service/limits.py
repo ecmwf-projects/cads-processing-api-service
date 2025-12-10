@@ -81,7 +81,11 @@ def get_rate_limits_for_user(
     rate_limits = []
     if user_uid == "unauthenticated":
         rate_limits = get_rate_limits_defaulted(
-            rate_limits_config.unauthenticated, route, method, request_origin, route_param
+            rate_limits_config.unauthenticated,
+            route,
+            method,
+            request_origin,
+            route_param,
         )
     if not rate_limits:
         rate_limits = get_rate_limits_defaulted(

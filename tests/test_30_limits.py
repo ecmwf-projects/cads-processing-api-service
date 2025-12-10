@@ -199,7 +199,7 @@ def test_get_rate_limits_for_user_unauthenticated() -> None:
         "/jobs/{job_id}": {"delete": {"api": ["1/second"]}},
         "unauthenticated": {
             "default": {"post": {"api": ["2/second"]}},
-            "/jobs/{job_id}": {"get": {"api": ["3/second"]}}
+            "/jobs/{job_id}": {"get": {"api": ["3/second"]}},
         },
     }
     rate_limits_config = config.RateLimitsConfig.model_validate(rate_limits)
@@ -244,7 +244,7 @@ def test_get_rate_limits_for_user_authenticated() -> None:
         "/jobs/{job_id}": {"delete": {"api": ["1/second"]}},
         "unauthenticated": {
             "default": {"post": {"api": ["2/second"]}},
-            "/jobs/{job_id}": {"get": {"api": ["3/second"]}}
+            "/jobs/{job_id}": {"get": {"api": ["3/second"]}},
         },
     }
     rate_limits_config = config.RateLimitsConfig.model_validate(rate_limits)
