@@ -30,7 +30,7 @@ limiter = config.RATE_LIMITS_LIMITER
 
 
 def get_rate_limits(
-    rate_limits_config: config.RateLimitsConfig,
+    rate_limits_config: config.RateLimitsUserConfig,
     route: str,
     method: str,
     request_origin: str,
@@ -49,7 +49,7 @@ def get_rate_limits(
 
 
 def get_rate_limits_defaulted(
-    rate_limits_config: config.RateLimitsConfig,
+    rate_limits_config: config.RateLimitsUserConfig,
     route: str,
     method: str,
     request_origin: str,
