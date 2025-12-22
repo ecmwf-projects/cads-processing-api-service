@@ -190,6 +190,96 @@ def test_get_rate_limits_undefined() -> None:
     assert rate_limits == exp_rate_limits
 
 
+def test_get_rate_limits_for_user_unauthenticated() -> None:
+    rate_limits = {
+        "default": {
+            "get": {"api": ["5/second"]},
+            "post": {"api": ["10/second"]},
+        },
+        "/jobs/{job_id}": {"delete": {"api": ["1/second"]}},
+        "unauthenticated": {
+            "default": {"post": {"api": ["2/second"]}},
+            "/jobs/{job_id}": {"get": {"api": ["3/second"]}},
+        },
+    }
+    rate_limits_config = config.RateLimitsConfig.model_validate(rate_limits)
+
+    route = "jobs_jobsid"
+    method = "get"
+    request_origin = "api"
+    user_uid = "unauthenticated"
+    rate_limits = cads_processing_api_service.limits.get_rate_limits_for_user(
+        rate_limits_config, user_uid, route, method, request_origin
+    )
+    exp_rate_limits = ["3/second"]
+    assert rate_limits == exp_rate_limits
+
+    route = "jobs_jobsid"
+    method = "post"
+    request_origin = "api"
+    user_uid = "unauthenticated"
+    rate_limits = cads_processing_api_service.limits.get_rate_limits_for_user(
+        rate_limits_config, user_uid, route, method, request_origin
+    )
+    exp_rate_limits = ["2/second"]
+    assert rate_limits == exp_rate_limits
+
+    route = "jobs_jobsid"
+    method = "delete"
+    request_origin = "api"
+    user_uid = "unauthenticated"
+    rate_limits = cads_processing_api_service.limits.get_rate_limits_for_user(
+        rate_limits_config, user_uid, route, method, request_origin
+    )
+    exp_rate_limits = ["1/second"]
+    assert rate_limits == exp_rate_limits
+
+
+def test_get_rate_limits_for_user_authenticated() -> None:
+    rate_limits = {
+        "default": {
+            "get": {"api": ["5/second"]},
+            "post": {"api": ["10/second"]},
+        },
+        "/jobs/{job_id}": {"delete": {"api": ["1/second"]}},
+        "unauthenticated": {
+            "default": {"post": {"api": ["2/second"]}},
+            "/jobs/{job_id}": {"get": {"api": ["3/second"]}},
+        },
+    }
+    rate_limits_config = config.RateLimitsConfig.model_validate(rate_limits)
+
+    route = "jobs_jobsid"
+    method = "get"
+    request_origin = "api"
+    user_uid = "user_uid"
+    rate_limits = cads_processing_api_service.limits.get_rate_limits_for_user(
+        rate_limits_config, user_uid, route, method, request_origin
+    )
+    exp_rate_limits = ["5/second"]
+    assert rate_limits == exp_rate_limits
+
+    route = "jobs_jobsid"
+    method = "post"
+    request_origin = "api"
+    user_uid = "user_uid"
+    rate_limits = cads_processing_api_service.limits.get_rate_limits_for_user(
+        rate_limits_config, user_uid, route, method, request_origin
+    )
+    exp_rate_limits = ["10/second"]
+    assert rate_limits == exp_rate_limits
+
+    route = "jobs_jobsid"
+    method = "delete"
+    request_origin = "api"
+    user_uid = "user_uid"
+    rate_limits = cads_processing_api_service.limits.get_rate_limits_for_user(
+        rate_limits_config, user_uid, route, method, request_origin
+    )
+    exp_rate_limits = ["1/second"]
+    assert rate_limits == exp_rate_limits
+
+
 def test_check_rate_limits_for_user() -> None:
     rate_limit_ids = ["1/second"]
     rate_limits = [limits.parse(rate_limit_id) for rate_limit_id in rate_limit_ids]

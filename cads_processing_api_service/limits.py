@@ -30,7 +30,7 @@ limiter = config.RATE_LIMITS_LIMITER
 
 
 def get_rate_limits(
-    rate_limits_config: config.RateLimitsConfig,
+    rate_limits_config: config.RateLimitsUserConfig,
     route: str,
     method: str,
     request_origin: str,
@@ -49,7 +49,7 @@ def get_rate_limits(
 
 
 def get_rate_limits_defaulted(
-    rate_limits_config: config.RateLimitsConfig,
+    rate_limits_config: config.RateLimitsUserConfig,
     route: str,
     method: str,
     request_origin: str,
@@ -66,6 +66,30 @@ def get_rate_limits_defaulted(
     if not rate_limits:
         rate_limits = get_rate_limits(
             rate_limits_config, "default", method, request_origin
+        )
+    return rate_limits
+
+
+def get_rate_limits_for_user(
+    rate_limits_config: config.RateLimitsConfig,
+    user_uid: str,
+    route: str,
+    method: str,
+    request_origin: str,
+    route_param: str | None = None,
+) -> list[str]:
+    rate_limits = []
+    if user_uid == "unauthenticated":
+        rate_limits = get_rate_limits_defaulted(
+            rate_limits_config.unauthenticated,
+            route,
+            method,
+            request_origin,
+            route_param,
+        )
+    if not rate_limits:
+        rate_limits = get_rate_limits_defaulted(
+            rate_limits_config, route, method, request_origin, route_param
         )
     return rate_limits
 
@@ -104,8 +128,8 @@ def check_rate_limits(
     """Check if the rate limits are exceeded."""
     request_origin = auth_info.request_origin
     user_uid = auth_info.user_uid
-    rate_limits = get_rate_limits_defaulted(
-        rate_limits_config, route, method, request_origin, route_param
+    rate_limits = get_rate_limits_for_user(
+        rate_limits_config, user_uid, route, method, request_origin, route_param
     )
     rate_limits_parsed = [limits.parse(rate_limit) for rate_limit in rate_limits]
     check_rate_limits_for_user(user_uid, rate_limits_parsed)
