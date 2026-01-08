@@ -64,6 +64,7 @@ class StatusInfo(ogc_api_processes_fastapi.models.StatusInfo):
 
 class JobListMetadata(pydantic.BaseModel):
     totalCount: int | None = None
+    totalCountLimit: int | None = None
 
 
 class DatasetMessage(pydantic.BaseModel):

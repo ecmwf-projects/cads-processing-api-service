@@ -224,6 +224,8 @@ class Settings(pydantic_settings.BaseSettings):
     retrieve_api_catalogue_pool_size: int = 5
     retrieve_api_catalogue_max_overflow: int = 15
 
+    requests_count_limit: int = 1000
+
     rate_limits_file: str | None = None
     rate_limits: RateLimitsConfig = pydantic.Field(default=RateLimitsConfig())
 
