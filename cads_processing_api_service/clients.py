@@ -432,6 +432,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         with compute_sessionmaker() as compute_session:
             jobs_count = cads_broker.database.count_requests(
                 session=compute_session,
+                limit=SETTINGS.requests_count_limit,
                 **job_filters,
             )
             job_entries = compute_session.scalars(statement).all()
@@ -473,7 +474,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         job_list = models.JobList(
             jobs=jobs,
             links=[ogc_api_processes_fastapi.models.Link(href="")],
-            metadata=models.JobListMetadata(totalCount=jobs_count),
+            metadata=models.JobListMetadata(
+                totalCount=jobs_count, totalCountLimit=SETTINGS.requests_count_limit
+            ),
         )
         pagination_query_params = utils.make_pagination_query_params(
             jobs, sort_key=sortby.lstrip("-")
