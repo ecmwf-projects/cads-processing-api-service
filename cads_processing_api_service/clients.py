@@ -426,15 +426,19 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             statement, self.job_table, back, sort_key, sort_dir
         )
         statement = utils.apply_limit(statement, limit)
-        compute_sessionmaker = db_utils.get_compute_sessionmaker(
-            mode=db_utils.ConnectionMode.write
+        read_compute_sessionmaker = db_utils.get_compute_sessionmaker(
+            mode=db_utils.ConnectionMode.read
         )
-        with compute_sessionmaker() as compute_session:
+        with read_compute_sessionmaker() as compute_session:
             jobs_count = cads_broker.database.count_requests(
                 session=compute_session,
                 limit=SETTINGS.requests_count_limit,
                 **job_filters,
             )
+        write_compute_sessionmaker = db_utils.get_compute_sessionmaker(
+            mode=db_utils.ConnectionMode.write
+        )
+        with write_compute_sessionmaker() as compute_session:
             job_entries = compute_session.scalars(statement).all()
             if back:
                 job_entries = reversed(job_entries)
