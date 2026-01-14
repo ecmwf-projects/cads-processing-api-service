@@ -556,7 +556,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 )
                 if qos:
                     job_qos_info = {
-                        **utils.get_job_qos_info(job, compute_session),
                         "status": cads_broker.database.get_qos_status_from_request(job),
                     }
                 # These lines are inside the session context because the related fields
@@ -581,7 +580,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     )
                     if qos:
                         job_qos_info = {
-                            **utils.get_job_qos_info(job, compute_session),
                             "status": cads_broker.database.get_qos_status_from_request(
                                 job
                             ),

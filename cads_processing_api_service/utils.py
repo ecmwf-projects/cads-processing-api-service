@@ -552,49 +552,6 @@ def parse_results_from_broker_db(
     return results
 
 
-def get_job_qos_info(
-    job: cads_broker.SystemRequest, session: sqlalchemy.orm.Session
-) -> dict[str, Any]:
-    entry_point = str(job.entry_point)
-    user_uid = str(job.user_uid)
-    qos = {
-        "adaptor_entry_point": entry_point,
-        "running_requests_per_user_adaptor": cads_broker.database.count_requests(
-            session=session,
-            status="running",
-            entry_point=entry_point,
-            user_uid=user_uid,
-        ),
-        "queued_requests_per_user_adaptor": cads_broker.database.count_requests(
-            session=session,
-            status="accepted",
-            entry_point=entry_point,
-            user_uid=user_uid,
-        ),
-        "running_requests_per_adaptor": cads_broker.database.count_requests(
-            session=session,
-            status="running",
-            entry_point=entry_point,
-        ),
-        "queued_requests_per_adaptor": cads_broker.database.count_requests(
-            session=session,
-            status="accepted",
-            entry_point=entry_point,
-        ),
-        "active_users_per_adaptor": cads_broker.database.count_users(
-            session=session,
-            status="running",
-            entry_point=entry_point,
-        ),
-        "waiting_users_per_adaptor": cads_broker.database.count_users(
-            session=session,
-            status="accepted",
-            entry_point=entry_point,
-        ),
-    }
-    return qos
-
-
 def get_job_events(
     job: cads_broker.SystemRequest,
     session: sqlalchemy.orm.Session,
