@@ -439,11 +439,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             mode=db_utils.ConnectionMode.write
         )
         with write_compute_sessionmaker() as compute_session:
-            jobs_count = cads_broker.database.count_requests(
-                session=compute_session,
-                limit=SETTINGS.requests_count_limit,
-                **job_filters,
-            )
             job_entries = compute_session.scalars(statement).all()
             if back:
                 job_entries = reversed(job_entries)
@@ -563,7 +558,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 )
                 if qos:
                     job_qos_info = {
-                        **utils.get_job_qos_info(job, compute_session),
                         "status": cads_broker.database.get_qos_status_from_request(job),
                     }
                 # These lines are inside the session context because the related fields
@@ -588,7 +582,6 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     )
                     if qos:
                         job_qos_info = {
-                            **utils.get_job_qos_info(job, compute_session),
                             "status": cads_broker.database.get_qos_status_from_request(
                                 job
                             ),
