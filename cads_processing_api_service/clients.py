@@ -252,22 +252,23 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         adaptor_properties = adaptors.get_adaptor_properties(dataset)
         adaptor = adaptors.instantiate_adaptor(adaptor_properties=adaptor_properties)
         try:
-            request_inputs = adaptor.normalise_request(request_body.get("inputs", {}))
-            _ = adaptor.check_validity(request_inputs)
+            request_inputs = request_body.get("inputs", {})
+            normalised_request = adaptor.normalise_request(request_inputs.copy())
+            _ = adaptor.check_validity(normalised_request)
         except cads_adaptors.exceptions.InvalidRequest as exc:
             raise exceptions.InvalidRequest(detail=str(exc)) from exc
         if dataset.api_enforce_constraints:
             try:
-                _ = adaptor.apply_constraints(request_inputs)
+                _ = adaptor.apply_constraints(normalised_request)
             except (
                 cads_adaptors.exceptions.ParameterError,
                 cads_adaptors.exceptions.InvalidRequest,
             ) as exc:
                 raise exceptions.InvalidRequest(detail=str(exc)) from exc
         costs = auth.verify_cost(
-            request_inputs, adaptor_properties, auth_info.request_origin
+            normalised_request, adaptor_properties, auth_info.request_origin
         )
-        required_licences = adaptor.get_licences(request_inputs)
+        required_licences = adaptor.get_licences(normalised_request)
         if auth_info.user_uid != "anonymous":
             accepted_licences = auth.get_accepted_licences(auth_info.auth_header)
             request_url = str(request.url)
