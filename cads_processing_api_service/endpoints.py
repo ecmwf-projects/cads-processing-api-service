@@ -214,3 +214,58 @@ def delete_jobs(
         jobs=jobs,
     )
     return job_list
+
+
+@exceptions.exception_logger
+def get_job_receipt(
+    job_id: str = fastapi.Path(..., description="Job identifier."),
+    auth_info: models.AuthInfo = fastapi.Depends(
+        exceptions.exception_logger(auth.get_auth_info)
+    ),
+) -> dict[str, Any]:
+    """Get the receipt of a job.
+
+    Parameters
+    ----------
+    job_id : str
+        Job identifier.
+
+    Returns
+    -------
+    dict[str, Any]
+        Job receipt.
+    """
+    structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
+    limits.check_rate_limits(
+        SETTINGS.rate_limits,
+        "jobs_jobid_receipt",
+        "get",
+        auth_info,
+        job_id,
+    )
+    compute_sessionmaker = db_utils.get_compute_sessionmaker(
+        mode=db_utils.ConnectionMode.read
+    )
+    with compute_sessionmaker() as compute_session:
+        job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
+        auth.verify_permission(auth_info.user_uid, job)
+        job_status = job.status
+        if job_status in ("accepted", "running"):
+            raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
+                detail=f"status of {job_id} is '{job_status}'"
+            )
+        status_info = utils.make_status_info(job)
+        try:
+            results = utils.get_results_from_job(job, compute_session)
+        except exceptions.JobResultsExpired as exc:
+            results = {"expired": {"message": str(exc)}}
+        except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
+            results = {"failed": {"title": exc.title, "traceback": exc.traceback}}
+        receipt = {
+            "job": status_info,
+            "results": results,
+            "collection": {
+                **job.request_metadata.get("receipt", {})
+            },
+        }
+    return receipt

@@ -173,6 +173,59 @@ def get_resource_properties(
     return resource_properties
 
 
+@cachetools.cached(
+    cache=cachetools.TTLCache(
+        maxsize=SETTINGS.cache_resources_maxsize,
+        ttl=SETTINGS.cache_resources_ttl,
+    ),
+    lock=threading.Lock(),
+    key=lambda session, portal, scope, table=cads_catalogue.database.Licence: cachetools.keys.hashkey(
+        portal, scope, table
+    ),
+)
+def get_licences(
+    table: type[cads_catalogue.database.Licence] = cads_catalogue.database.Licence,
+    session: sqlalchemy.orm.Session = None,
+    portal: str | None = None,
+    scope: str | None = None,
+) -> list[cads_catalogue.database.Licence]:
+    """Get licences from the Catalogue database.
+
+    Parameters
+    ----------
+    table : type[cads_catalogue.database.Licence], optional
+        Catalogue database table, by default type[cads_catalogue.database.Licence]
+    session : sqlalchemy.orm.Session, optional
+        Catalogue database session, by default None
+    portal : str | None, optional
+        Portal to filter licences by, by default None
+    scope : str | None, optional
+        Scope to filter licences by, by default None
+
+    Returns
+    -------
+    list[cads_catalogue.database.Licence]
+        List of licences.
+    """
+    statement = sa.select(table)
+    if portal:
+        statement = statement.filter(table.portal == portal)
+    if scope:
+        statement = statement.filter(table.scope == scope)
+    licences = session.execute(statement).scalars().all()
+    return licences
+
+
+def make_licence_url(licence: cads_catalogue.database.Licence) -> str:
+    """Make a URL for a licence."""
+    licence_url = licence.download_filename
+    if licence.spdx_identifier is None:
+        licence_url = urllib.parse.urljoin(
+            SETTINGS.document_storage_url, licence_url
+        )
+    return licence_url
+
+
 def parse_sortby(sortby: str) -> tuple[str, str]:
     sort_params = sortby.split("_")
     sort_key = "_".join(sort_params[:-1])
