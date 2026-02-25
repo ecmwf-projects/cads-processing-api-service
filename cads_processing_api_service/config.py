@@ -79,7 +79,6 @@ MISSING_LICENCES_MESSAGE = (
 )
 
 DATASET_LICENCES_URL = "{base_url}/datasets/{process_id}?tab=download#manage-licences"
-DOCUMENT_STORAGE_URL = "http://document-storage/documents/"
 
 RATE_LIMITS_STORAGE = limits.storage.MemoryStorage()
 RATE_LIMITS_LIMITER = limits.strategies.FixedWindowRateLimiter(RATE_LIMITS_STORAGE)
@@ -222,7 +221,8 @@ class Settings(pydantic_settings.BaseSettings):
     deprecation_warning_message: str = DEPRECATION_WARNING_MESSAGE
     missing_licences_message: str = MISSING_LICENCES_MESSAGE
     dataset_licences_url: str = DATASET_LICENCES_URL
-    document_storage_url: str = DOCUMENT_STORAGE_URL
+    document_storage_url: str = "http://document-storage/documents/"
+    user_support_url: str = "https://support.ecmwf.int"
 
     retrieve_api_broker_pool_timeout: float = 1.0
     retrieve_api_broker_pool_recycle: int = 60

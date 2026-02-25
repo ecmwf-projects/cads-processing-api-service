@@ -315,7 +315,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                         "licences": [
                             {
                                 "title": licence.title,
-                                "revision": licence.revision,
+                                "revision": str(licence.revision),
                                 "url": utils.make_licence_url(licence),
                             } 
                             for licence in dataset.licences + licences_portal

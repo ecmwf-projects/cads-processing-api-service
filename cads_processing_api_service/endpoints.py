@@ -5,6 +5,7 @@ from typing import Any
 
 import cads_adaptors
 import cads_adaptors.exceptions
+import cads_adaptors.models
 import cads_broker
 import cads_catalogue
 import fastapi
@@ -254,18 +255,47 @@ def get_job_receipt(
             raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
                 detail=f"status of {job_id} is '{job_status}'"
             )
-        status_info = utils.make_status_info(job)
         try:
-            results = utils.get_results_from_job(job, compute_session)
+            results_asset = utils.get_results_from_job(job, compute_session).get("asset", {})
+            traceback = None
         except exceptions.JobResultsExpired as exc:
-            results = {"expired": {"message": str(exc)}}
+            results_asset = {}
+            traceback = None
         except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
-            results = {"failed": {"title": exc.title, "traceback": exc.traceback}}
-        receipt = {
-            "job": status_info,
-            "results": results,
-            "collection": {
-                **job.request_metadata.get("receipt", {})
-            },
-        }
+            results_asset = {}
+            traceback = exc.traceback
+    status_info = utils.make_status_info(job)
+    catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
+        db_utils.ConnectionMode.read
+    )
+    with catalogue_sessionmaker() as catalogue_session:
+        dataset: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
+            resource_id=job.process_id,
+            table=cads_catalogue.database.Resource,
+            session=catalogue_session,
+        )
+    make_receipt_args = cads_adaptors.models.MakeReceiptArgs(
+        request=job.request_body["request"],
+        collection=cads_adaptors.models.CollectionMetadata( 
+            **job.request_metadata.get("receipt", {})
+        ),
+        job=cads_adaptors.models.JobMetadata(
+            process_id=status_info.processID,
+            job_id=status_info.jobID,
+            status=str(status_info.status),
+            message=status_info.message,
+            created=status_info.created,
+            started=status_info.started,
+            finished=status_info.finished,
+            updated=status_info.updated,
+            origin=status_info.metadata.origin if status_info.metadata else None,
+        ),
+        results=cads_adaptors.models.ResultsMetadata(
+            **results_asset.get("value", {})
+        ),
+        traceback=traceback,
+        user_support_url=SETTINGS.user_support_url,
+    )
+    adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
+    receipt = make_receipt_args.model_dump()
     return receipt
