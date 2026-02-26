@@ -267,12 +267,12 @@ def get_job_receipt(
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
         db_utils.ConnectionMode.read
     )
-    # with catalogue_sessionmaker() as catalogue_session:
-    #     dataset: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
-    #         resource_id=job.process_id,
-    #         table=cads_catalogue.database.Resource,
-    #         session=catalogue_session,
-    #     )
+    with catalogue_sessionmaker() as catalogue_session:
+        dataset: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
+            resource_id=job.process_id,
+            table=cads_catalogue.database.Resource,
+            session=catalogue_session,
+        )
     make_receipt_args = {
         "request": job.request_body["request"],
         "collection": cads_adaptors.models.CollectionMetadata( 
@@ -281,7 +281,7 @@ def get_job_receipt(
         "job": cads_adaptors.models.JobMetadata(
             process_id=job.process_id,
             user_id=job.user_uid,
-            job_id=job.request_uid,
+            request_id=job.request_uid,
             status=job.status,
             created=job.created_at,
             started=job.started_at,
@@ -295,7 +295,6 @@ def get_job_receipt(
             **results_asset.get("value", {})
         ),
     }
-    # adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
-    # receipt = adaptor.make_receipt(**make_receipt_args)
-    receipt = make_receipt_args
+    adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
+    receipt = adaptor.make_receipt(**make_receipt_args)
     return receipt
