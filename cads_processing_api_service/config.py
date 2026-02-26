@@ -239,7 +239,7 @@ class Settings(pydantic_settings.BaseSettings):
     rate_limits_file: str | None = None
     rate_limits: RateLimitsConfig = pydantic.Field(default=RateLimitsConfig())
 
-    extra_receipt_collection_metadata: list[str] = pydantic.Field(default=["sanity_check", "lineage"])
+    extra_receipt_collection_metadata: list[str] = pydantic.Field(default=[])
 
     portals_file: str | None = None
     portals: dict[str, str] = pydantic.Field(default={})

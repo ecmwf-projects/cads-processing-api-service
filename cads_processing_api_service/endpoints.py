@@ -268,18 +268,18 @@ def get_job_receipt(
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
         db_utils.ConnectionMode.read
     )
-    with catalogue_sessionmaker() as catalogue_session:
-        dataset: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
-            resource_id=job.process_id,
-            table=cads_catalogue.database.Resource,
-            session=catalogue_session,
-        )
-    make_receipt_args = cads_adaptors.models.MakeReceiptArgs(
-        request=job.request_body["request"],
-        collection=cads_adaptors.models.CollectionMetadata( 
+    # with catalogue_sessionmaker() as catalogue_session:
+    #     dataset: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
+    #         resource_id=job.process_id,
+    #         table=cads_catalogue.database.Resource,
+    #         session=catalogue_session,
+    #     )
+    make_receipt_args = {
+        "request": job.request_body["request"],
+        "collection": cads_adaptors.models.CollectionMetadata( 
             **job.request_metadata.get("receipt", {})
         ),
-        job=cads_adaptors.models.JobMetadata(
+        "job": cads_adaptors.models.JobMetadata(
             process_id=status_info.processID,
             job_id=status_info.jobID,
             status=str(status_info.status),
@@ -289,13 +289,14 @@ def get_job_receipt(
             finished=status_info.finished,
             updated=status_info.updated,
             origin=status_info.metadata.origin if status_info.metadata else None,
+            traceback=traceback,
+            user_support_url=SETTINGS.user_support_url
         ),
-        results=cads_adaptors.models.ResultsMetadata(
+        "results": cads_adaptors.models.ResultsMetadata(
             **results_asset.get("value", {})
         ),
-        traceback=traceback,
-        user_support_url=SETTINGS.user_support_url,
-    )
-    adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
-    receipt = make_receipt_args.model_dump()
+    }
+    # adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
+    # receipt = adaptor.make_receipt(**make_receipt_args)
+    receipt = make_receipt_args
     return receipt
