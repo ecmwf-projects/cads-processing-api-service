@@ -327,6 +327,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                         ],
                         "doi": dataset.doi,
                         "citation": dataset.citation,
+                        "portal": dataset.portal,
                         "url": urllib.parse.urljoin(cads_common.portal.get_site_url(dataset.portal), f"datasets/{dataset.resource_uid}"),
                         **extra_receipt_collection_metadata,
                     },
