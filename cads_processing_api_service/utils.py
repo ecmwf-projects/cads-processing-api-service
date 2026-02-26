@@ -17,6 +17,7 @@
 import base64
 import datetime
 import enum
+import json
 import threading
 import urllib.parse
 from typing import Any, Callable, Mapping
@@ -695,3 +696,11 @@ def get_portals(
         tuple([p.strip() for p in portal_header.split(",")]) if portal_header else None
     )
     return portals
+
+
+def is_json_serializable(obj):
+    try:
+        json.dumps(obj)
+        return True
+    except (TypeError, ValueError):
+        return False

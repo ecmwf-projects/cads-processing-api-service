@@ -299,6 +299,10 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
             mode=db_utils.ConnectionMode.write
         )
         with compute_sessionmaker() as compute_session:
+            extra_receipt_collection_metadata = {}
+            for key in SETTINGS.extra_receipt_collection_metadata:
+                if hasattr(dataset, key) and utils.is_json_serializable(getattr(dataset, key)):
+                    extra_receipt_collection_metadata[key] = getattr(dataset, key)
             job = cads_broker.database.create_request(
                 session=compute_session,
                 request_uid=job_id,
@@ -323,6 +327,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                         "doi": dataset.doi,
                         "citation": dataset.citation,
                         "url": urllib.parse.urljoin(cads_common.portal.get_site_url(dataset.portal), f"datasets/{dataset.resource_uid}"),
+                        **extra_receipt_collection_metadata,
                     },
                 },
                 **job_kwargs,
