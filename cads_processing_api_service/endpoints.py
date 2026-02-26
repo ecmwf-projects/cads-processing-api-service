@@ -264,7 +264,6 @@ def get_job_receipt(
         except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
             results_asset = {}
             traceback = exc.traceback
-    status_info = utils.make_status_info(job)
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
         db_utils.ConnectionMode.read
     )
@@ -280,15 +279,15 @@ def get_job_receipt(
             **job.request_metadata.get("receipt", {})
         ),
         "job": cads_adaptors.models.JobMetadata(
-            process_id=status_info.processID,
-            job_id=status_info.jobID,
-            status=str(status_info.status),
-            message=status_info.message,
-            created=status_info.created,
-            started=status_info.started,
-            finished=status_info.finished,
-            updated=status_info.updated,
-            origin=status_info.metadata.origin if status_info.metadata else None,
+            process_id=job.process_id,
+            user_id=job.user_uid,
+            job_id=job.request_uid,
+            status=job.status,
+            created=job.created_at,
+            started=job.started_at,
+            finished=job.finished_at,
+            updated=job.updated_at,
+            origin=job.origin,
             traceback=traceback,
             user_support_url=SETTINGS.user_support_url
         ),

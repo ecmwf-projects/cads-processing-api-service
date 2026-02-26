@@ -315,6 +315,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     "costs": costs,
                     "user_data": {"email": auth_info.email},
                     "receipt": {
+                        "collection_id": dataset.resource_uid,
                         "title": dataset.title,
                         "licences": [
                             {
