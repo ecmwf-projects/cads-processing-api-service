@@ -269,14 +269,15 @@ def get_job_receipt(
     )
     with catalogue_sessionmaker() as catalogue_session:
         dataset: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
-            resource_id=job.process_id,
+            resource_id=job.process_id if job.process_id is not None else "",
             table=cads_catalogue.database.Resource,
             session=catalogue_session,
         )
+    request_metdata = job.request_metadata or {}
     make_receipt_args = {
-        "request": job.request_body["request"],
+        "request": job.request_body["request"] if job.request_body is not None else {},
         "collection": cads_adaptors.models.CollectionMetadata( 
-            **job.request_metadata.get("receipt", {})
+            **request_metdata.get("receipt", {})
         ),
         "job": cads_adaptors.models.JobMetadata(
             process_id=job.process_id,
@@ -296,5 +297,5 @@ def get_job_receipt(
         ),
     }
     adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
-    receipt = adaptor.make_receipt(**make_receipt_args)
+    receipt: dict[str, Any] = adaptor.make_receipt(**make_receipt_args)
     return receipt

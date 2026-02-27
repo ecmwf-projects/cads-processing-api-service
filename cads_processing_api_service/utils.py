@@ -185,8 +185,8 @@ def get_resource_properties(
     ),
 )
 def get_licences(
+    session: sqlalchemy.orm.Session,
     table: type[cads_catalogue.database.Licence] = cads_catalogue.database.Licence,
-    session: sqlalchemy.orm.Session = None,
     portal: str | None = None,
     scope: str | None = None,
 ) -> list[cads_catalogue.database.Licence]:
@@ -194,10 +194,10 @@ def get_licences(
 
     Parameters
     ----------
+    session : sqlalchemy.orm.Session
+        Catalogue database session
     table : type[cads_catalogue.database.Licence], optional
         Catalogue database table, by default type[cads_catalogue.database.Licence]
-    session : sqlalchemy.orm.Session, optional
-        Catalogue database session, by default None
     portal : str | None, optional
         Portal to filter licences by, by default None
     scope : str | None, optional
@@ -213,11 +213,11 @@ def get_licences(
         statement = statement.filter(table.portal == portal)
     if scope:
         statement = statement.filter(table.scope == scope)
-    licences = session.execute(statement).scalars().all()
+    licences = list(session.execute(statement).scalars().all())
     return licences
 
 
-def make_licence_url(licence: cads_catalogue.database.Licence) -> str:
+def make_licence_url(licence: cads_catalogue.database.Licence) -> str | None:
     """Make a URL for a licence."""
     licence_url = licence.download_filename
     if licence.spdx_identifier is None:
@@ -698,7 +698,7 @@ def get_portals(
     return portals
 
 
-def is_json_serializable(obj):
+def is_json_serializable(obj: Any) -> bool:
     try:
         json.dumps(obj)
         return True
