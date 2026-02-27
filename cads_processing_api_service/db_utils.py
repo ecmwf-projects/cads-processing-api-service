@@ -16,7 +16,6 @@
 
 import enum
 import functools
-import urllib.parse
 
 import cads_broker.config
 import cads_catalogue.database

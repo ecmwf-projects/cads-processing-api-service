@@ -23,9 +23,9 @@ import uuid
 import attrs
 import cacholote.extra_encoders
 import cads_adaptors.exceptions
-import cads_common.portal
 import cads_broker.database
 import cads_catalogue.database
+import cads_common.portal
 import fastapi
 import ogc_api_processes_fastapi
 import ogc_api_processes_fastapi.clients
@@ -250,7 +250,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 load_messages=True,
                 portals=auth_info.portals,
             )
-            licences_portal = utils.get_licences(session=catalogue_session, portal=dataset.portal, scope="portal")
+            licences_portal = utils.get_licences(
+                session=catalogue_session, portal=dataset.portal, scope="portal"
+            )
         auth.verify_if_disabled(dataset.disabled_reason, auth_info.user_role)
         adaptor_properties = adaptors.get_adaptor_properties(dataset)
         adaptor = adaptors.instantiate_adaptor(adaptor_properties=adaptor_properties)
@@ -301,7 +303,9 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
         with compute_sessionmaker() as compute_session:
             extra_receipt_collection_metadata = {}
             for key in SETTINGS.extra_receipt_collection_metadata:
-                if hasattr(dataset, key) and utils.is_json_serializable(getattr(dataset, key)):
+                if hasattr(dataset, key) and utils.is_json_serializable(
+                    getattr(dataset, key)
+                ):
                     extra_receipt_collection_metadata[key] = getattr(dataset, key)
             job = cads_broker.database.create_request(
                 session=compute_session,
@@ -322,13 +326,16 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                                 "title": licence.title,
                                 "revision": str(licence.revision),
                                 "url": utils.make_licence_url(licence),
-                            } 
+                            }
                             for licence in dataset.licences + licences_portal
                         ],
                         "doi": dataset.doi,
                         "citation": dataset.citation,
                         "portal": dataset.portal,
-                        "url": urllib.parse.urljoin(cads_common.portal.get_site_url(dataset.portal), f"datasets/{dataset.resource_uid}"),
+                        "url": urllib.parse.urljoin(
+                            cads_common.portal.get_site_url(dataset.portal),
+                            f"datasets/{dataset.resource_uid}",
+                        ),
                         **extra_receipt_collection_metadata,
                     },
                 },

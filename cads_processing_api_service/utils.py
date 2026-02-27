@@ -180,7 +180,10 @@ def get_resource_properties(
         ttl=SETTINGS.cache_resources_ttl,
     ),
     lock=threading.Lock(),
-    key=lambda session, portal, scope, table=cads_catalogue.database.Licence: cachetools.keys.hashkey(
+    key=lambda session,
+    portal,
+    scope,
+    table=cads_catalogue.database.Licence: cachetools.keys.hashkey(
         portal, scope, table
     ),
 )
@@ -221,9 +224,7 @@ def make_licence_url(licence: cads_catalogue.database.Licence) -> str | None:
     """Make a URL for a licence."""
     licence_url = licence.download_filename
     if licence.spdx_identifier is None:
-        licence_url = urllib.parse.urljoin(
-            SETTINGS.document_storage_url, licence_url
-        )
+        licence_url = urllib.parse.urljoin(SETTINGS.document_storage_url, licence_url)
     return licence_url
 
 

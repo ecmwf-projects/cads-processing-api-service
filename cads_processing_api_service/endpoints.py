@@ -256,9 +256,11 @@ def get_job_receipt(
                 detail=f"status of {job_id} is '{job_status}'"
             )
         try:
-            results_asset = utils.get_results_from_job(job, compute_session).get("asset", {})
+            results_asset = utils.get_results_from_job(job, compute_session).get(
+                "asset", {}
+            )
             traceback = None
-        except exceptions.JobResultsExpired as exc:
+        except exceptions.JobResultsExpired:
             results_asset = {}
             traceback = None
         except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
@@ -276,7 +278,7 @@ def get_job_receipt(
     request_metdata = job.request_metadata or {}
     make_receipt_args = {
         "request": job.request_body["request"] if job.request_body is not None else {},
-        "collection": cads_adaptors.models.CollectionMetadata( 
+        "collection": cads_adaptors.models.CollectionMetadata(
             **request_metdata.get("receipt", {})
         ),
         "job": cads_adaptors.models.JobMetadata(
@@ -290,7 +292,7 @@ def get_job_receipt(
             updated=job.updated_at,
             origin=job.origin,
             traceback=traceback,
-            user_support_url=SETTINGS.user_support_url
+            user_support_url=SETTINGS.user_support_url,
         ),
         "results": cads_adaptors.models.ResultsMetadata(
             **results_asset.get("value", {})
