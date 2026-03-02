@@ -256,15 +256,16 @@ def get_job_receipt(
                 detail=f"status of {job_id} is '{job_status}'"
             )
         try:
-            results_asset = utils.get_results_from_job(job, compute_session).get(
+            results_asset: dict[str, Any] = utils.get_results_from_job(job, compute_session).get(
                 "asset", {}
             )
+            results = cads_adaptors.models.ResultsMetadata(**results_asset.get("value", {}))
             traceback = None
         except exceptions.JobResultsExpired:
-            results_asset = {}
+            results = None
             traceback = None
         except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
-            results_asset = {}
+            results = None
             traceback = exc.traceback
     catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
         db_utils.ConnectionMode.read
@@ -294,9 +295,7 @@ def get_job_receipt(
             traceback=traceback,
             user_support_url=SETTINGS.user_support_url,
         ),
-        "results": cads_adaptors.models.ResultsMetadata(
-            **results_asset.get("value", {})
-        ),
+        "results": results,
     }
     adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
     receipt: dict[str, Any] = adaptor.make_receipt(**make_receipt_args)
