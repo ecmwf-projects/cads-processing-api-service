@@ -17,6 +17,7 @@
 import base64
 import datetime
 import enum
+import random
 import threading
 import urllib.parse
 from typing import Any, Callable, Mapping
@@ -479,9 +480,23 @@ def get_job_from_broker_db(
     return job
 
 
-def update_results_href(local_path: str, download_node: str) -> str:
-    file_path = local_path.split("://", 1)[-1]
-    results_href = urllib.parse.urljoin(download_node, file_path)
+def update_results_href(
+    local_path: str, download_nodes_settings: dict[str, str]
+) -> str:
+    local_path_parsed = urllib.parse.urlparse(local_path)
+    local_path_scheme = local_path_parsed.scheme
+    try:
+        download_nodes = download_nodes_settings[local_path_scheme]
+    except KeyError:
+        logger.error(
+            "no download node configured for the scheme of the local path",
+            local_path_scheme=local_path_scheme,
+        )
+        raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
+            detail=f"no download node configured for the scheme of the local path: {local_path_scheme}"
+        )
+    download_node = random.choice(download_nodes)
+    results_href = urllib.parse.urljoin(download_node, local_path.split("://", 1)[1])
     return results_href
 
 
@@ -516,8 +531,9 @@ def get_results_from_job(
             raise exceptions.JobResultsExpired(
                 detail=f"results of job {job_id} expired"
             )
+        download_nodes_settings = config.DownloadNodesSettings()
         asset_value["href"] = update_results_href(
-            asset_value["file:local_path"], config.DownloadNodesSettings().download_node
+            asset_value["file:local_path"], download_nodes_settings.download_nodes
         )
         results = {"asset": {"value": asset_value}}
     elif job_status in ("failed", "rejected"):

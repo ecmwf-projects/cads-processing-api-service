@@ -18,9 +18,7 @@ Options are based on pydantic.BaseSettings, so they automatically get values fro
 # limitations under the License.
 
 import functools
-import os
 import pathlib
-import random
 from typing import Annotated
 
 import limits
@@ -261,16 +259,9 @@ def validate_download_nodes_file(download_nodes_file: str) -> pathlib.Path:
 
 
 @functools.lru_cache
-def load_download_nodes(download_nodes_file: pathlib.Path) -> list[str]:
-    download_nodes = []
+def load_download_nodes(download_nodes_file: pathlib.Path) -> dict[str, str]:
     with open(download_nodes_file, "r") as file:
-        for line in file:
-            if download_node := os.path.expandvars(line.rstrip("\n")):
-                download_nodes.append(download_node)
-    if not download_nodes:
-        raise ValueError(
-            f"No download nodes found in download nodes file: {download_nodes_file}"
-        )
+        download_nodes: dict[str, str] = yaml.safe_load(file)
     return download_nodes
 
 
@@ -279,9 +270,8 @@ class DownloadNodesSettings(pydantic_settings.BaseSettings):
 
     download_nodes_file: Annotated[
         str, pydantic.AfterValidator(validate_download_nodes_file)
-    ] = "/etc/retrieve-api/download-nodes.config"
+    ] = "/etc/retrieve-api/download-nodes.yaml"
 
     @property
-    def download_node(self) -> str:
-        download_nodes = load_download_nodes(self.download_nodes_file)
-        return random.choice(download_nodes)
+    def download_nodes(self) -> dict[str, str]:
+        return load_download_nodes(pathlib.Path(self.download_nodes_file))

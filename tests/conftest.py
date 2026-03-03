@@ -16,6 +16,7 @@
 import os
 
 import pytest
+import yaml
 
 
 @pytest.fixture
@@ -35,8 +36,8 @@ def dev_env_prof_api_url() -> str:
 @pytest.fixture(scope="session")
 def prepare_env_for_download_nodes(tmp_path_factory) -> None:
     temp_dir = tmp_path_factory.mktemp("data")
-    temp_file_path = temp_dir / "test-download-nodes.config"
-    # Create and write to the file
+    temp_file_path = temp_dir / "test-download-nodes.yaml"
+    download_nodes_config = {"protocol": ["http://test_node/"]}
     with open(temp_file_path, "w") as f:
-        f.write("http://test_node")
+        yaml.safe_dump(download_nodes_config, f)
     os.environ["DOWNLOAD_NODES_FILE"] = str(temp_file_path)
