@@ -261,7 +261,7 @@ def validate_download_nodes_file(download_nodes_file: str) -> pathlib.Path:
 @functools.lru_cache
 def load_download_nodes(download_nodes_file: pathlib.Path) -> dict[str, str]:
     with open(download_nodes_file, "r") as file:
-        download_nodes = yaml.safe_load(file)
+        download_nodes: dict[str, str] = yaml.safe_load(file)
     return download_nodes
 
 
