@@ -219,6 +219,7 @@ def delete_jobs(
 
 @exceptions.exception_logger
 def get_job_receipt(
+    response: fastapi.Response,
     job_id: str = fastapi.Path(..., description="Job identifier."),
     auth_info: models.AuthInfo = fastapi.Depends(
         exceptions.exception_logger(auth.get_auth_info)
@@ -299,4 +300,5 @@ def get_job_receipt(
     }
     adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
     receipt: dict[str, Any] = adaptor.make_receipt(**make_receipt_args)
+    response.headers["Content-Disposition"] = f"receipt-{job.request_uid}.txt"
     return receipt
