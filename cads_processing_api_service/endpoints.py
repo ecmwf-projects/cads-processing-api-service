@@ -257,10 +257,12 @@ def get_job_receipt(
                 detail=f"status of {job_id} is '{job_status}'"
             )
         try:
-            results_asset: dict[str, Any] = utils.get_results_from_job(job, compute_session).get(
-                "asset", {}
+            results_asset: dict[str, Any] = utils.get_results_from_job(
+                job, compute_session
+            ).get("asset", {})
+            results = cads_adaptors.models.ResultsMetadata(
+                **results_asset.get("value", {})
             )
-            results = cads_adaptors.models.ResultsMetadata(**results_asset.get("value", {}))
             traceback = None
         except exceptions.JobResultsExpired:
             results = None
@@ -300,5 +302,7 @@ def get_job_receipt(
     }
     adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
     receipt: dict[str, Any] = adaptor.make_receipt(**make_receipt_args)
-    response.headers["Content-Disposition"] = f"attachment; filename=\"receipt-{job.request_uid}.txt\""
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="receipt-{job.request_uid}.txt"'
+    )
     return receipt
