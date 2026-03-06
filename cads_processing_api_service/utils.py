@@ -17,6 +17,7 @@
 import base64
 import datetime
 import enum
+import json
 import threading
 import urllib.parse
 from typing import Any, Callable, Mapping
@@ -171,6 +172,60 @@ def get_resource_properties(
             detail=f"dataset {resource_id} not found"
         )
     return resource_properties
+
+
+@cachetools.cached(
+    cache=cachetools.TTLCache(
+        maxsize=SETTINGS.cache_resources_maxsize,
+        ttl=SETTINGS.cache_resources_ttl,
+    ),
+    lock=threading.Lock(),
+    key=lambda session,
+    portal,
+    scope,
+    table=cads_catalogue.database.Licence: cachetools.keys.hashkey(
+        portal, scope, table
+    ),
+)
+def get_licences(
+    session: sqlalchemy.orm.Session,
+    table: type[cads_catalogue.database.Licence] = cads_catalogue.database.Licence,
+    portal: str | None = None,
+    scope: str | None = None,
+) -> list[cads_catalogue.database.Licence]:
+    """Get licences from the Catalogue database.
+
+    Parameters
+    ----------
+    session : sqlalchemy.orm.Session
+        Catalogue database session
+    table : type[cads_catalogue.database.Licence], optional
+        Catalogue database table, by default type[cads_catalogue.database.Licence]
+    portal : str | None, optional
+        Portal to filter licences by, by default None
+    scope : str | None, optional
+        Scope to filter licences by, by default None
+
+    Returns
+    -------
+    list[cads_catalogue.database.Licence]
+        List of licences.
+    """
+    statement = sa.select(table)
+    if portal:
+        statement = statement.filter(table.portal == portal)
+    if scope:
+        statement = statement.filter(table.scope == scope)
+    licences = list(session.execute(statement).scalars().all())
+    return licences
+
+
+def make_licence_url(licence: cads_catalogue.database.Licence) -> str | None:
+    """Make a URL for a licence."""
+    licence_url = licence.download_filename
+    if licence.spdx_identifier is None:
+        licence_url = urllib.parse.urljoin(SETTINGS.document_storage_url, licence_url)
+    return licence_url
 
 
 def parse_sortby(sortby: str) -> tuple[str, str]:
@@ -642,3 +697,11 @@ def get_portals(
         tuple([p.strip() for p in portal_header.split(",")]) if portal_header else None
     )
     return portals
+
+
+def is_json_serializable(obj: Any) -> bool:
+    try:
+        json.dumps(obj)
+        return True
+    except (TypeError, ValueError):
+        return False

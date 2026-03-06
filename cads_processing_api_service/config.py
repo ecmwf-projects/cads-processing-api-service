@@ -221,6 +221,8 @@ class Settings(pydantic_settings.BaseSettings):
     deprecation_warning_message: str = DEPRECATION_WARNING_MESSAGE
     missing_licences_message: str = MISSING_LICENCES_MESSAGE
     dataset_licences_url: str = DATASET_LICENCES_URL
+    document_storage_url: str = "http://document-storage/documents/"
+    user_support_url: str = "https://support.ecmwf.int"
 
     retrieve_api_broker_pool_timeout: float = 1.0
     retrieve_api_broker_pool_recycle: int = 60
@@ -236,6 +238,8 @@ class Settings(pydantic_settings.BaseSettings):
 
     rate_limits_file: str | None = None
     rate_limits: RateLimitsConfig = pydantic.Field(default=RateLimitsConfig())
+
+    extra_receipt_collection_metadata: list[str] = pydantic.Field(default=[])
 
     portals_file: str | None = None
     portals: dict[str, str] = pydantic.Field(default={})

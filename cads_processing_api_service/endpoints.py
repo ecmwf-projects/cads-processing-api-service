@@ -5,6 +5,7 @@ from typing import Any
 
 import cads_adaptors
 import cads_adaptors.exceptions
+import cads_adaptors.models
 import cads_broker
 import cads_catalogue
 import fastapi
@@ -214,3 +215,94 @@ def delete_jobs(
         jobs=jobs,
     )
     return job_list
+
+
+@exceptions.exception_logger
+def get_job_receipt(
+    response: fastapi.Response,
+    job_id: str = fastapi.Path(..., description="Job identifier."),
+    auth_info: models.AuthInfo = fastapi.Depends(
+        exceptions.exception_logger(auth.get_auth_info)
+    ),
+) -> dict[str, Any]:
+    """Get the receipt of a job.
+
+    Parameters
+    ----------
+    job_id : str
+        Job identifier.
+
+    Returns
+    -------
+    dict[str, Any]
+        Job receipt.
+    """
+    structlog.contextvars.bind_contextvars(user_uid=auth_info.user_uid)
+    limits.check_rate_limits(
+        SETTINGS.rate_limits,
+        "jobs_jobid_receipt",
+        "get",
+        auth_info,
+        job_id,
+    )
+    compute_sessionmaker = db_utils.get_compute_sessionmaker(
+        mode=db_utils.ConnectionMode.read
+    )
+    with compute_sessionmaker() as compute_session:
+        job = utils.get_job_from_broker_db(job_id=job_id, session=compute_session)
+        auth.verify_permission(auth_info.user_uid, job)
+        job_status = job.status
+        if job_status in ("accepted", "running"):
+            raise ogc_api_processes_fastapi.exceptions.ResultsNotReady(
+                detail=f"status of {job_id} is '{job_status}'"
+            )
+        try:
+            results_asset: dict[str, Any] = utils.get_results_from_job(
+                job, compute_session
+            ).get("asset", {})
+            results = cads_adaptors.models.ResultsMetadata(
+                **results_asset.get("value", {})
+            )
+            traceback = None
+        except exceptions.JobResultsExpired:
+            results = None
+            traceback = None
+        except ogc_api_processes_fastapi.exceptions.JobResultsFailed as exc:
+            results = None
+            traceback = exc.traceback
+    catalogue_sessionmaker = db_utils.get_catalogue_sessionmaker(
+        db_utils.ConnectionMode.read
+    )
+    with catalogue_sessionmaker() as catalogue_session:
+        dataset: cads_catalogue.database.Resource = utils.lookup_resource_by_id(
+            resource_id=job.process_id if job.process_id is not None else "",
+            table=cads_catalogue.database.Resource,
+            session=catalogue_session,
+        )
+    request_metdata = job.request_metadata or {}
+    make_receipt_args = {
+        "request": job.request_body["request"] if job.request_body is not None else {},
+        "collection": cads_adaptors.models.CollectionMetadata(
+            **request_metdata.get("receipt", {})
+        ),
+        "job": cads_adaptors.models.JobMetadata(
+            process_id=job.process_id,
+            user_id=job.user_uid,
+            request_id=job.request_uid,
+            status=job.status,
+            created=job.created_at,
+            started=job.started_at,
+            finished=job.finished_at,
+            updated=job.updated_at,
+            origin=job.origin,
+            traceback=traceback,
+            user_support_url=SETTINGS.user_support_url,
+        ),
+        "results": results,
+    }
+    adaptor: cads_adaptors.AbstractAdaptor = adaptors.instantiate_adaptor(dataset)
+    receipt: dict[str, Any] = adaptor.make_receipt(**make_receipt_args)
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="receipt-{job.request_uid}.txt"'
+    )
+    return receipt

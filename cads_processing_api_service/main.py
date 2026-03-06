@@ -104,6 +104,14 @@ app.router.add_api_route(
     response_model_exclude_none=True,
 )
 app.router.add_api_route(
+    "/jobs/{job_id}/receipt",
+    endpoints.get_job_receipt,
+    description="Get the receipt of a job.",
+    methods=["GET"],
+    response_model_exclude_unset=True,
+    response_model_exclude_none=True,
+)
+app.router.add_api_route(
     "/metrics", starlette_exporter.handle_metrics, include_in_schema=False
 )
 app.add_middleware(middlewares.ProcessingPrometheusMiddleware, group_paths=True)
