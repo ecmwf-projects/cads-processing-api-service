@@ -239,17 +239,18 @@ def test_get_job_from_broker_db(mocker) -> None:
 
 
 def test_update_results_href() -> None:
-    download_node = "http://download_node/"
-
+    download_nodes_settings = {"protocol": ["http://download_node/"]}
     local_path = "protocol://results/1234"
-    updated_href = utils.update_results_href(local_path, download_node)
+    updated_href = utils.update_results_href(local_path, download_nodes_settings)
     exp_updated_href = "http://download_node/results/1234"
     assert updated_href == exp_updated_href
 
-    local_path = "results/1234"
-    updated_href = utils.update_results_href(local_path, download_node)
-    exp_updated_href = "http://download_node/results/1234"
-    assert updated_href == exp_updated_href
+
+def test_update_results_href_missing_protocol() -> None:
+    download_nodes_settings = {"protocol": ["http://download_node/"]}
+    local_path = "missing-protocol://results/1234"
+    with pytest.raises(ogc_api_processes_fastapi.exceptions.JobResultsFailed):
+        _ = utils.update_results_href(local_path, download_nodes_settings)
 
 
 def test_get_results_from_job(prepare_env_for_download_nodes, mocker) -> None:

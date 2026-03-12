@@ -39,7 +39,7 @@ class PermissionDenied(ogc_api_processes_fastapi.exceptions.OGCAPIException):
 @attrs.define
 class InvalidParameter(ogc_api_processes_fastapi.exceptions.OGCAPIException):
     type: str = "invalid parameter"
-    status_code: int = fastapi.status.HTTP_422_UNPROCESSABLE_ENTITY
+    status_code: int = fastapi.status.HTTP_422_UNPROCESSABLE_CONTENT
     title: str = "invalid parameter"
 
 
