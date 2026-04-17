@@ -60,11 +60,9 @@ class JobSortCriterion(str, enum.Enum):
         ttl=SETTINGS.cache_resources_ttl,
     ),
     lock=threading.Lock(),
-    key=lambda resource_id,
-    table,
-    session,
-    load_messages=False,
-    portals=None: cachetools.keys.hashkey(resource_id, table, load_messages, portals),
+    key=lambda resource_id, table, session, load_messages=False, portals=None: (
+        cachetools.keys.hashkey(resource_id, table, load_messages, portals)
+    ),
 )
 def lookup_resource_by_id(
     resource_id: str,
@@ -181,11 +179,8 @@ def get_resource_properties(
         ttl=SETTINGS.cache_resources_ttl,
     ),
     lock=threading.Lock(),
-    key=lambda session,
-    portal,
-    scope,
-    table=cads_catalogue.database.Licence: cachetools.keys.hashkey(
-        portal, scope, table
+    key=lambda session, portal, scope, table=cads_catalogue.database.Licence: (
+        cachetools.keys.hashkey(portal, scope, table)
     ),
 )
 def get_licences(
@@ -536,7 +531,7 @@ def get_job_from_broker_db(
 
 
 def update_results_href(
-    local_path: str, download_nodes_settings: dict[str, str]
+    local_path: str, download_nodes_settings: dict[str, list[str]]
 ) -> str:
     local_path_parsed = urllib.parse.urlparse(local_path)
     local_path_scheme = local_path_parsed.scheme
@@ -602,7 +597,7 @@ def get_results_from_job(
             case "rejected":
                 exc_title = "The job has been rejected"
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
-            title=exc_title,  # type: ignore
+            title=exc_title,
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
             traceback=traceback,
         )
