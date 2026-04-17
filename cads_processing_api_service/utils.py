@@ -60,11 +60,9 @@ class JobSortCriterion(str, enum.Enum):
         ttl=SETTINGS.cache_resources_ttl,
     ),
     lock=threading.Lock(),
-    key=lambda resource_id,
-    table,
-    session,
-    load_messages=False,
-    portals=None: cachetools.keys.hashkey(resource_id, table, load_messages, portals),
+    key=lambda resource_id, table, session, load_messages=False, portals=None: (
+        cachetools.keys.hashkey(resource_id, table, load_messages, portals)
+    ),
 )
 def lookup_resource_by_id(
     resource_id: str,
@@ -181,11 +179,8 @@ def get_resource_properties(
         ttl=SETTINGS.cache_resources_ttl,
     ),
     lock=threading.Lock(),
-    key=lambda session,
-    portal,
-    scope,
-    table=cads_catalogue.database.Licence: cachetools.keys.hashkey(
-        portal, scope, table
+    key=lambda session, portal, scope, table=cads_catalogue.database.Licence: (
+        cachetools.keys.hashkey(portal, scope, table)
     ),
 )
 def get_licences(
