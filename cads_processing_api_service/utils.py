@@ -531,7 +531,7 @@ def get_job_from_broker_db(
 
 
 def update_results_href(
-    local_path: str, download_nodes_settings: dict[str, str]
+    local_path: str, download_nodes_settings: dict[str, list[str]]
 ) -> str:
     local_path_parsed = urllib.parse.urlparse(local_path)
     local_path_scheme = local_path_parsed.scheme
@@ -597,7 +597,7 @@ def get_results_from_job(
             case "rejected":
                 exc_title = "The job has been rejected"
         raise ogc_api_processes_fastapi.exceptions.JobResultsFailed(
-            title=exc_title,  # type: ignore
+            title=exc_title,
             status_code=fastapi.status.HTTP_400_BAD_REQUEST,
             traceback=traceback,
         )
