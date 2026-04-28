@@ -487,7 +487,7 @@ def make_pagination_query_params(
 def dictify_job(request: cads_broker.database.SystemRequest) -> dict[str, Any]:
     job: dict[str, Any] = {
         column.key: getattr(request, column.key)
-        for column in sqlalchemy.inspect(request).mapper.column_attrs  # type: ignore
+        for column in sqlalchemy.inspect(request).mapper.column_attrs
     }
     return job
 
@@ -581,7 +581,7 @@ def get_results_from_job(
     job_id = job.request_uid
     if job_status == "successful":
         try:
-            asset_value = job.cache_entry.result["args"][0]  # type: ignore
+            asset_value = job.cache_entry.result["args"][0]
         except Exception:
             raise exceptions.JobResultsExpired(
                 detail=f"results of job {job_id} expired"
@@ -638,7 +638,7 @@ def get_job_events(
     )
     for request_event in request_events:
         events.append((request_event.timestamp, request_event.message))
-    return events  # type: ignore
+    return events
 
 
 def make_status_info(
