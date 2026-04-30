@@ -294,6 +294,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                     ]
                 )
             )
+        request_tags = adaptor.get_request_tags(request_inputs.copy())
         job_id = str(uuid.uuid4())
         job_kwargs = adaptors.make_system_job_kwargs(
             dataset, request_inputs, adaptor.resources
@@ -315,7 +316,7 @@ class DatabaseClient(ogc_api_processes_fastapi.clients.BaseClient):
                 user_uid=auth_info.user_uid,
                 process_id=process_id,
                 portal=dataset.portal,
-                qos_tags=dataset.qos_tags,
+                qos_tags=dataset.qos_tags + request_tags,
                 metadata={
                     "costs": costs,
                     "user_data": {"email": auth_info.email},
